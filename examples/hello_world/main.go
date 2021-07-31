@@ -1,10 +1,9 @@
 package main
 
 import (
+	"crypto/tls"
 	"log"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"time"
 )
 
@@ -27,20 +26,16 @@ func handle(w http.ResponseWriter, r *http.Request) {
 }
 
 func proxy(w http.ResponseWriter, r *http.Request) {
-	url, err := url.Parse("http://fuzznet:81/")
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	res, err := http.Get("https://fuzznet:81/hello")
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	proxy := httputil.NewSingleHostReverseProxy(url)
-	proxy.ServeHTTP(w, r)
-	// res, err := http.Get("http://fuzznet/hello")
-	// if err != nil {
-	// 	log.Println(err)
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	return
-	// }
-	// x := []byte{}
-	// res.Body.Read(x)
-	// w.Write(x)
+	log.Println(res.Status)
+	x := []byte{}
+	i, err := res.Body.Read(x)
+	log.Println(i, err, string(x))
+	w.Write(x)
 }
