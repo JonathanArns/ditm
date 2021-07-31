@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	log.Println("starting fuzznet")
+	log.Println("starting ditm")
 	proxy := Proxy{
 		recording: true,
 		filter:    Filter{},
@@ -33,5 +33,5 @@ func main() {
 }
 
 func hello(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello from Fuzznet!"))
+	w.Write([]byte("Hello from ditm!"))
 }

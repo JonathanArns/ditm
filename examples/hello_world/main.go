@@ -27,7 +27,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 
 func proxy(w http.ResponseWriter, r *http.Request) {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	res, err := http.Get("https://fuzznet:81/hello")
+	res, err := http.Get("https://ditm:81/hello")
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusBadRequest)

@@ -1,7 +1,7 @@
 FROM scratch
 
-COPY fuzznet .
+COPY ditm .
 
 EXPOSE 80
 
-CMD ["./fuzznet"]
+CMD ["./ditm"]

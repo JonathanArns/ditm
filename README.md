@@ -1,2 +1,2 @@
-# fuzznet
-A Fuzzer to test network partition tolerance
+# ditm
+Debugger in the Middle

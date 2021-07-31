@@ -57,7 +57,7 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	request.FromNames = names
 
-	request.Blocked := p.filter.Block(&request)
+	request.Blocked = p.filter.Block(&request)
 
 	// proxy the request
 	host, err := url.Parse(proto + r.URL.Host)

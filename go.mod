@@ -1,4 +1,4 @@
-module github.com/JonathanArns/fuzznet
+module github.com/JonathanArns/ditm
 
 go 1.16
 
