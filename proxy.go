@@ -28,8 +28,8 @@ type Proxy struct {
 }
 
 type Recording struct {
-	requests   map[string][]Request
-	checkpoing string
+	requests map[string][]Request
+	snapshot string
 }
 
 type Request struct {
@@ -137,6 +137,21 @@ func (p *Proxy) writeRecording(recording Recording) error {
 	return os.WriteFile(filename, bytes, 666)
 }
 
+func (p *Proxy) loadRecording(filename string) error {
+	filepath := "/recordings/" + filename
+	bytes, err := os.ReadFile(filepath)
+	if err != nil {
+		return err
+	}
+	recording := Recording{}
+	err = json.Unmarshal(bytes, &recording)
+	if err != nil {
+		return err
+	}
+	p.recording = recording
+	return nil
+}
+
 func writeVolumes() error {
 	filename := "/snapshots/" + time.Now().Format(time.StampMicro) + ".zip"
 	err := archiver.Archive([]string{"/volumes"}, filename)
@@ -147,7 +162,8 @@ func loadVolumes(file string) error {
 	if file == "" {
 		return errors.New("No Volumes Snapshot")
 	}
-	err := archiver.Unarchive(file, "/volumes")
+	filepath := "/volumes/" + file
+	err := archiver.Unarchive(filepath, "/volumes")
 	return err
 }
 
@@ -202,6 +218,18 @@ func (p *Proxy) LoadVolumesHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 	}
+}
+
+func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
+	filename := r.FormValue("filename")
+	p.isRecording = false
+	err := p.loadRecording(filename)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+	loadVolumes(p.recording.snapshot)
+	p.isReplaying = true
 }
 
 func (p *Proxy) CurrentRecordingHandler(w http.ResponseWriter, r *http.Request) {
