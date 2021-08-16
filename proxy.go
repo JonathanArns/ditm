@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -12,13 +13,16 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mholt/archiver/v3"
 )
 
 type Proxy struct {
+	mu              sync.Mutex
 	hostNames       map[string]string
 	isRecording     bool
 	isReplaying     bool
@@ -29,21 +33,35 @@ type Proxy struct {
 }
 
 type Recording struct {
-	requests map[string][]Request
-	snapshot string
+	Requests []*Request `json:"requests"`
+	Volumes  string     `json:"volumes"`
+}
+
+func (r *Recording) getStream(streamIdentifier string) []*Request {
+	ret := []*Request{}
+	for _, request := range r.Requests {
+		if request.StreamIdentifier == streamIdentifier {
+			ret = append(ret, request)
+		}
+	}
+	return ret
 }
 
 type Request struct {
-	From             string `json:"from"`
-	FromName         string `json:"from_name"`
-	To               string `json:"to"`
-	StreamIdentifier string `json:"stream_identifier"`
-	URI              string `json:"uri"`
-	BodyLength       int    `json:"body_length"`
-	TLS              bool   `json:"tls"`
-	Blocked          bool   `json:"blocked"`
-	FromOutside      bool   `json:"from_outside"`
-	seen             bool   `json:"-"`
+	From             string      `json:"from"`
+	FromName         string      `json:"from_name"`
+	To               string      `json:"to"`
+	StreamIdentifier string      `json:"stream_identifier"`
+	URI              string      `json:"uri"`
+	Method           string      `json:"method"`
+	Timestamp        time.Time   `json:"timestamp"`
+	BodyLength       int         `json:"body_length"`
+	TLS              bool        `json:"tls"`
+	Blocked          bool        `json:"blocked"`
+	FromOutside      bool        `json:"from_outside"`
+	Body             []byte      `json:"body"`
+	Header           http.Header `json:"header"`
+	seen             bool        `json:"-"`
 }
 
 func (p *Proxy) Block(request *Request) bool {
@@ -53,14 +71,8 @@ func (p *Proxy) Block(request *Request) bool {
 		return false
 	}
 
-	recording, ok := p.recording.requests[request.StreamIdentifier]
-	if !ok {
-		log.Println("FUCK WE DON'T KNOW THIS REQUEST")
-	}
-	replayingFrom, ok := p.replayingFrom.requests[request.StreamIdentifier]
-	if !ok {
-		log.Println("FUCK WE DON'T KNOW THIS REQUEST")
-	}
+	recording := p.recording.getStream(request.StreamIdentifier)
+	replayingFrom := p.replayingFrom.getStream(request.StreamIdentifier)
 
 	highScore := -math.MaxFloat64
 	var bestMatch *Request
@@ -76,30 +88,36 @@ func (p *Proxy) Block(request *Request) bool {
 		}
 		if score > highScore {
 			highScore = score
-			bestMatch = &r
+			bestMatch = r
 		}
 	}
 	if bestMatch != nil {
 		bestMatch.seen = true
 		return bestMatch.Blocked
 	}
-	log.Println("WE ARE SEEING MORE REQUESTS THAN IN THE ORIGINAL RECORDING")
+	log.Println("WE ARE SEEING MORE REQUESTS FOR THIS STREAM THAN IN THE ORIGINAL RECORDING")
 	return false
 }
 
 func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.ResetReplayTimer()
+
 	var proto string
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadGateway)
 		return
 	}
-	request := Request{
+	request := &Request{
 		From:       r.RemoteAddr,
 		To:         r.URL.String(),
 		BodyLength: len(body),
 		URI:        r.URL.RequestURI(),
+		Body:       body,
+		Method:     r.Method,
+		Timestamp:  time.Now(),
 	}
 	if r.TLS == nil {
 		request.TLS = false
@@ -119,7 +137,7 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	request.StreamIdentifier = request.FromName + "->" + request.To
 
-	request.Blocked = p.Block(&request)
+	request.Blocked = p.Block(request)
 	p.record(request)
 	if request.Blocked {
 		panic("We want to block this request")
@@ -134,32 +152,40 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	proxy := httputil.NewSingleHostReverseProxy(remoteHost)
 	proxy.ServeHTTP(w, r)
+	p.nextOutsideRequest(false)
 }
 
-func (p *Proxy) record(request Request) {
-	if stream, ok := p.recording.requests[request.StreamIdentifier]; ok {
-		stream = append(stream, request)
-	} else {
-		p.recording.requests[request.StreamIdentifier] = []Request{request}
-	}
+func (p *Proxy) record(request *Request) {
+	p.recording.Requests = append(p.recording.Requests, request)
 }
 
-func (p *Proxy) writeRecording(recording Recording) error {
-	filename := "/recordings/" + time.Now().Format(time.StampMicro) + ".json"
-	bytes, err := json.MarshalIndent(recording, "", " ")
+func (p *Proxy) writeRecording() (int, error) {
+	filename, fileId := newFilePath("/recordings/", ".json")
+	bytes, err := json.MarshalIndent(p.recording, "", " ")
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return os.WriteFile(filename, bytes, 666)
+	log.Println(string(bytes))
+	return fileId, os.WriteFile(filename, bytes, 0b_110110110)
 }
 
-func loadRecording(filename string) (*Recording, error) {
-	filepath := "/recordings/" + filename
+func newFilePath(prefix, postfix string) (string, int) {
+	fileId := 1
+	for {
+		if _, err := os.Stat(prefix + strconv.Itoa(fileId) + postfix); os.IsNotExist(err) {
+			return prefix + strconv.Itoa(fileId) + postfix, fileId
+		}
+		fileId += 1
+	}
+}
+
+func loadRecording(id string) (*Recording, error) {
+	filepath := "/recordings/" + id + ".json"
 	bytes, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, err
 	}
-	recording := Recording{}
+	recording := Recording{Requests: []*Request{}}
 	err = json.Unmarshal(bytes, &recording)
 	if err != nil {
 		return nil, err
@@ -171,73 +197,100 @@ func (p *Proxy) ResetReplayTimer() {
 	if p.replayTimer == nil {
 		return
 	}
-	p.replayTimer.Reset(time.Duration(1) * time.Second)
+	p.replayTimer.Reset(time.Duration(3) * time.Second)
+}
+
+func (p *Proxy) nextOutsideRequest(alwaysSend bool) {
+	for _, request := range p.replayingFrom.Requests {
+		if !request.seen && request.FromOutside {
+			request.seen = true
+			send(request)
+			r := *request // make a copy of request, to record it with new timestamp
+			r.Timestamp = time.Now()
+			p.record(&r)
+		} else if !alwaysSend && !request.seen {
+			return // exit because we need to see some other requests first
+		}
+	}
+}
+
+func send(r *Request) (*http.Response, error) {
+	url, err := url.Parse(r.URI)
+	if err != nil {
+		return nil, err
+	}
+	request := &http.Request{
+		Method: r.Method,
+		URL:    url,
+		Body:   io.NopCloser(bytes.NewReader(r.Body)),
+		Header: r.Header,
+	}
+	return http.DefaultClient.Do(request)
 }
 
 func (p *Proxy) EndReplay() {
-	for _, stream := range p.recording.requests {
-		for _, req := range stream {
-			if !req.seen {
-				p.ResetReplayTimer()
-				return
-			}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for _, r := range p.recording.Requests {
+		if !r.seen {
+			p.ResetReplayTimer()
+			return
 		}
 	}
-	p.writeRecording(p.recording)
+	p.writeRecording()
 	p.isReplaying = false
 	p.replayTimer = nil
 }
 
-func writeVolumes() error {
-	filename := "/snapshots/" + time.Now().Format(time.StampMicro) + ".zip"
+func writeVolumes() (int, error) {
+	filename, fileId := newFilePath("/snapshots/", ".zip")
 	err := archiver.Archive([]string{"/volumes"}, filename)
-	return err
+	return fileId, err
 }
 
-func loadVolumes(file string) error {
-	if file == "" {
+func loadVolumes(id string) error {
+	if id == "" {
 		return errors.New("No Volumes Snapshot")
 	}
-	filepath := "/volumes/" + file
+	filepath := "/volumes/" + id + ".zip"
 	err := archiver.Unarchive(filepath, "/volumes")
 	return err
 }
 
 func latestVolumes() string {
 	files, _ := os.ReadDir("/snapshots")
-	latestTime := time.Time{}
-	latestName := ""
+	latest := 0
 	for _, file := range files {
 		if file.IsDir() {
 			continue
 		}
-		name := file.Name()
-		if stamp, err := time.Parse(time.StampMicro, strings.Trim(name, ".zip")); err == nil {
-			if stamp.After(latestTime) {
-				latestName = name
-				latestTime = stamp
+		name := strings.Trim(file.Name(), ".zip")
+		if id, err := strconv.Atoi(name); err == nil {
+			if id > latest {
+				latest = id
 			}
 		}
 	}
-	return latestName
+	return strconv.Itoa(latest)
 }
 
 func (p *Proxy) StartRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	p.isRecording = true
-	p.recording = Recording{}
-	p.replayingFrom = Recording{}
+	p.recording = Recording{Requests: []*Request{}}
+	p.replayingFrom = Recording{Requests: []*Request{}}
 }
 
 func (p *Proxy) EndRecordingHandler(w http.ResponseWriter, r *http.Request) {
-	err := p.writeRecording(p.recording)
+	_, err := p.writeRecording()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 	}
+	p.recording = Recording{Requests: []*Request{}}
 }
 
 func (p *Proxy) SaveVolumesHandler(w http.ResponseWriter, r *http.Request) {
-	err := writeVolumes()
+	_, err := writeVolumes()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -245,7 +298,7 @@ func (p *Proxy) SaveVolumesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Proxy) LoadVolumesHandler(w http.ResponseWriter, r *http.Request) {
-	filename := r.FormValue("filename")
+	filename := r.FormValue("id")
 	if filename == "" {
 		filename = latestVolumes()
 	}
@@ -257,21 +310,23 @@ func (p *Proxy) LoadVolumesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
-	filename := r.FormValue("filename")
+	id := r.FormValue("id")
 	p.isRecording = false
-	recording, err := loadRecording(filename)
+	recording, err := loadRecording(id)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 	}
 	p.replayingFrom = *recording
-	err = loadVolumes(p.recording.snapshot)
+	p.recording = Recording{Requests: []*Request{}}
+	err = loadVolumes(p.recording.Volumes)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 	}
 	p.isReplaying = true
-	p.replayTimer = time.AfterFunc(time.Duration(1)*time.Second, p.EndReplay)
+	p.replayTimer = time.AfterFunc(time.Duration(3)*time.Second, p.EndReplay)
+	p.nextOutsideRequest(true)
 }
 
 func (p *Proxy) CurrentRecordingHandler(w http.ResponseWriter, r *http.Request) {

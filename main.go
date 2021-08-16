@@ -8,29 +8,38 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 func main() {
 	log.Println("starting ditm")
 	proxy := InitProxy()
-	helloSrv := &http.Server{
-		Handler:      http.HandlerFunc(hello),
-		Addr:         ":81",
-		WriteTimeout: 10 * time.Second,
-		ReadTimeout:  10 * time.Second,
-	}
-
 	srv := &http.Server{
 		Handler:      http.HandlerFunc(proxy.Handler),
-		Addr:         ":80",
+		Addr:         ":5000",
 		WriteTimeout: 10 * time.Second,
 		ReadTimeout:  10 * time.Second,
 	}
 	go func() {
-		log.Fatal(helloSrv.ListenAndServe())
+		log.Fatal(srv.ListenAndServe())
 	}()
-	log.Fatal(srv.ListenAndServe())
+
+	r := mux.NewRouter()
+	r.Path("/start_recording").HandlerFunc(proxy.StartRecordingHandler)
+	r.Path("/end_recording").HandlerFunc(proxy.EndRecordingHandler)
+	r.Path("/start_replay").HandlerFunc(proxy.StartReplayHandler)
+	r.Path("/save_volumes").HandlerFunc(proxy.SaveVolumesHandler)
+	r.Path("/load_volumes").HandlerFunc(proxy.LoadVolumesHandler)
+	apiSrv := &http.Server{
+		Handler:      r,
+		Addr:         ":80",
+		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  10 * time.Second,
+	}
+	log.Fatal(apiSrv.ListenAndServe())
 }
 
 func hello(w http.ResponseWriter, r *http.Request) {
@@ -39,9 +48,10 @@ func hello(w http.ResponseWriter, r *http.Request) {
 
 func InitProxy() *Proxy {
 	proxy := &Proxy{
-		hostNames: map[string]string{},
-		recording: Recording{},
-		replay:    Recording{},
+		mu:            sync.Mutex{},
+		hostNames:     map[string]string{},
+		recording:     Recording{Requests: []*Request{}},
+		replayingFrom: Recording{Requests: []*Request{}},
 	}
 
 	blockPercentage, err := strconv.Atoi(os.Getenv("BLOCK_PERCENTAGE"))
