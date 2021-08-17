@@ -52,7 +52,6 @@ type Request struct {
 	FromName         string      `json:"from_name"`
 	To               string      `json:"to"`
 	StreamIdentifier string      `json:"stream_identifier"`
-	URI              string      `json:"uri"`
 	Method           string      `json:"method"`
 	Timestamp        time.Time   `json:"timestamp"`
 	BodyLength       int         `json:"body_length"`
@@ -84,7 +83,7 @@ func (p *Proxy) Block(request *Request) bool {
 		}
 		score := 0.0
 		score -= math.Abs(float64(i - len(recording)))
-		if r.URI == request.URI {
+		if r.To == request.To {
 			score += 1 * faktor
 		}
 		if score > highScore {
@@ -117,7 +116,6 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 		From:       r.RemoteAddr,
 		To:         r.URL.String(),
 		BodyLength: len(body),
-		URI:        r.URL.RequestURI(),
 		Body:       body,
 		Method:     r.Method,
 		Timestamp:  time.Now(),
