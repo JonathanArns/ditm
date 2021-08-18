@@ -76,10 +76,17 @@ func (p *Proxy) Block(request *Request) bool {
 	highScore := -math.MaxFloat64
 	var bestMatch *Request
 	faktor := float64(len(replayingFrom)) // a faktor to relativize constant score components
+	log.Println(recording)
+	log.Println(replayingFrom)
 	for i, r := range replayingFrom {
-		// TODO: this dowsn't work at all right now
-		if r.seen {
+		// TODO: this doesn't work at all right now
+		if r.seen || r.FromOutside {
 			continue
+		}
+		if i == len(recording) {
+			log.Println("hello")
+			bestMatch = r
+			break
 		}
 		score := 0.0
 		score -= math.Abs(float64(i - len(recording)))
@@ -174,6 +181,7 @@ func newFilePath(prefix, postfix string) (string, int) {
 	fileId := 1
 	for {
 		if _, err := os.Stat(prefix + strconv.Itoa(fileId) + postfix); os.IsNotExist(err) {
+			log.Println(fileId)
 			return prefix + strconv.Itoa(fileId) + postfix, fileId
 		}
 		fileId += 1
@@ -186,12 +194,12 @@ func loadRecording(id string) (*Recording, error) {
 	if err != nil {
 		return nil, err
 	}
-	recording := Recording{Requests: []*Request{}}
-	err = json.Unmarshal(bytes, &recording)
+	recording := &Recording{}
+	err = json.Unmarshal(bytes, recording)
 	if err != nil {
 		return nil, err
 	}
-	return &recording, nil
+	return recording, nil
 }
 
 func (p *Proxy) ResetReplayTimer() {
@@ -201,8 +209,14 @@ func (p *Proxy) ResetReplayTimer() {
 	p.replayTimer.Reset(time.Duration(3) * time.Second)
 }
 
+// Checks if the next unseen request in the recording is an
+// outside request, if so, sends the request.
+// If alwaysSend is true, the next unseen request is always sent,
+// even if there are unseen requests from inside are before it.
 func (p *Proxy) nextOutsideRequest(alwaysSend bool) {
+	log.Println("next outside")
 	for _, request := range p.replayingFrom.Requests {
+		log.Println(*request)
 		if !request.seen && request.FromOutside {
 			request.seen = true
 			_, err := send(request)
@@ -213,6 +227,7 @@ func (p *Proxy) nextOutsideRequest(alwaysSend bool) {
 			r.Timestamp = time.Now()
 			p.record(&r)
 		} else if !alwaysSend && !request.seen {
+			log.Println("Fuck")
 			return // exit because we need to see some other requests first
 		}
 	}
@@ -234,8 +249,9 @@ func send(r *Request) (*http.Response, error) {
 }
 
 func (p *Proxy) EndReplay() {
+	log.Println("end replay")
 	p.mu.Lock()
-	for _, r := range p.recording.Requests {
+	for _, r := range p.replayingFrom.Requests {
 		if !r.seen {
 			p.ResetReplayTimer()
 			p.mu.Unlock()
@@ -247,6 +263,7 @@ func (p *Proxy) EndReplay() {
 	p.isReplaying = false
 	p.replayTimer = nil
 	p.mu.Unlock()
+	log.Println("replay finished")
 }
 
 func writeVolumes() (int, error) {
