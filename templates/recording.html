@@ -1,0 +1,14 @@
+<table class="table">
+	<thead>
+		<tr>
+			<th>From</th>
+			<th>To</th>
+		</tr>
+	</thead>
+	{{range .Requests}}
+	<tr>
+		<td>{{.FromName}}</td>
+		<td>{{.To}}</td>
+	</tr>
+	{{end}}
+</table>

@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -18,26 +17,24 @@ func main() {
 	log.Println("starting ditm")
 	proxy := InitProxy()
 	srv := &http.Server{
-		Handler:      http.HandlerFunc(proxy.Handler),
-		Addr:         ":5000",
-		WriteTimeout: 10 * time.Second,
-		ReadTimeout:  10 * time.Second,
+		Handler: http.HandlerFunc(proxy.Handler),
+		Addr:    ":5000",
 	}
 	go func() {
 		log.Fatal(srv.ListenAndServe())
 	}()
 
 	r := mux.NewRouter()
+	r.Path("/").HandlerFunc(proxy.HomeHandler)
+	r.Path("/live_updates").HandlerFunc(proxy.LiveUpdatesHandler)
 	r.Path("/start_recording").HandlerFunc(proxy.StartRecordingHandler)
 	r.Path("/end_recording").HandlerFunc(proxy.EndRecordingHandler)
 	r.Path("/start_replay").HandlerFunc(proxy.StartReplayHandler)
 	r.Path("/save_volumes").HandlerFunc(proxy.SaveVolumesHandler)
 	r.Path("/load_volumes").HandlerFunc(proxy.LoadVolumesHandler)
 	apiSrv := &http.Server{
-		Handler:      r,
-		Addr:         ":80",
-		WriteTimeout: 10 * time.Second,
-		ReadTimeout:  10 * time.Second,
+		Handler: r,
+		Addr:    ":80",
 	}
 	log.Fatal(apiSrv.ListenAndServe())
 }

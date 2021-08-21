@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"errors"
+	"html/template"
 	"io"
 	"log"
 	"math"
@@ -298,6 +300,28 @@ func latestVolumes() string {
 	return strconv.Itoa(latest)
 }
 
+type TemplateData struct {
+	ModeDefault    bool
+	ModeRecording  bool
+	ModeReplaying  bool
+	ModeInspecting bool
+}
+
+//go:embed templates/main.html
+var mainTemplate string
+
+//go:embed templates/recording.html
+var recordingTemplate string
+
+func (p *Proxy) HomeHandler(w http.ResponseWriter, r *http.Request) {
+	t := template.New("main")
+	t.Parse(mainTemplate)
+	err := t.Execute(w, TemplateData{ModeDefault: true})
+	if err != nil {
+		log.Println(err)
+	}
+}
+
 func (p *Proxy) StartRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -363,8 +387,29 @@ func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
 	p.nextOutsideRequest(true)
 }
 
-func (p *Proxy) CurrentRecordingHandler(w http.ResponseWriter, r *http.Request) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
+func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
+	t := template.New("recording")
+	t.Parse("data: " + strings.ReplaceAll(recordingTemplate, "\n", "") + "\n\n")
+	ctx := r.Context()
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Transfer-Encoding", "chunked")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	flusher := w.(http.Flusher)
+	for {
+		select {
+		case <-time.After(time.Duration(1) * time.Second):
+			p.mu.Lock()
+			err := t.Execute(w, p.recording)
+			p.mu.Unlock()
+			flusher.Flush()
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
