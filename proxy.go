@@ -15,6 +15,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -190,6 +191,32 @@ func newFilePath(prefix, postfix string) (string, int) {
 	}
 }
 
+func ListFileIDs(dirname, fileext string) []int {
+	ret := sort.IntSlice{}
+	files, err := os.ReadDir(dirname)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, info := range files {
+		if !info.IsDir() {
+			name := strings.Trim(info.Name(), fileext)
+			if id, err := strconv.Atoi(name); err == nil {
+				ret = append(ret, id)
+			}
+		}
+	}
+	ret.Sort()
+	return ret
+}
+
+func ListRecordings() []int {
+	return ListFileIDs("/recordings", ".json")
+}
+
+func ListVolumesSnapshots() []int {
+	return ListFileIDs("/volumes", ".zip")
+}
+
 func loadRecording(id string) (*Recording, error) {
 	filepath := "/recordings/" + id + ".json"
 	bytes, err := os.ReadFile(filepath)
@@ -305,6 +332,20 @@ type TemplateData struct {
 	ModeRecording  bool
 	ModeReplaying  bool
 	ModeInspecting bool
+	Recordings     []int
+	Volumes        []int
+}
+
+func NewTemplateData(none, recording, replaying, inspecting bool) TemplateData {
+	return TemplateData{
+		ModeDefault:    none,
+		ModeRecording:  recording,
+		ModeReplaying:  replaying,
+		ModeInspecting: inspecting,
+		Recordings:     ListRecordings(),
+		Volumes:        ListVolumesSnapshots(),
+	}
+
 }
 
 //go:embed templates/main.html
@@ -314,9 +355,18 @@ var mainTemplate string
 var recordingTemplate string
 
 func (p *Proxy) HomeHandler(w http.ResponseWriter, r *http.Request) {
+	p.mu.Lock()
+	if p.isRecording {
+		p.replayTimer.Stop()
+		p.replayTimer = nil
+		p.isReplaying = false
+		log.Println("replay canceled")
+	}
+	p.recording = Recording{Requests: []*Request{}}
+	p.mu.Unlock()
 	t := template.New("main")
 	t.Parse(mainTemplate)
-	err := t.Execute(w, TemplateData{ModeDefault: true})
+	err := t.Execute(w, NewTemplateData(true, false, false, false))
 	if err != nil {
 		log.Println(err)
 	}
@@ -328,6 +378,9 @@ func (p *Proxy) StartRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	p.isRecording = true
 	p.recording = Recording{Requests: []*Request{}}
 	p.replayingFrom = Recording{Requests: []*Request{}}
+	t := template.New("main")
+	t.Parse(mainTemplate)
+	t.Execute(w, NewTemplateData(false, true, false, false))
 }
 
 func (p *Proxy) EndRecordingHandler(w http.ResponseWriter, r *http.Request) {
@@ -335,10 +388,12 @@ func (p *Proxy) EndRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	defer p.mu.Unlock()
 	_, err := p.writeRecording()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		log.Println(err)
 	}
 	p.recording = Recording{Requests: []*Request{}}
+	t := template.New("main")
+	t.Parse(mainTemplate)
+	t.Execute(w, NewTemplateData(true, false, false, false))
 }
 
 func (p *Proxy) SaveVolumesHandler(w http.ResponseWriter, r *http.Request) {
@@ -346,9 +401,11 @@ func (p *Proxy) SaveVolumesHandler(w http.ResponseWriter, r *http.Request) {
 	defer p.mu.Unlock()
 	_, err := writeVolumes()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		log.Println(err)
 	}
+	t := template.New("main")
+	t.Parse(mainTemplate)
+	t.Execute(w, NewTemplateData(true, false, false, false))
 }
 
 func (p *Proxy) LoadVolumesHandler(w http.ResponseWriter, r *http.Request) {
@@ -360,9 +417,11 @@ func (p *Proxy) LoadVolumesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err := loadVolumes(filename)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		log.Println(err)
 	}
+	t := template.New("main")
+	t.Parse(mainTemplate)
+	t.Execute(w, NewTemplateData(true, false, false, false))
 }
 
 func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
@@ -371,19 +430,20 @@ func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
 	p.isRecording = false
 	recording, err := loadRecording(id)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		log.Println(err)
 	}
 	p.replayingFrom = *recording
 	p.recording = Recording{Requests: []*Request{}}
 	err = loadVolumes(p.recording.Volumes)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		log.Println(err)
 	}
 	p.isReplaying = true
 	p.replayTimer = time.AfterFunc(time.Duration(3)*time.Second, p.EndReplay)
 	p.mu.Unlock()
+	t := template.New("main")
+	t.Parse(mainTemplate)
+	t.Execute(w, NewTemplateData(false, false, true, false))
 	p.nextOutsideRequest(true)
 }
 

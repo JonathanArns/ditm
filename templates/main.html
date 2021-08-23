@@ -10,30 +10,30 @@
 	<h1>ditm</h1>
 	<ul class="nav justify-content-center">
 		{{if .ModeDefault}}
-			<a class="nav-link" href="#">Start Recording</a>
-			<a class="nav-link" href="#">Stop Recoring</a>
-			<a class="nav-link" href="#">Start Replay</a>
-			<a class="nav-link" href="#">Link</a>
+			<a class="nav-link" href="/start_recording">Start Recording</a>
+			<a class="nav-link" href="/stop_recording">Stop Recoring</a>
+			<a class="nav-link" href="/save_volumes">Save Volumes</a>
 		{{end}}
 		{{if .ModeRecording}}
-			<a class="nav-link active" aria-current="page" href="#">Active</a>
-			<a class="nav-link" href="#">Link</a>
-			<a class="nav-link" href="#">Link</a>
-			<a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Disabled</a>
+			<a class="nav-link" href="/stop_recording">Stop Recoring</a>
 		{{end}}
 		{{if .ModeReplaying}}
-			<a class="nav-link active" aria-current="page" href="#">Active</a>
-			<a class="nav-link" href="#">Link</a>
-			<a class="nav-link" href="#">Link</a>
-			<a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Disabled</a>
+			<a class="nav-link" href="/">Cancel Replay</a>
 		{{end}}
 		{{if .ModeInspecting}}
-			<a class="nav-link active" aria-current="page" href="#">Active</a>
-			<a class="nav-link" href="#">Link</a>
-			<a class="nav-link" href="#">Link</a>
-			<a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Disabled</a>
+			<a class="nav-link" href="/">Home</a>
+			<a class="nav-link" href="/start_recording">Start Recording</a>
+			<a class="nav-link" href="/stop_recording">Stop Recoring</a>
+			<a class="nav-link" href="/save_volumes">Save Volumes</a>
 		{{end}}
 	</ul>
+	{{range .Recordings}}
+		<a href="/start_replay?id={{.}}">Start Replay {{.}}</a>
+		<a href="/load_recording?id={{.}}">Show Replay {{.}}</a>
+	{{end}}
+	{{range .Volumes}}
+		<a href="/load_volumes?id={{.}}">Load Volumes {{.}}</a>
+	{{end}}
 	<div id="table_container" class="container"></div>
 	<script>
 		let context = {{.}}
