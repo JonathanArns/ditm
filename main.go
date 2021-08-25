@@ -26,6 +26,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.Path("/").HandlerFunc(proxy.HomeHandler)
+	r.Path("/log").HandlerFunc(proxy.LogHandler)
 	r.Path("/live_updates").HandlerFunc(proxy.LiveUpdatesHandler)
 	r.Path("/start_recording").HandlerFunc(proxy.StartRecordingHandler)
 	r.Path("/end_recording").HandlerFunc(proxy.EndRecordingHandler)

@@ -37,7 +37,14 @@ type Proxy struct {
 
 type Recording struct {
 	Requests []*Request `json:"requests"`
-	Volumes  string     `json:"volumes"`
+	Logs     []LogEntry
+	Volumes  string `json:"volumes"`
+}
+
+type LogEntry struct {
+	Timestamp     time.Time `json:"timestamp"`
+	Message       string    `json:"message"`
+	ContainerName string    `json:"container_name"`
 }
 
 func (r *Recording) getStream(streamIdentifier string) []*Request {
@@ -164,7 +171,9 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	proxy := httputil.NewSingleHostReverseProxy(remoteHost)
 	proxy.ServeHTTP(w, r)
-	p.nextOutsideRequest(false)
+	if p.isReplaying {
+		p.nextOutsideRequest(false)
+	}
 }
 
 func (p *Proxy) record(request *Request) {
@@ -345,7 +354,12 @@ func NewTemplateData(none, recording, replaying, inspecting bool) TemplateData {
 		Recordings:     ListRecordings(),
 		Volumes:        ListVolumesSnapshots(),
 	}
+}
 
+type TemplateEvent struct {
+	IsRequest bool
+	Request   Request
+	Log       LogEntry
 }
 
 //go:embed templates/main.html
@@ -461,8 +475,22 @@ func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-time.After(time.Duration(1) * time.Second):
 			p.mu.Lock()
-			err := t.Execute(w, p.recording)
+			events := []TemplateEvent{}
+			i := 0
+			j := 0
+			for i < len(p.recording.Requests) && j < len(p.recording.Logs) {
+				r := p.recording.Requests[i]
+				l := p.recording.Logs[j]
+				if r.Timestamp.Before(l.Timestamp) {
+					events = append(events, TemplateEvent{IsRequest: true, Request: *r})
+					i += 1
+				} else {
+					events = append(events, TemplateEvent{Log: l})
+					j += 1
+				}
+			}
 			p.mu.Unlock()
+			err := t.Execute(w, events)
 			flusher.Flush()
 			if err != nil {
 				log.Println(err)
@@ -472,4 +500,20 @@ func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+}
+
+func (p *Proxy) LogHandler(w http.ResponseWriter, r *http.Request) {
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println("log:", string(data))
+	msg := LogEntry{}
+	err = json.Unmarshal(data, &msg)
+	if err != nil {
+		log.Println(err)
+	}
+	p.mu.Lock()
+	p.recording.Logs = append(p.recording.Logs, msg)
+	p.mu.Unlock()
 }

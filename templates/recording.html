@@ -5,10 +5,17 @@
 			<th>To</th>
 		</tr>
 	</thead>
-	{{range .Requests}}
+	{{range .}}
+	{{if .IsRequest}}
 	<tr>
-		<td>{{.FromName}}</td>
-		<td>{{.To}}</td>
+		<td>{{.Request.FromName}}</td>
+		<td>{{.Request.To}}</td>
 	</tr>
+	{{else}}
+	<tr>
+		<td>{{.Log.ContainerName}}</td>
+		<td>{{.Log.Message}}</td>
+	</tr>
+	{{end}}
 	{{end}}
 </table>
