@@ -25,20 +25,20 @@ import (
 )
 
 type Proxy struct {
-	mu              sync.Mutex
-	hostNames       map[string]string
-	isRecording     bool
-	isReplaying     bool
-	blockPercentage int
-	recording       Recording
-	replayingFrom   Recording
-	replayTimer     *time.Timer
+	mu            sync.Mutex
+	hostNames     map[string]string
+	isRecording   bool
+	isReplaying   bool
+	blockConfig   BlockConfig
+	recording     Recording
+	replayingFrom Recording
+	replayTimer   *time.Timer
 }
 
 type Recording struct {
 	Requests []*Request `json:"requests"`
-	Logs     []LogEntry
-	Volumes  string `json:"volumes"`
+	Logs     []LogEntry `json:"logs"`
+	Volumes  string     `json:"volumes"`
 }
 
 type LogEntry struct {
@@ -57,10 +57,18 @@ func (r *Recording) getStream(streamIdentifier string) []*Request {
 	return ret
 }
 
+type BlockConfig struct {
+	Mode         string     `json:"mode"`
+	Partitions   [][]string `json:"partitions"`
+	Percentage   int        `json:"percentage"`
+	previousMode string
+}
+
 type Request struct {
 	From             string      `json:"from"`
 	FromName         string      `json:"from_name"`
 	To               string      `json:"to"`
+	ToName           string      `json:"to_name"`
 	StreamIdentifier string      `json:"stream_identifier"`
 	Method           string      `json:"method"`
 	Timestamp        time.Time   `json:"timestamp"`
@@ -73,13 +81,7 @@ type Request struct {
 	seen             bool        `json:"-"`
 }
 
-func (p *Proxy) Block(request *Request) bool {
-	if p.isRecording {
-		return rand.Float32() < float32(p.blockPercentage)/100
-	} else if !p.isReplaying {
-		return false
-	}
-
+func (p *Proxy) replayBlock(request *Request) bool {
 	recording := p.recording.getStream(request.StreamIdentifier)
 	replayingFrom := p.replayingFrom.getStream(request.StreamIdentifier)
 
@@ -113,6 +115,20 @@ func (p *Proxy) Block(request *Request) bool {
 		return bestMatch.Blocked
 	}
 	log.Println("WE ARE SEEING MORE REQUESTS FOR THIS STREAM THAN IN THE ORIGINAL RECORDING")
+	return false
+}
+
+func (p *Proxy) Block(request *Request) bool {
+	switch p.blockConfig.Mode {
+	case "none":
+		return false
+	case "random":
+		return rand.Float32() < float32(p.blockConfig.Percentage)/100
+	case "partitions":
+		return p.checkPartitions(request)
+	case "replay":
+		return p.replayBlock(request)
+	}
 	return false
 }
 
@@ -174,6 +190,24 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	if p.isReplaying {
 		p.nextOutsideRequest(false)
 	}
+}
+
+func (p *Proxy) checkPartitions(request *Request) bool {
+	for _, partition := range p.blockConfig.Partitions {
+		from := false
+		to := false
+		for _, node := range partition {
+			if node == request.FromName {
+				from = true
+			} else if node == request.ToName {
+				to = true
+			}
+		}
+		if from && to {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *Proxy) record(request *Request) {
@@ -299,6 +333,7 @@ func (p *Proxy) EndReplay() {
 	}
 	p.writeRecording()
 	p.isReplaying = false
+	p.blockConfig.Mode = p.blockConfig.previousMode
 	p.replayTimer = nil
 	p.mu.Unlock()
 	log.Println("replay finished")
@@ -370,19 +405,42 @@ var recordingTemplate string
 
 func (p *Proxy) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
-	if p.isRecording {
+	if p.isReplaying {
 		p.replayTimer.Stop()
 		p.replayTimer = nil
 		p.isReplaying = false
 		log.Println("replay canceled")
 	}
 	p.recording = Recording{Requests: []*Request{}}
+
 	p.mu.Unlock()
 	t := template.New("main")
 	t.Parse(mainTemplate)
 	err := t.Execute(w, NewTemplateData(true, false, false, false))
 	if err != nil {
 		log.Println(err)
+	}
+}
+
+func (p *Proxy) BlockConfigHandler(w http.ResponseWriter, r *http.Request) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.isReplaying {
+		return
+	}
+	if mode := r.FormValue("mode"); mode != "" {
+		p.blockConfig.previousMode = p.blockConfig.Mode
+		p.blockConfig.Mode = mode
+	}
+	if partitions := r.FormValue("partitions"); partitions != "" {
+		parts := [][]string{}
+		json.Unmarshal([]byte(partitions), &parts)
+		p.blockConfig.Partitions = parts
+	}
+	if percentage := r.FormValue("percentage"); percentage != "" {
+		if i, err := strconv.Atoi(percentage); err == nil {
+			p.blockConfig.Percentage = i
+		}
 	}
 }
 
@@ -453,6 +511,8 @@ func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 	p.isReplaying = true
+	p.blockConfig.previousMode = p.blockConfig.Mode
+	p.blockConfig.Mode = "replay"
 	p.replayTimer = time.AfterFunc(time.Duration(3)*time.Second, p.EndReplay)
 	p.mu.Unlock()
 	t := template.New("main")

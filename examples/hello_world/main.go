@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -9,8 +10,8 @@ import (
 
 func main() {
 	router := http.NewServeMux()
-	router.HandleFunc("/", handle)
-	router.HandleFunc("/hello", proxy)
+	router.HandleFunc("/hello", handle)
+	router.HandleFunc("/", proxy)
 
 	srv := &http.Server{
 		Handler:      router,
@@ -22,20 +23,24 @@ func main() {
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {
+	log.Println("target hello world")
 	w.Write([]byte("Hello World!"))
 }
 
 func proxy(w http.ResponseWriter, r *http.Request) {
+	log.Println("target proxy")
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	res, err := http.Get("https://ditm:81/hello")
+	res, err := http.Get("http://target2:80/hello")
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	log.Println(res.Status)
-	x := []byte{}
-	i, err := res.Body.Read(x)
-	log.Println(i, err, string(x))
+	x, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusBadGateway)
+		return
+	}
 	w.Write(x)
 }

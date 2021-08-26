@@ -33,6 +33,7 @@ func main() {
 	r.Path("/start_replay").HandlerFunc(proxy.StartReplayHandler)
 	r.Path("/save_volumes").HandlerFunc(proxy.SaveVolumesHandler)
 	r.Path("/load_volumes").HandlerFunc(proxy.LoadVolumesHandler)
+	r.Path("/block_config").HandlerFunc(proxy.BlockConfigHandler)
 	apiSrv := &http.Server{
 		Handler: r,
 		Addr:    ":80",
@@ -50,15 +51,17 @@ func InitProxy() *Proxy {
 		hostNames:     map[string]string{},
 		recording:     Recording{Requests: []*Request{}},
 		replayingFrom: Recording{Requests: []*Request{}},
+		blockConfig:   BlockConfig{},
 	}
 
 	blockPercentage, err := strconv.Atoi(os.Getenv("BLOCK_PERCENTAGE"))
 	if err != nil {
 		panic(err)
 	}
-	proxy.blockPercentage = blockPercentage
+	proxy.blockConfig.Percentage = blockPercentage
 
 	hostNames := strings.Split(os.Getenv("CONTAINER_HOST_NAMES"), ",")
+	proxy.blockConfig.Partitions = [][]string{hostNames}
 	for _, name := range hostNames {
 		addrs, err := net.DefaultResolver.LookupHost(context.Background(), name)
 		if err != nil {
