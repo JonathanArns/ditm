@@ -29,6 +29,7 @@ type Proxy struct {
 	hostNames     map[string]string
 	isRecording   bool
 	isReplaying   bool
+	isInspecting  bool
 	blockConfig   BlockConfig
 	recording     Recording
 	replayingFrom Recording
@@ -378,16 +379,19 @@ type TemplateData struct {
 	ModeInspecting bool
 	Recordings     []int
 	Volumes        []int
+	Partitions     string
 }
 
-func NewTemplateData(none, recording, replaying, inspecting bool) TemplateData {
+func (p *Proxy) NewTemplateData() TemplateData {
+	partitions, _ := json.Marshal(p.blockConfig.Partitions)
 	return TemplateData{
-		ModeDefault:    none,
-		ModeRecording:  recording,
-		ModeReplaying:  replaying,
-		ModeInspecting: inspecting,
+		ModeDefault:    !p.isRecording && !p.isReplaying && !p.isInspecting,
+		ModeRecording:  p.isRecording,
+		ModeReplaying:  p.isReplaying,
+		ModeInspecting: p.isInspecting,
 		Recordings:     ListRecordings(),
 		Volumes:        ListVolumesSnapshots(),
+		Partitions:     string(partitions),
 	}
 }
 
@@ -416,7 +420,7 @@ func (p *Proxy) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Unlock()
 	t := template.New("main")
 	t.Parse(mainTemplate)
-	err := t.Execute(w, NewTemplateData(true, false, false, false))
+	err := t.Execute(w, p.NewTemplateData())
 	if err != nil {
 		log.Println(err)
 	}
@@ -442,17 +446,24 @@ func (p *Proxy) BlockConfigHandler(w http.ResponseWriter, r *http.Request) {
 			p.blockConfig.Percentage = i
 		}
 	}
+	t := template.New("main")
+	t.Parse(mainTemplate)
+	err := t.Execute(w, p.NewTemplateData())
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func (p *Proxy) StartRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.isRecording = true
+	p.isInspecting = false
 	p.recording = Recording{Requests: []*Request{}}
 	p.replayingFrom = Recording{Requests: []*Request{}}
 	t := template.New("main")
 	t.Parse(mainTemplate)
-	t.Execute(w, NewTemplateData(false, true, false, false))
+	t.Execute(w, p.NewTemplateData())
 }
 
 func (p *Proxy) EndRecordingHandler(w http.ResponseWriter, r *http.Request) {
@@ -463,9 +474,10 @@ func (p *Proxy) EndRecordingHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 	p.recording = Recording{Requests: []*Request{}}
+	p.isRecording = false
 	t := template.New("main")
 	t.Parse(mainTemplate)
-	t.Execute(w, NewTemplateData(true, false, false, false))
+	t.Execute(w, p.NewTemplateData())
 }
 
 func (p *Proxy) SaveVolumesHandler(w http.ResponseWriter, r *http.Request) {
@@ -477,7 +489,7 @@ func (p *Proxy) SaveVolumesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	t := template.New("main")
 	t.Parse(mainTemplate)
-	t.Execute(w, NewTemplateData(true, false, false, false))
+	t.Execute(w, p.NewTemplateData())
 }
 
 func (p *Proxy) LoadVolumesHandler(w http.ResponseWriter, r *http.Request) {
@@ -493,7 +505,7 @@ func (p *Proxy) LoadVolumesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	t := template.New("main")
 	t.Parse(mainTemplate)
-	t.Execute(w, NewTemplateData(true, false, false, false))
+	t.Execute(w, p.NewTemplateData())
 }
 
 func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
@@ -511,13 +523,14 @@ func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 	p.isReplaying = true
+	p.isInspecting = false
 	p.blockConfig.previousMode = p.blockConfig.Mode
 	p.blockConfig.Mode = "replay"
 	p.replayTimer = time.AfterFunc(time.Duration(3)*time.Second, p.EndReplay)
 	p.mu.Unlock()
 	t := template.New("main")
 	t.Parse(mainTemplate)
-	t.Execute(w, NewTemplateData(false, false, true, false))
+	t.Execute(w, p.NewTemplateData())
 	p.nextOutsideRequest(true)
 }
 

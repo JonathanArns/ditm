@@ -1,53 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" integrity="sha384-KyZXEAg3QhqLMpG8r+8fhAXLRk2vvoC2f3B09zVXn8CA5QIVfZOJ3BCsw2P0p/We" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css"
+		integrity="sha384-KyZXEAg3QhqLMpG8r+8fhAXLRk2vvoC2f3B09zVXn8CA5QIVfZOJ3BCsw2P0p/We" crossorigin="anonymous">
 	<title>ditm</title>
 </head>
+
 <body>
-	<h1>ditm</h1>
-	<ul class="nav justify-content-center">
-		{{if .ModeDefault}}
-			<a class="nav-link" href="/start_recording">Start Recording</a>
-			<a class="nav-link" href="/stop_recording">Stop Recoring</a>
-			<a class="nav-link" href="/save_volumes">Save Volumes</a>
-		{{end}}
-		{{if .ModeRecording}}
-			<a class="nav-link" href="/stop_recording">Stop Recoring</a>
-		{{end}}
-		{{if .ModeReplaying}}
-			<a class="nav-link" href="/">Cancel Replay</a>
-		{{end}}
-		{{if .ModeInspecting}}
-			<a class="nav-link" href="/">Home</a>
-			<a class="nav-link" href="/start_recording">Start Recording</a>
-			<a class="nav-link" href="/stop_recording">Stop Recoring</a>
-			<a class="nav-link" href="/save_volumes">Save Volumes</a>
-		{{end}}
-	</ul>
-	{{range .Recordings}}
-		<a href="/start_replay?id={{.}}">Start Replay {{.}}</a>
-		<a href="/load_recording?id={{.}}">Show Replay {{.}}</a>
-	{{end}}
-	{{range .Volumes}}
-		<a href="/load_volumes?id={{.}}">Load Volumes {{.}}</a>
-	{{end}}
-	<div id="table_container" class="container"></div>
+	<div class="container">
+		<h1>ditm</h1>
+
+		<ul class="nav nav-tabs" role="tablist">
+			<li class="nav-item" role="presentation">
+				<button class="nav-link active" data-bs-toggle="tab" role="tab" aria-controls="home"
+					aria-selected="true" data-bs-target="#home">Home</button>
+			</li>
+			<li class="nav-item" role="presentation">
+				<button class="nav-link" data-bs-toggle="tab" role="tab" aria-controls="recordings"
+					aria-selected="false" data-bs-target="#recordings">Recordings</button>
+			</li>
+			<li class="nav-item" role="presentation">
+				<button class="nav-link" data-bs-toggle="tab" role="tab" aria-controls="volumes" aria-selected="false"
+					data-bs-target="#volumes">Volumes</button>
+			</li>
+			<li class="nav-item" role="presentation">
+				<button class="nav-link" data-bs-toggle="tab" role="tab" aria-controls="partitions"
+					aria-selected="false" data-bs-target="#partitions">Partitions</button>
+			</li>
+		</ul>
+
+		<div class="tab-content">
+			<div id="home" class="tab-pane fade show active" role="tabpanel">
+				<h3>HOME</h3>
+				{{if .ModeDefault}}
+				<a class="btn btn-primary" href="/start_recording">Start Recording</a>
+				<a class="btn btn-primary" href="/save_volumes">Save Volumes</a>
+				{{end}}
+				{{if .ModeInspecting}}
+				<a class="btn btn-primary" href="/start_recording">Start Recording</a>
+				<a class="btn btn-primary" href="/save_volumes">Save Volumes</a>
+				{{end}}
+				{{if .ModeRecording}}
+				<a class="btn btn-primary" href="/stop_recording">Stop Recoring</a>
+				{{end}}
+				{{if .ModeReplaying}}
+				<a class="btn btn-primary" href="/">Cancel Replay</a>
+				{{end}}
+				<div id="table_container"></div>
+			</div>
+
+			<div id="recordings" class="tab-pane fade" role="tabpanel">
+				<h3>Recording Menu</h3>
+				<table class="table">
+					<thead>
+						<tr>
+							<th scope="col">ID</th>
+							<th scope="col">Show</th>
+							<th scope="col">Start</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{range .Recordings}}
+						<tr>
+							<td>{{.}}</td>
+							<td><a href="/load_recording?id={{.}}">Show</a></td>
+							<td><a href="/start_replay?id={{.}}">Start</a></td>
+						</tr>
+						{{end}}
+					</tbody>
+				</table>
+			</div>
+
+			<div id="volumes" class="tab-pane fade" role="tabpanel">
+				<h3>Volume Menu</h3>
+				<table class="table">
+					<thead>
+						<tr>
+							<th scope="col">ID</th>
+							<th scope="col">Load</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{range .Volumes}}
+						<tr>
+							<td>{{.}}</td>
+							<td><a href="/load_volumes?id={{.}}">Load Volumes {{.}}</a></td>
+						</tr>
+						{{end}}
+					</tbody>
+				</table>
+			</div>
+
+			<div id="partitions" class="tab-pane fade" role="tabpanel">
+				<h3>Partition Menu</h3>
+				<form action="/block_config">
+					<select name="mode" class="form-select">
+						<option value="random">random</option>
+						<option value="partitions">partitions</option>
+					</select>
+					<input type="text" name="partitions" class="form-control" value="{{.Partitions}}" />
+					<button type="submit" class="btn btn-primary">Submit</button>
+				</form>
+			</div>
+		</div>
+	</div>
+
 	<script>
 		let context = {{.}}
 		let source = new EventSource("/live_updates")
-		source.onopen = function(e) {
+		source.onopen = function (e) {
 			console.log("open")
 		}
-		source.onerror = function(e) {
+		source.onerror = function (e) {
 			console.log("error")
 		}
-		source.onmessage = function(e) {
+		source.onmessage = function (e) {
 			document.getElementById("table_container").innerHTML = e.data
 		}
 	</script>
-	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-U1DAWAznBHeqEIlVSCgzq+c9gqGAJn5c/t99JyeKa9xxaYpSvHU5awsuZVVFIhvj" crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"
+		integrity="sha384-U1DAWAznBHeqEIlVSCgzq+c9gqGAJn5c/t99JyeKa9xxaYpSvHU5awsuZVVFIhvj"
+		crossorigin="anonymous"></script>
 </body>
+
 </html>
