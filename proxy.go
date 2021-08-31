@@ -62,6 +62,7 @@ type BlockConfig struct {
 	Mode         string     `json:"mode"`
 	Partitions   [][]string `json:"partitions"`
 	Percentage   int        `json:"percentage"`
+	timesUsed    int
 	previousMode string
 }
 
@@ -76,13 +77,14 @@ type Request struct {
 	BodyLength       int         `json:"body_length"`
 	TLS              bool        `json:"tls"`
 	Blocked          bool        `json:"blocked"`
+	BlockedResponse  bool        `json:"blocked_response"`
 	FromOutside      bool        `json:"from_outside"`
 	Body             []byte      `json:"body"`
 	Header           http.Header `json:"header"`
 	seen             bool        `json:"-"`
 }
 
-func (p *Proxy) replayBlock(request *Request) bool {
+func (p *Proxy) replayBlock(request *Request) (bool, bool) {
 	recording := p.recording.getStream(request.StreamIdentifier)
 	replayingFrom := p.replayingFrom.getStream(request.StreamIdentifier)
 
@@ -113,24 +115,28 @@ func (p *Proxy) replayBlock(request *Request) bool {
 	}
 	if bestMatch != nil {
 		bestMatch.seen = true
-		return bestMatch.Blocked
+		return bestMatch.Blocked, bestMatch.BlockedResponse
 	}
-	log.Println("WE ARE SEEING MORE REQUESTS FOR THIS STREAM THAN IN THE ORIGINAL RECORDING")
-	return false
+	// log.Println("WE ARE SEEING MORE REQUESTS FOR THIS STREAM THAN IN THE ORIGINAL RECORDING")
+	return false, false
 }
 
-func (p *Proxy) Block(request *Request) bool {
+func (p *Proxy) Block(r *Request) (request bool, response bool) {
 	switch p.blockConfig.Mode {
 	case "none":
-		return false
+		break
 	case "random":
-		return rand.Float32() < float32(p.blockConfig.Percentage)/100
+		request = rand.Float32() < float32(p.blockConfig.Percentage)/100
+		if !request {
+			response = rand.Float32() < float32(p.blockConfig.Percentage)/100
+		}
+		return request, response
 	case "partitions":
-		return p.checkPartitions(request)
+		return p.checkPartitions(r), false
 	case "replay":
-		return p.replayBlock(request)
+		return p.replayBlock(r)
 	}
-	return false
+	return false, false
 }
 
 // This is where all the proxy requests are handled.
@@ -172,7 +178,7 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	request.StreamIdentifier = request.FromName + "->" + request.To
 
-	request.Blocked = p.Block(request)
+	request.Blocked, request.BlockedResponse = p.Block(request)
 	p.record(request)
 	if request.Blocked {
 		panic("We want to block this request")
@@ -187,6 +193,11 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	proxy := httputil.NewSingleHostReverseProxy(remoteHost)
+	if request.BlockedResponse {
+		proxy.ModifyResponse = func(r *http.Response) error {
+			panic("We want to block this response")
+		}
+	}
 	proxy.ServeHTTP(w, r)
 	if p.isReplaying {
 		p.nextOutsideRequest(false)
