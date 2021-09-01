@@ -46,8 +46,9 @@ func hello(w http.ResponseWriter, r *http.Request) {
 }
 
 func InitProxy() *Proxy {
+	m := &sync.Mutex{}
 	proxy := &Proxy{
-		mu:            sync.Mutex{},
+		mu:            m,
 		hostNames:     map[string]string{},
 		recording:     Recording{Requests: []*Request{}},
 		replayingFrom: Recording{Requests: []*Request{}},

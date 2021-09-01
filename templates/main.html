@@ -49,7 +49,17 @@
 				{{if .ModeReplaying}}
 				<a class="btn btn-primary" href="/">Cancel Replay</a>
 				{{end}}
-				<div id="table_container"></div>
+				<div id="table_container">
+					<table class="table" id="event_table">
+						<thead>
+							<tr>
+								<th>Timestamp</th>
+								<th>From</th>
+								<th>To</th>
+							</tr>
+						</thead>
+					</table>
+				</div>
 			</div>
 
 			<div id="recordings" class="tab-pane fade" role="tabpanel">
@@ -109,7 +119,28 @@
 	</div>
 
 	<script>
-		let context = {{.}}
+		function sortEventTable() {
+			var table, rows, switching, i, x, y, shouldSwitch;
+			table = document.getElementById("event_table");
+			switching = true;
+			while (switching) {
+				switching = false;
+				rows = table.rows;
+				for (i = 1; i < (rows.length - 1); i++) {
+					shouldSwitch = false;
+					x = rows[i].getElementsByTagName("td")[0];
+					y = rows[i + 1].getElementsByTagName("td")[0];
+					if (Date(x.innerHTML) < Date(y.innerHTML)) {
+						shouldSwitch = true;
+						break;
+					}
+				}
+				if (shouldSwitch) {
+					rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+					switching = true;
+				}
+			}
+		}
 		let source = new EventSource("/live_updates")
 		source.onopen = function (e) {
 			console.log("open")
@@ -118,7 +149,8 @@
 			console.log("error")
 		}
 		source.onmessage = function (e) {
-			document.getElementById("table_container").innerHTML = e.data
+			document.getElementById("event_table").innerHTML += e.data
+			sortEventTable()
 		}
 	</script>
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"

@@ -25,7 +25,7 @@ import (
 )
 
 type Proxy struct {
-	mu            sync.Mutex
+	mu            *sync.Mutex
 	hostNames     map[string]string
 	isRecording   bool
 	isReplaying   bool
@@ -222,6 +222,7 @@ func (p *Proxy) checkPartitions(request *Request) bool {
 	return false
 }
 
+// p.mu has to be locked when calling record
 func (p *Proxy) record(request *Request) {
 	p.recording.Requests = append(p.recording.Requests, request)
 }
@@ -555,31 +556,35 @@ func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	flusher := w.(http.Flusher)
+	writtenRequests := 0
+	writtenLogs := 0
+	var event TemplateEvent
 	for {
 		select {
-		case <-time.After(time.Duration(1) * time.Second):
+		case <-time.After(1 * time.Second):
 			p.mu.Lock()
-			events := []TemplateEvent{}
-			i := 0
-			j := 0
-			for i < len(p.recording.Requests) && j < len(p.recording.Logs) {
-				r := p.recording.Requests[i]
-				l := p.recording.Logs[j]
-				if r.Timestamp.Before(l.Timestamp) {
-					events = append(events, TemplateEvent{IsRequest: true, Request: *r})
-					i += 1
-				} else {
-					events = append(events, TemplateEvent{Log: l})
-					j += 1
+			event.IsRequest = false
+			for writtenLogs < len(p.recording.Logs) {
+				event.Log = p.recording.Logs[writtenLogs]
+				err := t.Execute(w, event)
+				if err != nil {
+					log.Println(err)
+					return
 				}
+				writtenLogs += 1
+			}
+			event.IsRequest = true
+			for writtenRequests < len(p.recording.Requests) {
+				event.Request = *p.recording.Requests[writtenRequests]
+				err := t.Execute(w, event)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				writtenRequests += 1
 			}
 			p.mu.Unlock()
-			err := t.Execute(w, events)
 			flusher.Flush()
-			if err != nil {
-				log.Println(err)
-				return
-			}
 		case <-ctx.Done():
 			return
 		}

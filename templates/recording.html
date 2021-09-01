@@ -1,21 +1,13 @@
-<table class="table">
-	<thead>
-		<tr>
-			<th>From</th>
-			<th>To</th>
-		</tr>
-	</thead>
-	{{range .}}
-	{{if .IsRequest}}
-	<tr>
-		<td>{{.Request.FromName}}</td>
-		<td>{{.Request.To}}</td>
-	</tr>
-	{{else}}
-	<tr>
-		<td>{{.Log.ContainerName}}</td>
-		<td>{{.Log.Message}}</td>
-	</tr>
-	{{end}}
-	{{end}}
-</table>
+{{if .IsRequest}}
+<tr>
+	<td>{{.Request.Timestamp}}</td>
+	<td>{{.Request.FromName}}</td>
+	<td>{{.Request.To}}</td>
+</tr>
+{{else}}
+<tr>
+	<td>{{.Log.Timestamp}}</td>
+	<td>{{.Log.ContainerName}}</td>
+	<td>{{.Log.Message}}</td>
+</tr>
+{{end}}
