@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/KonstantinGasser/ditm/examples/service_b/internal/ports"
+	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_b/internal/ports"
 )
 
 type service struct {

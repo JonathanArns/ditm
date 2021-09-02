@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/KonstantinGasser/ditm/examples/service_b/pkg/helper"
+	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_b/pkg/helper"
 )
 
 func WithLogging(next http.Handler) http.Handler {

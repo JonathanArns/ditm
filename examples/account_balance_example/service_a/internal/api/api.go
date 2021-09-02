@@ -3,8 +3,8 @@ package api
 import (
 	"net/http"
 
-	middelware "github.com/KonstantinGasser/ditm/examples/service_b/internal/api/middleware"
-	"github.com/KonstantinGasser/ditm/examples/service_b/internal/ports"
+	middelware "github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/api/middleware"
+	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/ports"
 	"github.com/gorilla/mux"
 )
 
@@ -29,7 +29,7 @@ func New(router *mux.Router, querySvc ports.QuerySvc, commandSvc ports.CommandSv
 }
 
 func (api ApiServer) setUp() {
-	api.router.HandleFunc("/api/account", api.HandlerCreateAccount).Methods("PUT")
+	api.router.HandleFunc("/api/account", api.HandleCreateAccount).Methods("PUT")
 	api.router.HandleFunc("/api/account/{id:[0-9]+}", api.HandlerGet).Methods("GET")
 	api.router.HandleFunc("/api/account/deposit", api.HandlerDeposit).Methods("POST")
 	api.router.HandleFunc("/api/account/withdraw", nil).Methods("POST")
