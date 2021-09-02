@@ -120,28 +120,6 @@
 	</div>
 
 	<script>
-		function sortEventTable() {
-			var table, rows, switching, i, x, y, shouldSwitch;
-			table = document.getElementById("event_table");
-			switching = true;
-			while (switching) {
-				switching = false;
-				rows = table.rows;
-				for (i = 1; i < (rows.length - 1); i++) {
-					shouldSwitch = false;
-					x = rows[i].getElementsByTagName("td")[0];
-					y = rows[i + 1].getElementsByTagName("td")[0];
-					if (Date(x.innerHTML) < Date(y.innerHTML)) {
-						shouldSwitch = true;
-						break;
-					}
-				}
-				if (shouldSwitch) {
-					rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-					switching = true;
-				}
-			}
-		}
 		let source = new EventSource("/live_updates")
 		source.onopen = function (e) {
 			console.log("open")
@@ -150,13 +128,31 @@
 			console.log("error")
 		}
 		source.onmessage = function (e) {
-			document.getElementById("event_table").innerHTML += e.data
-			sortEventTable()
+			let table = document.getElementById("event_table")
+			let rows = table.rows
+			console.log(rows)
+			let newRow = document.createElement("tr")
+			newRow.innerHTML = e.data
+			let timestamp = newRow.getElementsByTagName("td")[0].innerHTML
+			var i
+			for (i = 1; i < rows.length; i++) {
+				if (rows[i].getElementsByTagName("td")[0].innerHTML > timestamp) {
+					table.insertBefore(newRow, rows[i])
+					return
+				}
+			}
+			table.appendChild(newRow)
 		}
 	</script>
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"
 		integrity="sha384-U1DAWAznBHeqEIlVSCgzq+c9gqGAJn5c/t99JyeKa9xxaYpSvHU5awsuZVVFIhvj"
 		crossorigin="anonymous"></script>
 </body>
+
+<style>
+	#event_table td:nth-child(1) {
+		font-family: monospace;
+	}
+</style>
 
 </html>

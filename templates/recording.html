@@ -1,13 +1,9 @@
 {{if .IsRequest}}
-<tr>
-	<td>{{.Request.Timestamp}}</td>
-	<td>{{.Request.FromName}}</td>
-	<td>{{.Request.To}}</td>
-</tr>
+<td>{{.Request.Timestamp.Format "15:04:05.000000"}}</td>
+<td>{{.Request.FromName}}</td>
+<td>{{.Request.To}}</td>
 {{else}}
-<tr>
-	<td>{{.Log.Timestamp}}</td>
-	<td>{{.Log.ContainerName}}</td>
-	<td>{{.Log.Message}}</td>
-</tr>
+<td>{{.Log.Timestamp.Format "15:04:05.000000"}}</td>
+<td>{{.Log.ContainerName}}</td>
+<td>{{.Log.Message}}</td>
 {{end}}
