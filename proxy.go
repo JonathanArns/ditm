@@ -179,7 +179,9 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	request.StreamIdentifier = request.FromName + "->" + request.To
 
 	request.Blocked, request.BlockedResponse = p.Block(request)
-	p.record(request)
+	if !p.isInspecting {
+		p.record(request)
+	}
 	if request.Blocked {
 		panic("We want to block this request")
 	}
@@ -299,20 +301,22 @@ func (p *Proxy) ResetReplayTimer() {
 // If alwaysSend is true, the next unseen request is always sent,
 // even if there are unseen requests from inside are before it.
 func (p *Proxy) nextOutsideRequest(alwaysSend bool) {
-	log.Println("next outside")
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	for _, request := range p.replayingFrom.Requests {
-		log.Println(*request)
 		if !request.seen && request.FromOutside {
 			request.seen = true
+			p.mu.Unlock()
 			_, err := send(request)
 			if err != nil {
 				log.Println(err)
 			}
 			r := *request // make a copy of request, to record it with new timestamp
 			r.Timestamp = time.Now()
+			p.mu.Lock()
 			p.record(&r)
+			return
 		} else if !alwaysSend && !request.seen {
-			log.Println("Fuck")
 			return // exit because we need to see some other requests first
 		}
 	}
@@ -428,11 +432,39 @@ func (p *Proxy) HomeHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("replay canceled")
 	}
 	p.recording = Recording{Requests: []*Request{}}
+	p.isInspecting = false
 
 	p.mu.Unlock()
 	t := template.New("main")
 	t.Parse(mainTemplate)
 	err := t.Execute(w, p.NewTemplateData())
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func (p *Proxy) InspectHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.FormValue("id")
+	recording, err := loadRecording(id)
+	if err != nil {
+		w.WriteHeader(404)
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.isReplaying {
+		p.replayTimer.Stop()
+		p.replayTimer = nil
+		p.isReplaying = false
+		log.Println("replay canceled")
+	}
+	p.isRecording = false
+	p.isInspecting = true
+	p.recording = *recording
+
+	t := template.New("main")
+	t.Parse(mainTemplate)
+	err = t.Execute(w, p.NewTemplateData())
 	if err != nil {
 		log.Println(err)
 	}
@@ -603,6 +635,8 @@ func (p *Proxy) LogHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 	p.mu.Lock()
-	p.recording.Logs = append(p.recording.Logs, msg)
+	if !p.isInspecting {
+		p.recording.Logs = append(p.recording.Logs, msg)
+	}
 	p.mu.Unlock()
 }

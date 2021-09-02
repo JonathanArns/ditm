@@ -30,6 +30,7 @@ func main() {
 	r.Path("/live_updates").HandlerFunc(proxy.LiveUpdatesHandler)
 	r.Path("/start_recording").HandlerFunc(proxy.StartRecordingHandler)
 	r.Path("/end_recording").HandlerFunc(proxy.EndRecordingHandler)
+	r.Path("/load_recording").HandlerFunc(proxy.InspectHandler)
 	r.Path("/start_replay").HandlerFunc(proxy.StartReplayHandler)
 	r.Path("/save_volumes").HandlerFunc(proxy.SaveVolumesHandler)
 	r.Path("/load_volumes").HandlerFunc(proxy.LoadVolumesHandler)
