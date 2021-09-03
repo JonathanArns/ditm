@@ -137,7 +137,7 @@ func (p *Proxy) Block(r *Request) (request bool, response bool) {
 		}
 		return request, response
 	case "partitions":
-		return p.checkPartitions(r), false
+		return !p.checkPartitions(r), false
 	case "replay":
 		return p.replayBlock(r)
 	}
@@ -211,6 +211,7 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// returns true when the request is allowed by the current partitions
 func (p *Proxy) checkPartitions(request *Request) bool {
 	for _, partition := range p.blockConfig.Partitions {
 		from := false
@@ -229,6 +230,7 @@ func (p *Proxy) checkPartitions(request *Request) bool {
 	return false
 }
 
+// appends a request to the current recording
 // p.mu has to be locked when calling record
 func (p *Proxy) record(request *Request) {
 	p.recording.Requests = append(p.recording.Requests, request)
