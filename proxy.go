@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"log"
@@ -34,6 +35,7 @@ type Proxy struct {
 	recording     Recording
 	replayingFrom Recording
 	replayTimer   *time.Timer
+	lastSavedId   int
 }
 
 type Recording struct {
@@ -122,6 +124,9 @@ func (p *Proxy) replayBlock(request *Request) (bool, bool) {
 }
 
 func (p *Proxy) Block(r *Request) (request bool, response bool) {
+	if r.FromOutside {
+		return false, false
+	}
 	switch p.blockConfig.Mode {
 	case "none":
 		break
@@ -182,10 +187,10 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	if !p.isInspecting {
 		p.record(request)
 	}
+	p.mu.Unlock()
 	if request.Blocked {
 		panic("We want to block this request")
 	}
-	p.mu.Unlock()
 
 	// proxy the request
 	remoteHost, err := url.Parse(proto + r.URL.Host)
@@ -231,6 +236,7 @@ func (p *Proxy) record(request *Request) {
 
 func (p *Proxy) writeRecording() (int, error) {
 	filename, fileId := newFilePath("/recordings/", ".json")
+	p.lastSavedId = fileId
 	bytes, err := json.MarshalIndent(p.recording, "", " ")
 	if err != nil {
 		return 0, err
@@ -389,25 +395,33 @@ func latestVolumes() string {
 }
 
 type TemplateData struct {
-	ModeDefault    bool
-	ModeRecording  bool
-	ModeReplaying  bool
-	ModeInspecting bool
-	Recordings     []int
-	Volumes        []int
-	Partitions     string
+	ModeDefault     bool
+	ModeRecording   bool
+	ModeReplaying   bool
+	ModeInspecting  bool
+	Recordings      []int
+	Volumes         []int
+	Partitions      string
+	Percentage      int
+	BlockNone       bool
+	BlockPartitions bool
+	BlockRandom     bool
 }
 
 func (p *Proxy) NewTemplateData() TemplateData {
 	partitions, _ := json.Marshal(p.blockConfig.Partitions)
 	return TemplateData{
-		ModeDefault:    !p.isRecording && !p.isReplaying && !p.isInspecting,
-		ModeRecording:  p.isRecording,
-		ModeReplaying:  p.isReplaying,
-		ModeInspecting: p.isInspecting,
-		Recordings:     ListRecordings(),
-		Volumes:        ListVolumesSnapshots(),
-		Partitions:     string(partitions),
+		ModeDefault:     !p.isRecording && !p.isReplaying && !p.isInspecting,
+		ModeRecording:   p.isRecording,
+		ModeReplaying:   p.isReplaying,
+		ModeInspecting:  p.isInspecting,
+		Recordings:      ListRecordings(),
+		Volumes:         ListVolumesSnapshots(),
+		Partitions:      string(partitions),
+		Percentage:      p.blockConfig.Percentage,
+		BlockNone:       p.blockConfig.Mode == "none",
+		BlockPartitions: p.blockConfig.Mode == "partitions",
+		BlockRandom:     p.blockConfig.Mode == "random",
 	}
 }
 
@@ -588,6 +602,7 @@ func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	flusher := w.(http.Flusher)
+	isReplaying := p.isReplaying
 	writtenRequests := 0
 	writtenLogs := 0
 	var event TemplateEvent
@@ -595,6 +610,12 @@ func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-time.After(1 * time.Second):
 			p.mu.Lock()
+			if isReplaying != p.isReplaying {
+				w.Write([]byte(fmt.Sprintf("event: finished\ndata: %v\n\n", p.lastSavedId)))
+				flusher.Flush()
+				p.mu.Unlock()
+				return
+			}
 			event.IsRequest = false
 			for writtenLogs < len(p.recording.Logs) {
 				event.Log = p.recording.Logs[writtenLogs]

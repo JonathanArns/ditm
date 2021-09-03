@@ -2,8 +2,9 @@
 <td>{{.Request.Timestamp.Format "15:04:05.000000"}}</td>
 <td>{{.Request.FromName}}</td>
 <td>{{.Request.To}}</td>
+<td>{{if .Request.Blocked}}-\-&gt{{else}}{{if .Request.BlockedResponse}}&lt-\-{{else}}&lt--&gt{{end}}{{end}}</td>
 {{else}}
 <td>{{.Log.Timestamp.Format "15:04:05.000000"}}</td>
 <td>{{.Log.ContainerName}}</td>
-<td>{{.Log.Message}}</td>
+<td colspan="2">{{.Log.Message}}</td>
 {{end}}

@@ -45,7 +45,7 @@
 				<a class="btn btn-primary" href="/">Back to live</a>
 				{{end}}
 				{{if .ModeRecording}}
-				<a class="btn btn-primary" href="/stop_recording">Stop Recoring</a>
+				<a class="btn btn-primary" href="/end_recording">End Recoring</a>
 				{{end}}
 				{{if .ModeReplaying}}
 				<a class="btn btn-primary" href="/">Cancel Replay</a>
@@ -57,6 +57,7 @@
 								<th>Timestamp</th>
 								<th>From</th>
 								<th>To</th>
+								<th>Flow</th>
 							</tr>
 						</thead>
 					</table>
@@ -109,10 +110,12 @@
 				<h3>Partition Menu</h3>
 				<form action="/block_config">
 					<select name="mode" class="form-select">
-						<option value="random">random</option>
-						<option value="partitions">partitions</option>
+						<option value="none" {{if .BlockNone}}selected{{end}}>none</option>
+						<option value="random" {{if .BlockRandom}}selected{{end}}>random</option>
+						<option value="partitions" {{if .BlockPartitions}}selected{{end}}>partitions</option>
 					</select>
 					<input type="text" name="partitions" class="form-control" value="{{.Partitions}}" />
+					<input type="number" name="percentage" class="form-control" value="{{.Percentage}}" />
 					<button type="submit" class="btn btn-primary">Submit</button>
 				</form>
 			</div>
@@ -121,16 +124,14 @@
 
 	<script>
 		let source = new EventSource("/live_updates")
-		source.onopen = function (e) {
-			console.log("open")
-		}
-		source.onerror = function (e) {
-			console.log("error")
-		}
+		source.addEventListener("finished", function (e) {
+			this.close()
+			url = location.href
+			location = url.substring(0, url.indexOf("/", 10)) + '/load_recording?id=' + e.data
+		})
 		source.onmessage = function (e) {
 			let table = document.getElementById("event_table")
 			let rows = table.rows
-			console.log(rows)
 			let newRow = document.createElement("tr")
 			newRow.innerHTML = e.data
 			let timestamp = newRow.getElementsByTagName("td")[0].innerHTML
