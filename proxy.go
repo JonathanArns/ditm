@@ -654,7 +654,6 @@ func (p *Proxy) LogHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 	}
-	log.Println("log:", string(data))
 	msg := LogEntry{}
 	err = json.Unmarshal(data, &msg)
 	if err != nil {
