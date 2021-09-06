@@ -152,11 +152,14 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	p.ResetReplayTimer()
 
 	var proto string
-	body, err := io.ReadAll(r.Body)
+	var buf bytes.Buffer
+	tee := io.TeeReader(r.Body, &buf)
+	body, err := io.ReadAll(tee)
 	if err != nil {
 		w.WriteHeader(http.StatusBadGateway)
 		return
 	}
+	r.Body = io.NopCloser(&buf)
 	request := &Request{
 		From:       r.RemoteAddr,
 		To:         r.URL.String(),
