@@ -8,6 +8,9 @@
 # Test binary, built with `go test -c`
 *.test
 
+# Swapfiles
+*.swp
+
 ditm
 env/
 volumes/
