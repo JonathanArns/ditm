@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  ditm:
+    image: ditm
+    container_name: ab-ditm
+    hostname: ditm
+    environment:
+      CONTAINER_HOST_NAMES: target-a,target-b
+      BLOCK_PERCENTAGE: 30
+    volumes:
+      - ./volumes/volumes:/volumes
+      - ./volumes/recordings:/recordings
+      - ./volumes/snapshots:/snapshots
+    ports:
+      - "8000:80"
+      - "5000:5000"
+    depends_on:
+      - target-a
+      - target-b
+  
+  target-a:
+    image: account-balance-a
+    container_name: ab-target-a
+    hostname: target-a
+    ports:
+      - "8080:80"
+    environment: 
+      - HTTP_PROXY=ditm:5000
+    logging:
+      driver: jonathanarns/http-log-driver
+      options:
+        endpoint: http://localhost:8000/log
+
+  target-b:
+    image: account-balance-b
+    container_name: ab-target-b
+    hostname: target-b
+    ports:
+      - "8081:80"
+    environment: 
+      - HTTP_PROXY=ditm:5000
+    logging:
+      driver: jonathanarns/http-log-driver
+      options:
+        endpoint: http://localhost:8000/log
+
