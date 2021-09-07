@@ -7,7 +7,6 @@ services:
     hostname: ditm
     environment:
       CONTAINER_HOST_NAMES: raft1,raft2,raft3
-      BLOCK_PERCENTAGE: 30
     volumes:
       - ./volumes/volumes:/volumes
       - ./volumes/recordings:/recordings

@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -53,14 +52,8 @@ func InitProxy() *Proxy {
 		hostNames:     map[string]string{},
 		recording:     Recording{Requests: []*Request{}},
 		replayingFrom: Recording{Requests: []*Request{}},
-		blockConfig:   BlockConfig{},
+		blockConfig:   BlockConfig{Percentage: 50},
 	}
-
-	blockPercentage, err := strconv.Atoi(os.Getenv("BLOCK_PERCENTAGE"))
-	if err != nil {
-		panic(err)
-	}
-	proxy.blockConfig.Percentage = blockPercentage
 
 	hostNames := strings.Split(os.Getenv("CONTAINER_HOST_NAMES"), ",")
 	proxy.blockConfig.Partitions = [][]string{hostNames}
