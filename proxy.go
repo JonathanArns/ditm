@@ -7,7 +7,6 @@ import (
 	"errors"
 	"io"
 	"log"
-	"math"
 	"math/rand"
 	"net"
 	"net/http"
@@ -87,32 +86,7 @@ type Request struct {
 func (p *Proxy) replayBlock(request *Request) (bool, bool) {
 	recording := p.recording.getStream(request.StreamIdentifier)
 	replayingFrom := p.replayingFrom.getStream(request.StreamIdentifier)
-
-	highScore := -math.MaxFloat64
-	var bestMatch *Request
-	faktor := float64(len(replayingFrom)) // a faktor to relativize constant score components
-	log.Println(recording)
-	log.Println(replayingFrom)
-	for i, r := range replayingFrom {
-		// TODO: this doesn't work at all right now
-		if r.seen || r.FromOutside {
-			continue
-		}
-		if i == len(recording) {
-			log.Println("hello")
-			bestMatch = r
-			break
-		}
-		score := 0.0
-		score -= math.Abs(float64(i - len(recording)))
-		if r.To == request.To {
-			score += 1 * faktor
-		}
-		if score > highScore {
-			highScore = score
-			bestMatch = r
-		}
-	}
+	bestMatch := defaultMatcher(request, len(recording), replayingFrom)
 	if bestMatch != nil {
 		bestMatch.seen = true
 		return bestMatch.Blocked, bestMatch.BlockedResponse
