@@ -1,0 +1,104 @@
+\documentclass{report}
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[english,ngerman]{babel}
+\usepackage[backend=biber,
+            sorting=none,   % Keine Sortierung
+            doi=true,       % DOI anzeigen
+            isbn=true,      % ISBN nicht anzeigen
+            url=true,       % URLs anzeigen
+            maxnames=6,     % Ab 6 Autoren et al. verwenden
+            minnames=1,     % und nur den ersten Autor angeben
+            style=numeric-comp,]{biblatex}
+\addbibresource{literatur.bib}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Erzeugung, Aufzeichnung und Wiedergabe von Netzwerk-Unterbrechungen in einer Testumgebung für verteilte Systeme}
+
+
+\author{Jonathan Arns
+	\textit{Hochschule Mannheim} \\
+	Fakultät für Informatik\\
+	Paul-Wittsack-Str. 10\\
+	68163 Mannheim\\
+	jonathan.arns@stud.hs-mannheim.de
+}
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Document beginning %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{abstract}
+	Das ist das abstract, das werde ich wohl am Ende schreiben.
+\end{abstract}
+
+
+\chapter{Einleitung}
+
+\chapter{Grundlagen}
+
+\chapter{State of the Art}
+\cite{debugging_distributed_systems_2016}
+\section{Chaos Testing}
+\cite{why_is_random_testing_effective}
+\section{Jepsen}
+
+\chapter{Systembeschreibung}
+Dieses Kapitel beschreibt die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelte System ditm.
+\section{Anforderungen}
+ditm verfolgt in erster Linie das Ziel, das in dieser Arbeit behandelte Konzept zur Erzeugung und Reproduktion von Netzwerk-Unterbrechungen
+zu untersuchen. Dementsprechend gehört zu den nicht funktionalen Anforderungen des Systems auch die Umsetzung des konkreten Konzepts,
+einen Proxy zur Umsetzung der Kernfunktionalität zu verwenden.
+
+\begin{table}[]
+	\begin{tabular}{|l|l|p{7cm}|}
+		\hline
+		ID   & Anforderung                   & Beschreibung                                                                                                                                                                                                          \\ \hline
+		FA1  & Netzwerk Unterbrechungen      & Das System soll kontrolliert Netzwerk-Unterbrechungen zwischen Knoten des zu testenden Systems erzeugen können.                                                                                                       \\ \hline
+		FA2  & Aufzeichnung                  & Das System soll den gesamten Netzwerkverkehr des zu testenden Systems aufzeichenen können. Insbesondere sollen auch erzeugte Netzwerk-Unterbrechungen aufgezeichnet werden.                                           \\ \hline
+		FA3  & Replay                        & Das System soll anhand einer durch das System erstellten Aufzeichnung die Situation in der Aufzeichnung am laufenden Testsystem wiederherstellen und vor allem inklusive Netzwerk-Unterbrechungen wiedergeben können. \\ \hline
+		FA4  & Zufällige Unterbrechungen     & Das System soll Netwerk-Unterbrechungen zufällig erzeugen können.                                                                                                                                                     \\ \hline
+		FA5  & Kontrollierte Unterbrechungen & Das System soll dem Nutzer die Möglichkeit geben, Netwerk-Unterbrechungen konkret zu steuern.                                                                                                                         \\ \hline
+		FA6  & Log Aggregation               & Das System soll zusätzlich zum Netzwerkverkehr auch die Log ausgaben des zu testenden Systems aufzeichnen und aggregieren können.                                                                                     \\ \hline
+		FA7  & Log Matching                  & Das System soll die aufgezeichneten Nachrichten und Logs in chronologischer Reihenfolge gemeinsam anzeigen können.                                                                                                    \\ \hline
+		FA8  & Volume Snapshots              & Das System soll für zustandsbehaftete Systeme Snapshots der Docker Volumes erstellen und zu einem späteren Zeitpunk wiederherstellen können.                                                                          \\ \hline
+		FA9  & Nachrichten von außen         & Das System soll dem Nutzer Schnittstelle bieten, über die Nachrichten reproduzierbar von außen in das zu testende System gesendet werden können, um Prozesse im zu testenden System anzustoßen.                       \\ \hline
+		FA10 & Responses Blocken             & Das System soll in der Lage sein, nicht nur Requests auf dem Hinweg zum Server zu blockieren, sondern optional auch erst die Antwort auf dem Rückweg.                                                                 \\ \hline
+	\end{tabular}
+\end{table}
+
+\begin{table}[]
+	\begin{tabular}{|l|l|p{7cm}|}
+		\hline
+		ID   & Anforderung              & Beschreibung                                                                                                                                                                                                  \\ \hline
+		NFA1 & Portabilität             & Das System soll vollständig in Docker lauffähig sein und mittlels docker-compose konfigurierbar sein.                                                                                                         \\ \hline
+		NFA2 & Proxy Architektur        & Umsetzung des Konzepts, einen Proxy zur erzeugung etc von Partitionen zu verwenden                                                                                                                            \\ \hline
+		NFA3 & HTTP                     & Das System soll mit HTTP als Netzwerkprotokoll Arbeiten und grundlegend alle verteilten Systeme, die ausschließlich über HTTP kommunizieren und die Umgebungsvariable HTTP\_PROXY respektieren, unterstützen. \\ \hline
+		NFA4 & Deterministische Replays & In der Wiedergabe einer Aufzeichnung sollen immer genau die Teile des Netzwerkverkehrs geblockt werden, die auch in der Aufzeichnung vom System geblockt wurden. Nicht mehr, nicht weniger und keine anderen. \\ \hline
+		NFA5 & Usability                & Das System soll einfach über eine graphische Oberfläche bedienbar sein.                                                                                                                                       \\ \hline
+		NFA6 & Echtzeit                 & Requests und Logs einer laufenden Aufzeichnung sollen in Echtzeicht angezeigt werden.                                                                                                                         \\ \hline
+		NFA7 & Default Test System      & Das zu testenden System sollte für den Test nicht angepasst werden müssen.                                                                                                                                    \\ \hline
+	\end{tabular}
+\end{table}
+
+\section{Architektur}
+ditm besteht aus einem
+\section{Implementierung}
+
+\chapter{Evaluation}
+
+\chapter{Ergebnis}
+
+\chapter{Future Work}
+
+\chapter{Fazit}
+
+\printbibliography
+
+\end{document}
