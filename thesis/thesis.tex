@@ -17,6 +17,7 @@
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
 \begin{document}
 
 \title{Erzeugung, Aufzeichnung und Wiedergabe von Netzwerk-Unterbrechungen in einer Testumgebung für verteilte Systeme}
@@ -32,6 +33,8 @@
 
 \maketitle
 
+\tableofcontents
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Document beginning %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{abstract}
@@ -42,26 +45,46 @@
 \chapter{Einleitung}
 
 \chapter{Grundlagen}
+\section{Verteilte Systeme}
+\subsection{Partition Tolerance}
+\subsection{CAP}
+\subsection{Verteilter Consens}
+\section{Docker}
+\section{Proxy}
 
 \chapter{State of the Art}
 \cite{debugging_distributed_systems_2016}
+\section{Tracing}
 \section{Chaos Testing}
 \cite{why_is_random_testing_effective}
 \section{Jepsen}
 
 \chapter{Systembeschreibung}
-Dieses Kapitel beschreibt die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelte System ditm.
+Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
+\section{Idee}
+Die grundlegende Idee dieser Arbeit ist ein Tool, welches nach Record and Replay Prinzip beim Debugging von Bugs im Zusammenhang
+mit Netwerk-Unterbrechungen in verteilten Systemen helfen soll. Mit Hilfe eines solchen Tools sollen Netwerk-Unterbrechungen
+während Test Durchläufen simuliert werden. Das Tool soll außerdem diese Test Durchläufe aufzeichnen und zum späteren Zeitpunkt
+wieder abspielen können, insbesondere mit den gleichen Netzwerk-Bedingungen wie während der Aufzeichnung.
+
+Der Kern der Arbeit ist dabei speziell der verfolgte Ansatz für ein solches System. Dieser ist, alle Nachrichten innerhalb eines
+verteilten Systems über einen Proxy zu leiten, der diese inklusive Metadaten aufzeichnet und in der Lage ist, kontrolliert
+Netwerk-Unterbrechungen zu simulieren, indem einzelne Nachrichten geblockt, bzw. nicht weiter geleitet, werden.
+Mit diesem Aufbau soll dann auch ein Replay der Netzwerk-Bedingungen anhand eines zuvor durch den Proxy aufgezeichneten
+Test Durchlaufs möglich sein, sofern der Proxy in der Lage ist, während des Replays für jeden erhaltenen Request zu identifizieren,
+welchem Request aus der Aufzeichnung er jeweils zuzuordnen ist. Zudem muss der Proxy Requests, die in der Aufzeichnung von
+außerhalb des Systems kamen, identifizieren und während des Replays zum richtigen Zeitpunkt selbstständig in das System senden.
+
 \section{Anforderungen}
-ditm verfolgt in erster Linie das Ziel, das in dieser Arbeit behandelte Konzept zur Erzeugung und Reproduktion von Netzwerk-Unterbrechungen
-zu untersuchen. Dementsprechend gehört zu den nicht funktionalen Anforderungen des Systems auch die Umsetzung des konkreten Konzepts,
-einen Proxy zur Umsetzung der Kernfunktionalität zu verwenden.
+ditm ist ein Prototyp, der primär dem Zweck dient, die zuvor beschriebene Idee zu verfizieren.
+Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstützten Netwerk-Protokolle auf HTTP beschränkt sind.
 
 \begin{table}[]
 	\begin{tabular}{|l|l|p{7cm}|}
 		\hline
 		ID   & Anforderung                   & Beschreibung                                                                                                                                                                                                          \\ \hline
 		FA1  & Netzwerk Unterbrechungen      & Das System soll kontrolliert Netzwerk-Unterbrechungen zwischen Knoten des zu testenden Systems erzeugen können.                                                                                                       \\ \hline
-		FA2  & Aufzeichnung                  & Das System soll den gesamten Netzwerkverkehr des zu testenden Systems aufzeichenen können. Insbesondere sollen auch erzeugte Netzwerk-Unterbrechungen aufgezeichnet werden.                                           \\ \hline
+		FA2  & Aufzeichnung                  & Das System soll den gesamten Netzwerkverkehr des zu testenden Systems aufzeichnen können. Insbesondere sollen auch erzeugte Netzwerk-Unterbrechungen aufgezeichnet werden.                                           \\ \hline
 		FA3  & Replay                        & Das System soll anhand einer durch das System erstellten Aufzeichnung die Situation in der Aufzeichnung am laufenden Testsystem wiederherstellen und vor allem inklusive Netzwerk-Unterbrechungen wiedergeben können. \\ \hline
 		FA4  & Zufällige Unterbrechungen     & Das System soll Netwerk-Unterbrechungen zufällig erzeugen können.                                                                                                                                                     \\ \hline
 		FA5  & Kontrollierte Unterbrechungen & Das System soll dem Nutzer die Möglichkeit geben, Netwerk-Unterbrechungen konkret zu steuern.                                                                                                                         \\ \hline
@@ -88,10 +111,36 @@ einen Proxy zur Umsetzung der Kernfunktionalität zu verwenden.
 \end{table}
 
 \section{Architektur}
-ditm besteht aus einem
+Das Herzstück des Systems ist entsprechend der Idee ein eigens entwickelter HTTP Proxy, welcher den Netzwerk-Verkehr in
+einem verteilten System aufzeichnen und Nachrichten wahlweise nicht weiter leiten kann. Dieser Proxy läuft in einem
+Docker Container direkt neben dem SUT und hängt im gleichen Docker Netzwerk.
+\subsection{Datenmodell}
+Das Datenmodell von ditm ist einfach gehalten. Das Top Level Datenobjekt ist das Recording, dieses enthält zwei chronologisch
+geordnete Listen, eine mit den Log Nachrichten des SUT und eine mit den aufgezeichneten Requests. Beide Listen enthalten
+die jeweiligen Objekte für alle Knoten des SUT, ohne diese weiter voneinander zu trennen. Sollte eine gefilterte Liste
+benötigt werden, die nur Objekte für bestimmte Knoten enthält, wird diese dynamisch erzeugt. Recordings enthalten außerdem
+eine Referenz auf einen Volume Snapshot, sofern für das Recording einer existiert.
+Die eigentlichen Request Datenobjekte enthalten neben dem Request Body eine Menge Metadaten, die teilweise vom Request selbst
+stammen und teilweise durch ditm erzeugt wurden, beispielsweise ob der Request geblockt wurde oder nicht.
+Log Nachrichten umfassen neben der eigentlichen Nachricht ebenfalls wichtige Metadaten, wie den Namen des Containers, der die
+Nachricht geloggt hat.
+\subsection{Weg eines Requests}
+\subsection{Frontend ?}
 \section{Implementierung}
-
+Als Programmiersprache wird für die Implementierung auf Go gesetzt. Go bietet sich an, da die Standartbibliothek
+sehr einfache, aber robuste APIs für den Umgang mit Netzwerken bietet und die Sprache insgesamt eine schnelle
+Entwicklungsgeschwindigkeit erlaubt.
+\subsection{Datenspeicherung}
+\subsection{Log Driver}
+Um die Logging Ausgaben des SUT in ditm aggregieren zu können, muss ditm aus seinem Container heraus auf die Logs der
+anderen Container zugreifen. Leider bietet Docker von sich aus keine einfache Möglichkeit dies zu konfigurieren,
+stattdessen muss auf Dockers Plugin API zurück gegriffen werden. Immerhin bietet Docker eine spezielle Plugin API
+für Log Driver, die es ermöglicht Log Nachrichten durch einen eigenen Driver beliebig weiter zu verarbeiten.
+Für ditm wurde ein einfaches Log Driver Plugin entwickelt, welches Nachrichten als HTTP Request an eine beliebige URL
+sendet. ditm selbst bietet in seiner API einen Endpunkt an, welcher diese Log Nachrichten empfangen und verarbeiten kann.
 \chapter{Evaluation}
+\section{Methodik}
+\section{Test Systeme}
 
 \chapter{Ergebnis}
 
