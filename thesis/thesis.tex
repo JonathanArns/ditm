@@ -113,7 +113,8 @@ Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstüt
 \section{Architektur}
 Das Herzstück des Systems ist entsprechend der Idee ein eigens entwickelter HTTP Proxy, welcher den Netzwerk-Verkehr in
 einem verteilten System aufzeichnen und Nachrichten wahlweise nicht weiter leiten kann. Dieser Proxy läuft in einem
-Docker Container direkt neben dem SUT und hängt im gleichen Docker Netzwerk.
+Docker Container direkt neben dem SUT und hängt auch im gleichen Docker Netzwerk wie das SUT. Neben dem Proxy hat
+ditm eine weitere Komponente, ein Docker Log Driver Plugin, welches Container Logs an den Proxy sendet.
 \subsection{Datenmodell}
 Das Datenmodell von ditm ist einfach gehalten. Das Top Level Datenobjekt ist das Recording, dieses enthält zwei chronologisch
 geordnete Listen, eine mit den Log Nachrichten des SUT und eine mit den aufgezeichneten Requests. Beide Listen enthalten
@@ -125,12 +126,52 @@ stammen und teilweise durch ditm erzeugt wurden, beispielsweise ob der Request g
 Log Nachrichten umfassen neben der eigentlichen Nachricht ebenfalls wichtige Metadaten, wie den Namen des Containers, der die
 Nachricht geloggt hat.
 \subsection{Weg eines Requests}
+Um eine konkrete Vorstellung von der Arbeitsweise des Proxys zu vermitteln, wird im folgenden beispielhaft der Weg eines
+Requests durch das System beschrieben. In diesem Kontext wird der Ursprung des Requests als Client und das Ziel des
+Requests als Server bezeichnet, beide sind Knoten des SUT. Abb. X stellt zunächst den groben Ablauf auf Systemebene dar.
+Wichtig ist zu bemerken, dass der Proxy bereits beim ersten erhalten des Requests die komplette Analyse durchführt und
+nicht nur entscheidet, ob der Request geblockt werden soll, sondern die Entscheidung auch direkt für die Response trifft,
+ohne die Response jemals gesehen zu haben. Tatsächlich wird die Response gar nicht von ditm betrachtet, stattdessen wird
+die Analyse vollständig am Request durchgeführt. Die einzige Interaktion des Proxys mit der Response ist, diese zu blocken,
+falls vorher festgelegt oder sie ansonsten direkt weiter zu leiten.
+Der Grund dafür ist, dass fast alle für ditm relevanten Metadaten bereits aus dem Request abgeleitet werden können. Zwar
+könnten die Länge der Response und die Response Header möglicherweise ebenfalls von Interesse sein, der Tradeoff wird
+hier aber in Kauf genommen, da das die Implementierung erheblich vereinfacht und auch so genügend Metadaten vorliegen,
+um verschiedene Ansätze zur Entscheidung, ob im Replay geblockt werden soll, zu evaluieren.
+% aktivitäts diagramm Abb. X
+
+Diese Logik zur Entscheidung, ob ein Request, bzw. eine Response, geblockt werden soll, ist das Kernstück des Proxys,
+welches es ermöglicht, Aufzeichnungen zuverlässig wiederzugeben. Das Problem lässt sich darauf herunterbrechen, den
+Request im ursprünglichen Recording zu identifizieren, dem der zu analysierende Request entspricht, da sich der Proxy
+während eines Replays identisch zur Aufnahme verhalten soll. Sie stützt sich auf die gesammlten Metadaten zum
+jeweiligen Request, die im Datenmodell dargestellt sind. Der StreamIdentifier ist von besonderer Bedeutung, er dient
+dazu, den Stream aus allen Requests, die der Proxy erhält, in kleinere Streams zu unterteilen, so dass Requests nicht mehr mit
+allen anderen Requests verglichen werden müssen, sondern nur noch denen im gleichen Stream. Der erste Schritt in der
+Logik ist somit immer, die gesamte Menge an Requests nach dem StreamIdentifier des aktuellen Requests zu filtern.
+Der StreamIdentifier wird zusammengesetzt aus den Namen des Clients und des Servers für den jeweiligen Request, ein
+Stream stellt also den gesamten Verkehr zwischen genau zwei Knoten des SUT dar. Ein solcher Stream wird sowohl für
+das Recording erstellt, von welchem das Replay durchgeführt wird, als auch für das Recording des Replays selbst.
+
+Danach wird die 
+Der Stream des ursprünglichen Recordings, dem Index des Requests im neuen Recording und dem Request selbst wird
+
 \subsection{Frontend ?}
+ditm bietet dem Nutzer eine Web Oberfläche, in der laufende, sowie vergangene, Aufzeichnungen tabellarisch
+visualisiert werden können. Des weiteren ist der Proxy vollständig über die GUI kontrollierbar.
+Events einer laufenden Aufzeichnung werden in Echtzeicht per Server-Sent-Events Schnittstelle an das Frontend
+gesendet und dort dargestellt.
 \section{Implementierung}
 Als Programmiersprache wird für die Implementierung auf Go gesetzt. Go bietet sich an, da die Standartbibliothek
 sehr einfache, aber robuste APIs für den Umgang mit Netzwerken bietet und die Sprache insgesamt eine schnelle
 Entwicklungsgeschwindigkeit erlaubt.
 \subsection{Datenspeicherung}
+Als Speicherformat für ditm wurden einfache Dateien in JSON Format gewählt. So wird jedes Recording Datenobjekt in
+einer eigenen Datei serialisiert gespeichert. Dieses Format wurde einer Datenbank aus mehreren Gründen vorgezogen.
+Zum einen wird Dateispeicher sowieso für die Volume Snapshots benötigt, die als Zip Dateien gespeichert werden,
+es spart also an Komplexität für den Prototypen, für die restlichen Daten ein ähnliches Speichermodel zu wählen.
+Zum anderen bieten Dateien den Vorteil, dass der Nutzer die Möglichkeit hat, diese selbst einzeln zu verwalten.
+Es ist dem Nutzer also möglich, die Dateien einer einzelnen Aufzeichnung und des zugehörigen Snapshots getrennt
+zu sichern oder einfach mit anderen Nutzern über einen generischen Filesharing Dienst zu teilen.
 \subsection{Log Driver}
 Um die Logging Ausgaben des SUT in ditm aggregieren zu können, muss ditm aus seinem Container heraus auf die Logs der
 anderen Container zugreifen. Leider bietet Docker von sich aus keine einfache Möglichkeit dies zu konfigurieren,
