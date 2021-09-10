@@ -2,9 +2,6 @@ package main
 
 import (
 	"bytes"
-	_ "embed"
-	"encoding/json"
-	"errors"
 	"io"
 	"log"
 	"math/rand"
@@ -12,14 +9,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
-	"sort"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
-
-	"github.com/mholt/archiver/v3"
 )
 
 type Proxy struct {
@@ -74,7 +65,6 @@ type Request struct {
 	Method           string      `json:"method"`
 	Timestamp        time.Time   `json:"timestamp"`
 	BodyLength       int         `json:"body_length"`
-	TLS              bool        `json:"tls"`
 	Blocked          bool        `json:"blocked"`
 	BlockedResponse  bool        `json:"blocked_response"`
 	FromOutside      bool        `json:"from_outside"`
@@ -123,7 +113,6 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
 	p.ResetReplayTimer()
 
-	var proto string
 	var buf bytes.Buffer
 	tee := io.TeeReader(r.Body, &buf)
 	body, err := io.ReadAll(tee)
@@ -139,13 +128,6 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 		Body:       body,
 		Method:     r.Method,
 		Timestamp:  time.Now(),
-	}
-	if r.TLS == nil {
-		request.TLS = false
-		proto = "http://"
-	} else {
-		request.TLS = true
-		proto = "https://"
 	}
 
 	// perform reverse lookup
@@ -168,7 +150,7 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// proxy the request
-	remoteHost, err := url.Parse(proto + r.URL.Host)
+	remoteHost, err := url.Parse("http://" + r.URL.Host)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusBadGateway)
@@ -209,67 +191,6 @@ func (p *Proxy) checkPartitions(request *Request) bool {
 // p.mu has to be locked when calling record
 func (p *Proxy) record(request *Request) {
 	p.recording.Requests = append(p.recording.Requests, request)
-}
-
-func (p *Proxy) writeRecording() (int, error) {
-	filename, fileId := newFilePath("/recordings/", ".json")
-	p.lastSavedId = fileId
-	bytes, err := json.MarshalIndent(p.recording, "", " ")
-	if err != nil {
-		return 0, err
-	}
-	return fileId, os.WriteFile(filename, bytes, 0b_110110110)
-}
-
-func newFilePath(prefix, postfix string) (string, int) {
-	fileId := 1
-	for {
-		if _, err := os.Stat(prefix + strconv.Itoa(fileId) + postfix); os.IsNotExist(err) {
-			log.Println(fileId)
-			return prefix + strconv.Itoa(fileId) + postfix, fileId
-		}
-		fileId += 1
-	}
-}
-
-func ListFileIDs(dirname, fileext string) []int {
-	ret := sort.IntSlice{}
-	files, err := os.ReadDir(dirname)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, info := range files {
-		if !info.IsDir() {
-			name := strings.Trim(info.Name(), fileext)
-			if id, err := strconv.Atoi(name); err == nil {
-				ret = append(ret, id)
-			}
-		}
-	}
-	ret.Sort()
-	return ret
-}
-
-func ListRecordings() []int {
-	return ListFileIDs("/recordings", ".json")
-}
-
-func ListVolumesSnapshots() []int {
-	return ListFileIDs("/volumes", ".zip")
-}
-
-func loadRecording(id string) (*Recording, error) {
-	filepath := "/recordings/" + id + ".json"
-	bytes, err := os.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-	recording := &Recording{}
-	err = json.Unmarshal(bytes, recording)
-	if err != nil {
-		return nil, err
-	}
-	return recording, nil
 }
 
 func (p *Proxy) ResetReplayTimer() {
@@ -337,36 +258,4 @@ func (p *Proxy) EndReplay() {
 	p.replayTimer = nil
 	p.mu.Unlock()
 	log.Println("replay finished")
-}
-
-func writeVolumes() (int, error) {
-	filename, fileId := newFilePath("/snapshots/", ".zip")
-	err := archiver.Archive([]string{"/volumes"}, filename)
-	return fileId, err
-}
-
-func loadVolumes(id string) error {
-	if id == "" {
-		return errors.New("No Volumes Snapshot")
-	}
-	filepath := "/volumes/" + id + ".zip"
-	err := archiver.Unarchive(filepath, "/volumes")
-	return err
-}
-
-func latestVolumes() string {
-	files, _ := os.ReadDir("/snapshots")
-	latest := 0
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-		name := strings.Trim(file.Name(), ".zip")
-		if id, err := strconv.Atoi(name); err == nil {
-			if id > latest {
-				latest = id
-			}
-		}
-	}
-	return strconv.Itoa(latest)
 }
