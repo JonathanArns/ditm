@@ -58,6 +58,7 @@
 \section{Chaos Testing}
 \cite{why_is_random_testing_effective}
 \section{Jepsen}
+Jepsen ist ein 
 
 \chapter{Systembeschreibung}
 Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
@@ -78,7 +79,7 @@ außerhalb des Systems kamen, identifizieren und während des Replays zum richti
 \section{Anforderungen}
 ditm ist ein Prototyp, der primär dem Zweck dient, die zuvor beschriebene Idee zu verfizieren.
 Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstützten Netwerk-Protokolle auf HTTP beschränkt sind.
-
+\subsection{Funktionale Anforderungen}
 \begin{table}[]
 	\begin{tabular}{|l|l|p{7cm}|}
 		\hline
@@ -96,6 +97,7 @@ Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstüt
 	\end{tabular}
 \end{table}
 
+\subsection{Nicht-Funktionale Anforderungen}
 \begin{table}[]
 	\begin{tabular}{|l|l|p{7cm}|}
 		\hline
@@ -115,7 +117,10 @@ Das Herzstück des Systems ist entsprechend der Idee ein eigens entwickelter HTT
 einem verteilten System aufzeichnen und Nachrichten wahlweise nicht weiter leiten kann. Dieser Proxy läuft in einem
 Docker Container direkt neben dem SUT und hängt auch im gleichen Docker Netzwerk wie das SUT. Neben dem Proxy hat
 ditm eine weitere Komponente, ein Docker Log Driver Plugin, welches Container Logs an den Proxy sendet.
+\subsection{Datenfluss}
+
 \subsection{Datenmodell}
+% Klassendiagramm
 Das Datenmodell von ditm ist einfach gehalten. Das Top Level Datenobjekt ist das Recording, dieses enthält zwei chronologisch
 geordnete Listen, eine mit den Log Nachrichten des SUT und eine mit den aufgezeichneten Requests. Beide Listen enthalten
 die jeweiligen Objekte für alle Knoten des SUT, ohne diese weiter voneinander zu trennen. Sollte eine gefilterte Liste
@@ -126,6 +131,7 @@ stammen und teilweise durch ditm erzeugt wurden, beispielsweise ob der Request g
 Log Nachrichten umfassen neben der eigentlichen Nachricht ebenfalls wichtige Metadaten, wie den Namen des Containers, der die
 Nachricht geloggt hat.
 \subsection{Weg eines Requests}
+% aktivitäts diagramm Abb. X
 Um eine konkrete Vorstellung von der Arbeitsweise des Proxys zu vermitteln, wird im folgenden beispielhaft der Weg eines
 Requests durch das System beschrieben. In diesem Kontext wird der Ursprung des Requests als Client und das Ziel des
 Requests als Server bezeichnet, beide sind Knoten des SUT. Abb. X stellt zunächst den groben Ablauf auf Systemebene dar.
@@ -137,29 +143,9 @@ falls vorher festgelegt oder sie ansonsten direkt weiter zu leiten.
 Der Grund dafür ist, dass fast alle für ditm relevanten Metadaten bereits aus dem Request abgeleitet werden können. Zwar
 könnten die Länge der Response und die Response Header möglicherweise ebenfalls von Interesse sein, der Tradeoff wird
 hier aber in Kauf genommen, da das die Implementierung erheblich vereinfacht und auch so genügend Metadaten vorliegen,
-um verschiedene Ansätze zur Entscheidung, ob im Replay geblockt werden soll, zu evaluieren.
-% aktivitäts diagramm Abb. X
+um verschiedene Ansätze zur Entscheidung, ob ein Reqeust im Replay geblockt werden soll, zu evaluieren.
+Die verschiedenen Ansätze, die diese Arbeit betrachtet, werden in Kap. X Request Matcher behandelt.
 
-Diese Logik zur Entscheidung, ob ein Request, bzw. eine Response, geblockt werden soll, ist das Kernstück des Proxys,
-welches es ermöglicht, Aufzeichnungen zuverlässig wiederzugeben. Das Problem lässt sich darauf herunterbrechen, den
-Request im ursprünglichen Recording zu identifizieren, dem der zu analysierende Request entspricht, da sich der Proxy
-während eines Replays identisch zur Aufnahme verhalten soll. Sie stützt sich auf die gesammlten Metadaten zum
-jeweiligen Request, die im Datenmodell dargestellt sind. Der StreamIdentifier ist von besonderer Bedeutung, er dient
-dazu, den Stream aus allen Requests, die der Proxy erhält, in kleinere Streams zu unterteilen, so dass Requests nicht mehr mit
-allen anderen Requests verglichen werden müssen, sondern nur noch denen im gleichen Stream. Der erste Schritt in der
-Logik ist somit immer, die gesamte Menge an Requests nach dem StreamIdentifier des aktuellen Requests zu filtern.
-Der StreamIdentifier wird zusammengesetzt aus den Namen des Clients und des Servers für den jeweiligen Request, ein
-Stream stellt also den gesamten Verkehr zwischen genau zwei Knoten des SUT dar. Ein solcher Stream wird sowohl für
-das Recording erstellt, von welchem das Replay durchgeführt wird, als auch für das Recording des Replays selbst.
-
-Danach wird die 
-Der Stream des ursprünglichen Recordings, dem Index des Requests im neuen Recording und dem Request selbst wird
-
-\subsection{Frontend ?}
-ditm bietet dem Nutzer eine Web Oberfläche, in der laufende, sowie vergangene, Aufzeichnungen tabellarisch
-visualisiert werden können. Des weiteren ist der Proxy vollständig über die GUI kontrollierbar.
-Events einer laufenden Aufzeichnung werden in Echtzeicht per Server-Sent-Events Schnittstelle an das Frontend
-gesendet und dort dargestellt.
 \section{Implementierung}
 Als Programmiersprache wird für die Implementierung auf Go gesetzt. Go bietet sich an, da die Standartbibliothek
 sehr einfache, aber robuste APIs für den Umgang mit Netzwerken bietet und die Sprache insgesamt eine schnelle
@@ -179,9 +165,64 @@ stattdessen muss auf Dockers Plugin API zurück gegriffen werden. Immerhin biete
 für Log Driver, die es ermöglicht Log Nachrichten durch einen eigenen Driver beliebig weiter zu verarbeiten.
 Für ditm wurde ein einfaches Log Driver Plugin entwickelt, welches Nachrichten als HTTP Request an eine beliebige URL
 sendet. ditm selbst bietet in seiner API einen Endpunkt an, welcher diese Log Nachrichten empfangen und verarbeiten kann.
+\subsection{Frontend}
+Als Frontend bietet ditm dem Nutzer eine Web Oberfläche, in der laufende, sowie vergangene, Aufzeichnungen
+tabellarisch visualisiert werden können. Des weiteren ist der Proxy vollständig über die GUI kontrollierbar.
+Events einer laufenden Aufzeichnung werden in Echtzeicht per Server-Sent-Events Schnittstelle an das Frontend
+gesendet und dort dargestellt.
+Das Frontend selbst ist eine einfache, serverseitig gerenderte, HTML Seite mit dem notwendigen JavaScript Code,
+um SSEs zu empfangen und zu verarbeiten. Die Seite ist mittels Bootstrap gestyled und in Tabs aufgeteilt.
+\subsection{Request Matcher}
+Die Logik zur Entscheidung, ob ein Request, bzw. eine Response, während eines Replays geblockt werden soll,
+ist das Kernstück des Proxys, welches es ermöglicht, Aufzeichnungen zuverlässig wiederzugeben.
+Das Problem lässt sich darauf herunterbrechen, genau den Request im ursprünglichen Recording zu identifizieren,
+dem der aktuelle Request während des Replays entspricht. Das liegt daran, dass sich der Proxy während eines
+Replays immer exact wie während der Aufnahme verhalten soll.
+
+Der erste Schritt dabei, Requests aus Recording und Replay zu matchen, ist immer die Requests sowohl im
+Recording als auch im Replay nach dem StreamIdentifier des aktuellen Requests zu filtern, so dass zwei
+kleinere Request Streams entstehen. Der StreamIdentifier wird zusammengesetzt aus den Namen des Clients
+und des Servers für den jeweiligen Request, ein so gefilterter Stream stellt also den gesamten Verkehr
+zwischen genau zwei Knoten des SUT dar. 
+Der Rest des Matchings ist über ein Single-Method-Interface abstrahiert, um leicht mehrere Implementierungen
+austauschen zu können. Die Methode Match des Interfaces erwartet als Parameter den aktuellen Request,
+dessen Index im gefilterten Stream des Replays und den gesamten gefilterten Stream des Recordings.
+Insgesamt wurden X Implementierungen für das Interface mit verschiedenen Algorithmen erstellt, die im Folgenden
+dargestellt und später gegeneinander evaluiert werden.
+\subsubsection{Matcher 1}
+\subsubsection{Matcher 2}
+\subsubsection{Matcher 3}
+
+\section{Nutzung}
+\subsection{Konfiguration}
+\subsection{Bedienung}
+
 \chapter{Evaluation}
+In diesem Kapitel werden anhand des beschriebenen Prototypen die folgenden Hypothesen untersucht:
+- Wie gut funktionieren Replays von Netwerk-Unterbrechungen über einen Proxy?
+- Wie gut funktioniert die chronologische Ordnung von Log Nachrichten relativ zu Requests?
+- Kann der verfolgte Ansatz hilfreich für einen menschlichen Debugging Prozess sein?
 \section{Methodik}
-\section{Test Systeme}
+\section{Rekursiv}
+Ziel dieses Szenarios ist es, die Grenzen von ditm im Bezug auf die ersten beiden Fragen auszuloten.
+\subsection{Versuchsaufbau}
+Dazu werden in einem Cluster mit nur zwei Knoten von einem Knoten in kurzer Zeit eine große Menge an
+Requests in semi-zufälliger Reihenfolge an den anderen geschickt. Jeder Request ist eindeutig
+identifizierbar anhand eines einzigartigen Query Parameters aus zwei Zahlen, die in der
+Kombination jeweils nur einmal vorkommen.
+
+Das Experiment wird mehrfach mit leicht unterschiedlichen Konfigurationen durchgeführt, um das Verhalten von ditm
+im Bezug auf verschiedene Request Eigenschaften zu testen.
+\subsection{Ergebnisse}
+\section{Konstostand}
+\subsection{Versuchsaufbau}
+\subsection{Ergebnisse}
+\section{Raft}
+\subsection{Versuchsaufbau}
+\subsection{Ergebnisse}
+\section{Microservices}
+\subsection{Versuchsaufbau}
+\subsection{Ergebnisse}
 
 \chapter{Ergebnis}
 
