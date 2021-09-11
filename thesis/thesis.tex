@@ -58,7 +58,11 @@
 \section{Chaos Testing}
 \cite{why_is_random_testing_effective}
 \section{Jepsen}
-Jepsen ist ein 
+\cite{abstracting_the_geniuses}
+
+Jepsen ist ein Test Tool, welches speziell auf das Verhalten von verteilten Systemen bei Netwerk-Unterbrechungen ausgerichtet ist.
+Jepsen hat sich auf dem Gebiet zu einem Industriestandart für verteilte Datenbanken entwickelt und wird aktiv für Projekte wie
+MongoDB, Couchbase, ScyllaDB, VoltDB, Hazelcast und CockroachDB verwendet und hat in jedem dieser Systeme bereits Bugs aufgedeckt.
 
 \chapter{Systembeschreibung}
 Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
@@ -202,18 +206,27 @@ In diesem Kapitel werden anhand des beschriebenen Prototypen die folgenden Hypot
 - Wie gut funktionieren Replays von Netwerk-Unterbrechungen über einen Proxy?
 - Wie gut funktioniert die chronologische Ordnung von Log Nachrichten relativ zu Requests?
 - Kann der verfolgte Ansatz hilfreich für einen menschlichen Debugging Prozess sein?
-\section{Methodik}
 \section{Rekursiv}
 Ziel dieses Szenarios ist es, die Grenzen von ditm im Bezug auf die ersten beiden Fragen auszuloten.
+Dazu wird mittels sich rekursiv verzweigender Coroutinen eine große Menge an Requests in semi-zufälliger
+Reihenfolge gesendet.
 \subsection{Versuchsaufbau}
-Dazu werden in einem Cluster mit nur zwei Knoten von einem Knoten in kurzer Zeit eine große Menge an
-Requests in semi-zufälliger Reihenfolge an den anderen geschickt. Jeder Request ist eindeutig
-identifizierbar anhand eines einzigartigen Query Parameters aus zwei Zahlen, die in der
-Kombination jeweils nur einmal vorkommen.
+Merke: Versuch ist noch nicht fertig, deshalb fehlen hier Details.
+
+Das Test System ist ein einfacher HTTP Server mit zwei Endpunkten. Einer davon löst die große Menge an
+Requests aus, der andere verarbeitet sie. Es wird für den Versuch also ein Cluster aus zwei identischen
+Knoten verwendet, wovon einer die Rolle eines API Gateways einnimmt und der andere die eines dahinter
+verborgenen Services.
+Die Requests, die der Gateway Knoten versendet, sind eindeutig identifizierbar anhand eines Query Parameters
+aus zwei Zahlen, die in der Kombination jeweils nur einmal vorkommen.
+
 
 Das Experiment wird mehrfach mit leicht unterschiedlichen Konfigurationen durchgeführt, um das Verhalten von ditm
 im Bezug auf verschiedene Request Eigenschaften zu testen.
+Außerdem wird das Experiment mit unterschiedlichen Rekursionstiefen durchgeführt, um die Anzahl an Requests zu
+variieren und somit die Grenzen von ditm im Bezug auf hochfrequente Requests zu untersuchen.
 \subsection{Ergebnisse}
+% Tabelle mit Ergebnissen
 \section{Konstostand}
 \subsection{Versuchsaufbau}
 \subsection{Ergebnisse}
