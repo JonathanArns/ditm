@@ -57,12 +57,18 @@
 \section{Tracing}
 \section{Chaos Testing}
 \cite{why_is_random_testing_effective}
-\section{Jepsen}
+\subsection{Jepsen}
 \cite{abstracting_the_geniuses}
 
-Jepsen ist ein Test Tool, welches speziell auf das Verhalten von verteilten Systemen bei Netwerk-Unterbrechungen ausgerichtet ist.
+Jepsen ist ein Test Tool, welches speziell auf das Verhalten von verteilten Systemen bei Netwerk-Unterbrechungen u.Ä. ausgerichtet ist.
 Jepsen hat sich auf dem Gebiet zu einem Industriestandart für verteilte Datenbanken entwickelt und wird aktiv für Projekte wie
-MongoDB, Couchbase, ScyllaDB, VoltDB, Hazelcast und CockroachDB verwendet und hat in jedem dieser Systeme bereits Bugs aufgedeckt.
+MongoDB, Couchbase, ScyllaDB, VoltDB, Hazelcast und CockroachDB verwendet und hat in jedem dieser Systeme bereits reale Bugs aufgedeckt.
+
+Während eines Tests führt Jepsen auf einem Kontrollknoten eine Reihe von Client Prozessen aus, die Requests an das verteilte System
+senden. Gleichzeitig führt Jepsen mit Hilfe von sog. Nemesis Prozessen verschiedene Fehler in das System ein. Zur Erzeugung von
+Netzwerk-Unterbrechungen verwenden die Nemesis Prozesse Linux Netwerk Tools wie iptables. Neben Netzwerk-Unterbrechungen ist Jepsen in
+der Lage verschiedene andere Fehler zu erzeugen, wie beispielsweise...
+
 
 \chapter{Systembeschreibung}
 Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
