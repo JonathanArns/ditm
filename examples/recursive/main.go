@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -17,6 +18,7 @@ var sum2 int
 
 var peer string
 var sendTimestamp bool
+var sendBody bool
 
 var receive chan struct{}
 var mu sync.Mutex
@@ -25,6 +27,9 @@ func main() {
 	peer = os.Getenv("PEER")
 	if sts := os.Getenv("SEND_TIMESTAMP"); sts == "true" {
 		sendTimestamp = true
+	}
+	if sts := os.Getenv("SEND_BODY"); sts == "true" {
+		sendBody = true
 	}
 	receive = make(chan struct{}, 100)
 	router := http.NewServeMux()
@@ -85,6 +90,8 @@ loop:
 }
 
 func recurse(maxDepth, depth, id int, c chan string) {
+	var err error
+	var res *http.Response
 	if depth < maxDepth {
 		go recurse(maxDepth, depth+1, id|1<<depth, c)
 		go recurse(maxDepth, depth+1, id, c)
@@ -92,11 +99,18 @@ func recurse(maxDepth, depth, id int, c chan string) {
 
 	v := fmt.Sprintf("%v-%v", depth, id)
 	log.Println(v)
-	uri := "http://" + peer + ":80?v=" + v
+	url := "http://" + peer + ":80"
+	uri := url + "?v=" + v
 	if sendTimestamp {
 		uri += "&ts=" + time.Now().Format(time.StampNano)
 	}
-	if res, err := http.Get(uri); err == nil {
+	if sendBody {
+		filler := []string{"abcdef", "abcdefghijklm", "abcdefghijklmopqrstuvw"}[rand.Intn(3)]
+		res, err = http.PostForm(url, map[string][]string{"v": {v}, "filler": {filler}})
+	} else {
+		res, err = http.Get(uri)
+	}
+	if err == nil {
 		data, err := io.ReadAll(res.Body)
 		if err != nil {
 			log.Println(err)

@@ -28,6 +28,7 @@ services:
       - HTTP_PROXY=ditm:5000
       - PEER=target2
       - SEND_TIMESTAMP=false
+      - SEND_BODY=true
     logging:
       driver: jonathanarns/http-log-driver
       options:
@@ -43,6 +44,7 @@ services:
       - HTTP_PROXY=ditm:5000
       - PEER=target
       - SEND_TIMESTAMP=false
+      - SEND_BODY=true
     logging:
       driver: jonathanarns/http-log-driver
       options:
