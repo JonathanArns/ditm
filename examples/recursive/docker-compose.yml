@@ -26,6 +26,8 @@ services:
       - "8080:80"
     environment: 
       - HTTP_PROXY=ditm:5000
+      - PEER=target2
+      - SEND_TIMESTAMP=false
     logging:
       driver: jonathanarns/http-log-driver
       options:
@@ -39,6 +41,8 @@ services:
       - "8081:80"
     environment: 
       - HTTP_PROXY=ditm:5000
+      - PEER=target
+      - SEND_TIMESTAMP=false
     logging:
       driver: jonathanarns/http-log-driver
       options:
