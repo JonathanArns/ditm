@@ -227,7 +227,7 @@ func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 	var event TemplateEvent
 	for {
 		select {
-		case <-time.After(1 * time.Second):
+		case <-time.After(100 * time.Millisecond):
 			p.mu.Lock()
 			if isReplaying != p.isReplaying {
 				w.Write([]byte(fmt.Sprintf("event: finished\ndata: %v\n\n", p.lastSavedId)))
