@@ -25,6 +25,8 @@ type TemplateData struct {
 	BlockNone       bool
 	BlockPartitions bool
 	BlockRandom     bool
+	MatcherDefault  bool
+	MatcherSmart    bool
 }
 
 func (p *Proxy) NewTemplateData() TemplateData {
@@ -41,6 +43,8 @@ func (p *Proxy) NewTemplateData() TemplateData {
 		BlockNone:       p.blockConfig.Mode == "none",
 		BlockPartitions: p.blockConfig.Mode == "partitions",
 		BlockRandom:     p.blockConfig.Mode == "random",
+		MatcherDefault:  p.blockConfig.Matcher == "default",
+		MatcherSmart:    p.blockConfig.Matcher == "smart",
 	}
 }
 
@@ -121,6 +125,16 @@ func (p *Proxy) BlockConfigHandler(w http.ResponseWriter, r *http.Request) {
 	if percentage := r.FormValue("percentage"); percentage != "" {
 		if i, err := strconv.Atoi(percentage); err == nil {
 			p.blockConfig.Percentage = i
+		}
+	}
+	if matcher := r.FormValue("matcher"); matcher != "" {
+		switch matcher {
+		case "default":
+			p.matcher = &defaultMatcher{map[*Request]struct{}{}}
+			p.blockConfig.Matcher = matcher
+		case "smart":
+			p.matcher = &smartMatcher{map[*Request]struct{}{}}
+			p.blockConfig.Matcher = matcher
 		}
 	}
 	t := template.New("main")

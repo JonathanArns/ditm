@@ -52,7 +52,7 @@ func InitProxy() *Proxy {
 		hostNames:     map[string]string{},
 		recording:     Recording{Requests: []*Request{}},
 		replayingFrom: Recording{Requests: []*Request{}},
-		blockConfig:   BlockConfig{Percentage: 50},
+		blockConfig:   BlockConfig{Percentage: 50, Mode: "none", Matcher: "default"},
 	}
 
 	hostNames := strings.Split(os.Getenv("CONTAINER_HOST_NAMES"), ",")

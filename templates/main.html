@@ -114,6 +114,10 @@
 						<option value="random" {{if .BlockRandom}}selected{{end}}>random</option>
 						<option value="partitions" {{if .BlockPartitions}}selected{{end}}>partitions</option>
 					</select>
+					<select name="matcher" class="form-select">
+						<option value="default" {{if .MatcherDefault}}selected{{end}}>default</option>
+						<option value="smart" {{if .MatcherSmart}}selected{{end}}>smart</option>
+					</select>
 					<input type="text" name="partitions" class="form-control" value="{{.Partitions}}" />
 					<input type="number" name="percentage" class="form-control" value="{{.Percentage}}" />
 					<button type="submit" class="btn btn-primary">Submit</button>

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -24,6 +25,7 @@ type Proxy struct {
 	replayingFrom Recording
 	replayTimer   *time.Timer
 	lastSavedId   int
+	matcher       Matcher
 }
 
 type Recording struct {
@@ -52,6 +54,7 @@ type BlockConfig struct {
 	Mode         string     `json:"mode"`
 	Partitions   [][]string `json:"partitions"`
 	Percentage   int        `json:"percentage"`
+	Matcher      string     `json:"matcher"`
 	timesUsed    int
 	previousMode string
 }
@@ -70,18 +73,15 @@ type Request struct {
 	FromOutside      bool        `json:"from_outside"`
 	Body             []byte      `json:"body"`
 	Header           http.Header `json:"header"`
-	seen             bool        `json:"-"`
 }
 
 func (p *Proxy) replayBlock(request *Request) (bool, bool) {
 	recording := p.recording.getStream(request.StreamIdentifier)
 	replayingFrom := p.replayingFrom.getStream(request.StreamIdentifier)
-	bestMatch := defaultMatcher(request, len(recording), replayingFrom)
+	bestMatch := p.matcher.Match(request, len(recording), replayingFrom)
 	if bestMatch != nil {
-		bestMatch.seen = true
 		return bestMatch.Blocked, bestMatch.BlockedResponse
 	}
-	// log.Println("WE ARE SEEING MORE REQUESTS FOR THIS STREAM THAN IN THE ORIGINAL RECORDING")
 	return false, false
 }
 
@@ -124,6 +124,7 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	request := &Request{
 		From:       r.RemoteAddr,
 		To:         r.URL.String(),
+		ToName:     strings.Split(r.URL.Host, ":")[0],
 		BodyLength: len(body),
 		Body:       body,
 		Method:     r.Method,
@@ -138,7 +139,7 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 		request.FromOutside = true
 		request.FromName = "outside"
 	}
-	request.StreamIdentifier = request.FromName + "->" + request.To
+	request.StreamIdentifier = request.FromName + "->" + request.ToName
 
 	request.Blocked, request.BlockedResponse = p.Block(request)
 	if !p.isInspecting {
@@ -208,8 +209,8 @@ func (p *Proxy) nextOutsideRequest(alwaysSend bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for _, request := range p.replayingFrom.Requests {
-		if !request.seen && request.FromOutside {
-			request.seen = true
+		if !p.matcher.Seen(request) && request.FromOutside {
+			p.matcher.MarkSeen(request)
 			p.mu.Unlock()
 			_, err := send(request)
 			if err != nil {
@@ -220,7 +221,7 @@ func (p *Proxy) nextOutsideRequest(alwaysSend bool) {
 			p.mu.Lock()
 			p.record(&r)
 			return
-		} else if !alwaysSend && !request.seen {
+		} else if !alwaysSend && !p.matcher.Seen(request) {
 			return // exit because we need to see some other requests first
 		}
 	}
@@ -245,7 +246,7 @@ func (p *Proxy) EndReplay() {
 	log.Println("end replay")
 	p.mu.Lock()
 	for _, r := range p.replayingFrom.Requests {
-		if !r.seen {
+		if !p.matcher.Seen(r) {
 			p.ResetReplayTimer()
 			p.mu.Unlock()
 			p.nextOutsideRequest(true)
