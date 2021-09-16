@@ -1,10 +1,11 @@
 {{if .IsRequest}}
 <td>{{.Request.Timestamp.Format "15:04:05.000000"}}</td>
 <td>{{.Request.FromName}}</td>
-<td>{{.Request.To}}</td>
+<td>{{.Request.ToName}}</td>
+<td><abbr title="{{string .Request.Body}}">{{abbreviate .Request.Body}}</abbr></td>
 <td>{{if .Request.Blocked}}-\-&gt{{else}}{{if .Request.BlockedResponse}}&lt-\-{{else}}&lt--&gt{{end}}{{end}}</td>
 {{else}}
 <td>{{.Log.Timestamp.Format "15:04:05.000000"}}</td>
 <td>{{.Log.ContainerName}}</td>
-<td colspan="2">{{.Log.Message}}</td>
+<td colspan="3">{{.Log.Message}}</td>
 {{end}}

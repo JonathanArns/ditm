@@ -236,7 +236,18 @@ func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
-	t := template.New("recording")
+	t := template.New("recording").Funcs(template.FuncMap{
+		"abbreviate": func(data []byte) string {
+			str := string(data)
+			if len(str) < 30 {
+				return str
+			}
+			return str[0:30] + "..."
+		},
+		"string": func(data []byte) string {
+			return string(data)
+		},
+	})
 	t.Parse("data: " + strings.ReplaceAll(recordingTemplate, "\n", "") + "\n\n")
 	ctx := r.Context()
 	w.Header().Set("Content-Type", "text/event-stream")
