@@ -14,37 +14,41 @@ import (
 )
 
 type TemplateData struct {
-	ModeDefault     bool
-	ModeRecording   bool
-	ModeReplaying   bool
-	ModeInspecting  bool
-	Recordings      []int
-	Volumes         []int
-	Partitions      string
-	Percentage      int
-	BlockNone       bool
-	BlockPartitions bool
-	BlockRandom     bool
-	MatcherDefault  bool
-	MatcherSmart    bool
+	ModeDefault      bool
+	ModeRecording    bool
+	ModeReplaying    bool
+	ModeInspecting   bool
+	Recordings       []int
+	Volumes          []int
+	Partitions       string
+	Percentage       int
+	BlockNone        bool
+	BlockPartitions  bool
+	BlockRandom      bool
+	MatcherHeuristic bool
+	MatcherExact     bool
+	MatcherMix       bool
+	MatcherCounting  bool
 }
 
 func (p *Proxy) NewTemplateData() TemplateData {
 	partitions, _ := json.Marshal(p.blockConfig.Partitions)
 	return TemplateData{
-		ModeDefault:     !p.isRecording && !p.isReplaying && !p.isInspecting,
-		ModeRecording:   p.isRecording,
-		ModeReplaying:   p.isReplaying,
-		ModeInspecting:  p.isInspecting,
-		Recordings:      ListRecordings(),
-		Volumes:         ListVolumesSnapshots(),
-		Partitions:      string(partitions),
-		Percentage:      p.blockConfig.Percentage,
-		BlockNone:       p.blockConfig.Mode == "none",
-		BlockPartitions: p.blockConfig.Mode == "partitions",
-		BlockRandom:     p.blockConfig.Mode == "random",
-		MatcherDefault:  p.blockConfig.Matcher == "default",
-		MatcherSmart:    p.blockConfig.Matcher == "smart",
+		ModeDefault:      !p.isRecording && !p.isReplaying && !p.isInspecting,
+		ModeRecording:    p.isRecording,
+		ModeReplaying:    p.isReplaying,
+		ModeInspecting:   p.isInspecting,
+		Recordings:       ListRecordings(),
+		Volumes:          ListVolumesSnapshots(),
+		Partitions:       string(partitions),
+		Percentage:       p.blockConfig.Percentage,
+		BlockNone:        p.blockConfig.Mode == "none",
+		BlockPartitions:  p.blockConfig.Mode == "partitions",
+		BlockRandom:      p.blockConfig.Mode == "random",
+		MatcherHeuristic: p.blockConfig.Matcher == "heuristic",
+		MatcherExact:     p.blockConfig.Matcher == "exact",
+		MatcherMix:       p.blockConfig.Matcher == "mix",
+		MatcherCounting:  p.blockConfig.Matcher == "counting",
 	}
 }
 
@@ -129,11 +133,17 @@ func (p *Proxy) BlockConfigHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if matcher := r.FormValue("matcher"); matcher != "" {
 		switch matcher {
-		case "default":
-			p.matcher = &defaultMatcher{map[*Request]struct{}{}}
+		case "heuristic":
+			p.matcher = &heuristicMatcher{map[*Request]struct{}{}}
 			p.blockConfig.Matcher = matcher
-		case "smart":
-			p.matcher = &smartMatcher{map[*Request]struct{}{}}
+		case "exact":
+			p.matcher = &exactMatcher{map[*Request]struct{}{}}
+			p.blockConfig.Matcher = matcher
+		case "mix":
+			p.matcher = &mixMatcher{map[*Request]struct{}{}}
+			p.blockConfig.Matcher = matcher
+		case "counting":
+			p.matcher = &countingMatcher{map[*Request]struct{}{}}
 			p.blockConfig.Matcher = matcher
 		}
 	}

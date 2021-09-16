@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"math"
 )
 
@@ -27,65 +26,46 @@ type Matcher interface {
 	MarkSeen(r *Request)
 }
 
-type defaultMatcher struct {
+type countingMatcher struct {
 	seen map[*Request]struct{}
 }
 
-func (m *defaultMatcher) Seen(r *Request) bool {
+func (m *countingMatcher) Seen(r *Request) bool {
 	_, ok := m.seen[r]
 	return ok
 }
 
-func (m *defaultMatcher) MarkSeen(r *Request) {
+func (m *countingMatcher) MarkSeen(r *Request) {
 	m.seen[r] = struct{}{}
 }
 
-func (m *defaultMatcher) Match(r *Request, i int, rec []*Request) *Request {
-	highScore := -math.MaxFloat64
-	var bestMatch *Request
-	faktor := float64(len(rec))
-	for j, req := range rec {
-		// TODO: this doesn't work so great rn
-		if m.Seen(req) || req.FromOutside {
-			continue
-		}
-		if j == i {
-			log.Println("hello")
-			bestMatch = req
-			break
-		}
-		score := 0.0
-		score -= math.Abs(float64(j - i))
-		if req.To == r.To {
-			score += 1 * faktor
-		}
-		if score > highScore {
-			highScore = score
-			bestMatch = req
-		}
+func (m *countingMatcher) Match(r *Request, i int, rec []*Request) *Request {
+	if i < len(rec) {
+		m.MarkSeen(rec[i])
+		return rec[i]
 	}
-	return bestMatch
+	return nil
 }
 
-type smartMatcher struct {
+type heuristicMatcher struct {
 	seen map[*Request]struct{}
 }
 
-func (m *smartMatcher) Seen(r *Request) bool {
+func (m *heuristicMatcher) Seen(r *Request) bool {
 	_, ok := m.seen[r]
 	return ok
 }
 
-func (m *smartMatcher) MarkSeen(r *Request) {
+func (m *heuristicMatcher) MarkSeen(r *Request) {
 	m.seen[r] = struct{}{}
 }
 
-func (m *smartMatcher) Match(r *Request, i int, rec []*Request) *Request {
+func (m *heuristicMatcher) Match(r *Request, i int, rec []*Request) *Request {
 	highScore := -math.MaxFloat64
 	var bestMatch *Request
 	faktor := float64(len(rec))
 	for j, req := range rec {
-		if m.Seen(req) || req.FromOutside {
+		if m.Seen(req) || req.FromOutside || r.Method != req.Method {
 			continue
 		}
 		score := 0.0
@@ -103,25 +83,69 @@ func (m *smartMatcher) Match(r *Request, i int, rec []*Request) *Request {
 	return bestMatch
 }
 
-type simpleMatcher struct {
+type exactMatcher struct {
 	seen map[*Request]struct{}
 }
 
-func (m *simpleMatcher) Seen(r *Request) bool {
+func (m *exactMatcher) Seen(r *Request) bool {
 	_, ok := m.seen[r]
 	return ok
 }
 
-func (m *simpleMatcher) MarkSeen(r *Request) {
+func (m *exactMatcher) MarkSeen(r *Request) {
 	m.seen[r] = struct{}{}
 }
 
-func (m *simpleMatcher) Match(r *Request, i int, rec []*Request) *Request {
+func (m *exactMatcher) Match(r *Request, i int, rec []*Request) *Request {
 	highScore := -math.MaxFloat64
 	var bestMatch *Request
-	faktor := float64(len(rec))
 	for j, req := range rec {
-		if m.Seen(req) || req.FromOutside {
+		if m.Seen(req) || req.FromOutside || r.Method != req.Method {
+			continue
+		}
+		score := 0.0
+		if i == j {
+			score += 1
+		}
+		if req.To == r.To {
+			score += 1
+		}
+		if len(req.To) == len(r.To) {
+			score += 1
+		}
+		if string(req.Body) == string(r.Body) {
+			score += 1
+		}
+		if len(req.Body) == len(r.Body) {
+			score += 1
+		}
+		if score > highScore {
+			highScore = score
+			bestMatch = req
+		}
+	}
+	return bestMatch
+}
+
+type mixMatcher struct {
+	seen map[*Request]struct{}
+}
+
+func (m *mixMatcher) Seen(r *Request) bool {
+	_, ok := m.seen[r]
+	return ok
+}
+
+func (m *mixMatcher) MarkSeen(r *Request) {
+	m.seen[r] = struct{}{}
+}
+
+func (m *mixMatcher) Match(r *Request, i int, rec []*Request) *Request {
+	highScore := -math.MaxFloat64
+	var bestMatch *Request
+	faktor := float64(len(rec)) / 10
+	for j, req := range rec {
+		if m.Seen(req) || req.FromOutside || r.Method != req.Method {
 			continue
 		}
 		score := 0.0
@@ -129,8 +153,15 @@ func (m *simpleMatcher) Match(r *Request, i int, rec []*Request) *Request {
 		if req.To == r.To {
 			score += 1 * faktor
 		}
-		score -= math.Abs(float64(len(req.To)-len(r.To))) * faktor / 10
-		score -= math.Abs(float64(len(req.Body)-len(r.Body))) * faktor / 10
+		if len(req.To) == len(r.To) {
+			score += 1 * faktor
+		}
+		if string(req.Body) == string(r.Body) {
+			score += 1 * faktor
+		}
+		if len(req.Body) == len(r.Body) {
+			score += 1 * faktor
+		}
 		if score > highScore {
 			highScore = score
 			bestMatch = req

@@ -115,8 +115,10 @@
 						<option value="partitions" {{if .BlockPartitions}}selected{{end}}>partitions</option>
 					</select>
 					<select name="matcher" class="form-select">
-						<option value="default" {{if .MatcherDefault}}selected{{end}}>default</option>
-						<option value="smart" {{if .MatcherSmart}}selected{{end}}>smart</option>
+						<option value="heuristic" {{if .MatcherHeuristic}}selected{{end}}>heuristic</option>
+						<option value="exact" {{if .MatcherExact}}selected{{end}}>exact</option>
+						<option value="mix" {{if .MatcherMix}}selected{{end}}>mix</option>
+						<option value="counting" {{if .MatcherCounting}}selected{{end}}>counting</option>
 					</select>
 					<input type="text" name="partitions" class="form-control" value="{{.Partitions}}" />
 					<input type="number" name="percentage" class="form-control" value="{{.Percentage}}" />
