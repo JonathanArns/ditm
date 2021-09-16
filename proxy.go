@@ -26,6 +26,7 @@ type Proxy struct {
 	replayTimer   *time.Timer
 	lastSavedId   int
 	matcher       Matcher
+	endReplayC    chan struct{}
 }
 
 type Recording struct {
@@ -225,6 +226,7 @@ func (p *Proxy) nextOutsideRequest(alwaysSend bool) {
 			return // exit because we need to see some other requests first
 		}
 	}
+	p.endReplayC <- struct{}{}
 }
 
 func send(r *Request) (*http.Response, error) {
@@ -243,14 +245,18 @@ func send(r *Request) (*http.Response, error) {
 }
 
 func (p *Proxy) EndReplay() {
-	log.Println("end replay")
 	p.mu.Lock()
-	for _, r := range p.replayingFrom.Requests {
-		if !p.matcher.Seen(r) {
-			p.ResetReplayTimer()
-			p.mu.Unlock()
-			p.nextOutsideRequest(true)
-			return
+	select {
+	case <-p.endReplayC:
+		break
+	default:
+		for _, r := range p.replayingFrom.Requests {
+			if !p.matcher.Seen(r) {
+				p.ResetReplayTimer()
+				p.mu.Unlock()
+				p.nextOutsideRequest(true)
+				return
+			}
 		}
 	}
 	p.writeRecording()
