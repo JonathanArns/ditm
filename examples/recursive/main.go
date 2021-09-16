@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -105,7 +104,7 @@ func recurse(maxDepth, depth, id int, c chan string) {
 		uri += "&ts=" + time.Now().Format(time.StampNano)
 	}
 	if sendBody {
-		filler := []string{"abcdef", "abcdefghijklm", "abcdefghijklmopqrstuvw"}[rand.Intn(3)]
+		filler := []string{"abcdef", "abcdefghijklm", "abcdefghijklmopqrstuvw"}[(depth+id)%3]
 		res, err = http.PostForm(url, map[string][]string{"v": {v}, "filler": {filler}})
 	} else {
 		res, err = http.Get(uri)
