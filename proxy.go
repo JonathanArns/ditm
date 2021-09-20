@@ -73,6 +73,7 @@ type Request struct {
 	BlockedResponse  bool        `json:"blocked_response"`
 	FromOutside      bool        `json:"from_outside"`
 	Body             []byte      `json:"body"`
+	ResponseBody     []byte      `json:"response_body"`
 	Header           http.Header `json:"header"`
 }
 
@@ -159,10 +160,19 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	proxy := httputil.NewSingleHostReverseProxy(remoteHost)
-	if request.BlockedResponse {
-		proxy.ModifyResponse = func(r *http.Response) error {
+	proxy.ModifyResponse = func(r *http.Response) error {
+		var buf bytes.Buffer
+		tee := io.TeeReader(r.Body, &buf)
+		body, err := io.ReadAll(tee)
+		if err != nil {
+			return err
+		}
+		r.Body = io.NopCloser(&buf)
+		request.ResponseBody = body
+		if request.BlockedResponse {
 			panic("We want to block this response")
 		}
+		return nil
 	}
 	proxy.ServeHTTP(w, r)
 	if p.isReplaying {

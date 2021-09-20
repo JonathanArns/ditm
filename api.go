@@ -239,10 +239,10 @@ func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 	t := template.New("recording").Funcs(template.FuncMap{
 		"abbreviate": func(data []byte) string {
 			str := string(data)
-			if len(str) < 30 {
+			if len(str) < 20 {
 				return str
 			}
-			return str[0:30] + "..."
+			return str[0:20] + "..."
 		},
 		"string": func(data []byte) string {
 			return string(data)
