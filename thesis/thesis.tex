@@ -1,5 +1,5 @@
 \documentclass[a4paper]{report}
-% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
@@ -95,7 +95,7 @@ Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstüt
 		\hline
 		ID   & Anforderung                   & Beschreibung                                                                                                                                                                                                          \\ \hline
 		FA1  & Netzwerk Unterbrechungen      & Das System soll kontrolliert Netzwerk-Unterbrechungen zwischen Knoten des zu testenden Systems erzeugen können.                                                                                                       \\ \hline
-		FA2  & Aufzeichnung                  & Das System soll den gesamten Netzwerkverkehr des zu testenden Systems aufzeichnen können. Insbesondere sollen auch erzeugte Netzwerk-Unterbrechungen aufgezeichnet werden.                                           \\ \hline
+		FA2  & Aufzeichnung                  & Das System soll den gesamten Netzwerkverkehr des zu testenden Systems aufzeichnen können. Insbesondere sollen auch erzeugte Netzwerk-Unterbrechungen aufgezeichnet werden.                                            \\ \hline
 		FA3  & Replay                        & Das System soll anhand einer durch das System erstellten Aufzeichnung die Situation in der Aufzeichnung am laufenden Testsystem wiederherstellen und vor allem inklusive Netzwerk-Unterbrechungen wiedergeben können. \\ \hline
 		FA4  & Zufällige Unterbrechungen     & Das System soll Netwerk-Unterbrechungen zufällig erzeugen können.                                                                                                                                                     \\ \hline
 		FA5  & Kontrollierte Unterbrechungen & Das System soll dem Nutzer die Möglichkeit geben, Netwerk-Unterbrechungen konkret zu steuern.                                                                                                                         \\ \hline
@@ -193,7 +193,7 @@ Der erste Schritt dabei, Requests aus Recording und Replay zu matchen, ist immer
 Recording als auch im Replay nach dem StreamIdentifier des aktuellen Requests zu filtern, so dass zwei
 kleinere Request Streams entstehen. Der StreamIdentifier wird zusammengesetzt aus den Namen des Clients
 und des Servers für den jeweiligen Request, ein so gefilterter Stream stellt also den gesamten Verkehr
-zwischen genau zwei Knoten des SUT dar. 
+zwischen genau zwei Knoten des SUT dar.
 Der Rest des Matchings ist über ein Single-Method-Interface abstrahiert, um leicht mehrere Implementierungen
 austauschen zu können. Die Methode Match des Interfaces erwartet als Parameter den aktuellen Request,
 dessen Index im gefilterten Stream des Replays und den gesamten gefilterten Stream des Recordings.
@@ -212,27 +212,56 @@ In diesem Kapitel werden anhand des beschriebenen Prototypen die folgenden Hypot
 - Wie gut funktionieren Replays von Netwerk-Unterbrechungen über einen Proxy?
 - Wie gut funktioniert die chronologische Ordnung von Log Nachrichten relativ zu Requests?
 - Kann der verfolgte Ansatz hilfreich für einen menschlichen Debugging Prozess sein?
-\section{Rekursiv}
+\section{Synthetisch}
 Ziel dieses Szenarios ist es, die Grenzen von ditm im Bezug auf die ersten beiden Fragen auszuloten.
-Dazu wird mittels sich rekursiv verzweigender Coroutinen eine große Menge an Requests in semi-zufälliger
-Reihenfolge gesendet.
+Dazu wird eine große Menge an eindeutig identifizierbarer Requests unter leicht unterschiedlichen Bedingungen gesendet.
 \subsection{Versuchsaufbau}
-Merke: Versuch ist noch nicht fertig, deshalb fehlen hier Details.
+Das Test System ist ein einfacher HTTP Server mit drei Endpunkten. Zwei davon lösen jeweils auf unterschiedliche Art und Weise
+eine große Menge an Requests aus, der dritte verarbeitet diese. Es wird für den Versuch ein Cluster aus zwei identischen
+Knoten verwendet, wovon einer die Rolle eines API Gateways einnimmt, über das von außen der Versuch ausgelöst wird,
+und der andere die eines dahinter verborgenen Services. Da ditm den Request-Fluss zwischen zwei Knoten des SUT immer einzeln
+betrachtet, genügen zwei Knoten aus, um das Request-Matching zu evaluieren.
+Die Requests, die der Gateway Knoten versendet, sind anhand eines Query Parameters eindeutig identifizierbar. Einer der
+Endpunkte sendet Requests in einer Schleife, der andere mittels einer sich rekursiv verzweigenden Funktion.
+Beide Endpunkte bieten unterschiedliche Konfigurationsmöglichkeiten, um den Strom an Requests zu beeinflussen.
+Die Requests aus der Schleife können in vollständig fester oder in zufällig leicht abgewandelter Reihenfolge erfolgen.
+Außerdem können die Requests synchron oder asynchron erfolgen.
+Die rekusiv ausgelösten Requests können ebenfalls synchron oder aynchron erfolgen. Synchron sind sie in fester Reihenfolge und
+nahezu äquivalent zur Schleife in fester Reihenfolge, asynchron sind sie in semi-zufälliger Reihenfolge und deutlich stärker
+germischt als die leicht gemischten Requests aus der Schleife.
+Beide Varianten bieten die Möglichkeit, entweder einfache GET Requests zu senden, die selben GET Request mit einem Zeitstempel
+als zusätzlichen Parameter oder POST Request mit einem Zeitstempel und einem zusätzlichen Füller im Body. Der Füller hat eine von
+drei Längen und dient somit als weiteres Merkmal für ditm, um Requests identifizierbar zu machen. Die Zeitstempel dienen dazu,
+Reqeusts schwieriger identifizierbar zu machen, indem ditm durch die Zeitstempel die Query Parameter, bzw. die Bodies der Requests
+nicht mehr einfach direkt miteinander vergleichen kann, um Reqeusts zu identifizieren.
 
-Das Test System ist ein einfacher HTTP Server mit zwei Endpunkten. Einer davon löst die große Menge an
-Requests aus, der andere verarbeitet sie. Es wird für den Versuch also ein Cluster aus zwei identischen
-Knoten verwendet, wovon einer die Rolle eines API Gateways einnimmt und der andere die eines dahinter
-verborgenen Services.
-Die Requests, die der Gateway Knoten versendet, sind eindeutig identifizierbar anhand eines Query Parameters
-aus zwei Zahlen, die in der Kombination jeweils nur einmal vorkommen.
+Für die Evaluation werden die folgenden Konfigurationen verwendet:
+- Schleife, feste Reihenfolge, synchron und asynchron, drei arten requests, 15 und 127 requests
+- Schleife, leicht gemischt, synchron und asynchron, drei arten requests, 15 und 127 requests
+- rekursiv, synchron und asynchron, drei arten requests, 15 und 127 requests
 
+\begin{verbatim}
+GET http://target:80?id=5-12
+\end{verbatim}
 
-Das Experiment wird mehrfach mit leicht unterschiedlichen Konfigurationen durchgeführt, um das Verhalten von ditm
-im Bezug auf verschiedene Request Eigenschaften zu testen.
-Außerdem wird das Experiment mit unterschiedlichen Rekursionstiefen durchgeführt, um die Anzahl an Requests zu
-variieren und somit die Grenzen von ditm im Bezug auf hochfrequente Requests zu untersuchen.
+Für die Evaluation den Request-Matchings wird jeweils betrachtet, für wie viele Requests ditm im Replay andere Netzwerk-Bedingungen
+erzeugt hat, als in der Aufzeichnung. Für das Log-Matching wird ausgewertet, wie weit entfernt das am schlechtesten gematchte Log
+von der korrekten Position entfernt ist.
+
 \subsection{Ergebnisse}
 % Tabelle mit Ergebnissen
+\begin{table}[]
+	\begin{tabular}{l l l|l l l l}
+		\hline
+		            & depth & num requests & heuristic & exact & mix    & counting \\ \hline
+		get 1       & 6     & 128          & 2,3,4     & 5,6,7 & 8,9,10 & 11,12,13 \\
+		            &       & 1024         & 0         & 0     &        &          \\ \hline
+		timestamp   &       & 128          & 0         & 0     &        &          \\
+		            &       & 1024         & 0         & 0     &        &          \\ \hline
+		random body &       & 128          & 0         & 0     &        &          \\
+		            &       & 1024         & 0         & 0     &        &          \\
+	\end{tabular}
+\end{table}
 \section{Konstostand}
 \subsection{Versuchsaufbau}
 \subsection{Ergebnisse}
