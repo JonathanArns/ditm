@@ -211,7 +211,7 @@ func (p *Proxy) ResetReplayTimer() {
 	if p.replayTimer == nil {
 		return
 	}
-	p.replayTimer.Reset(time.Duration(3) * time.Second)
+	p.replayTimer.Reset(time.Duration(300) * time.Millisecond)
 }
 
 // Checks if the next unseen request in the recording is an
@@ -223,16 +223,14 @@ func (p *Proxy) nextOutsideRequest(alwaysSend bool) {
 	for _, request := range p.replayingFrom.Requests {
 		if !p.matcher.Seen(request) && request.FromOutside {
 			p.matcher.MarkSeen(request)
+			r := *request // make a copy of request, to record it with new timestamp
+			r.Timestamp = time.Now()
+			p.record(&r)
 			p.mu.Unlock()
 			_, err := send(request)
 			if err != nil {
 				log.Println(err)
 			}
-			r := *request // make a copy of request, to record it with new timestamp
-			r.Timestamp = time.Now()
-			p.mu.Lock()
-			p.record(&r)
-			p.mu.Unlock()
 			return
 		} else if !alwaysSend && !p.matcher.Seen(request) {
 			p.mu.Unlock()

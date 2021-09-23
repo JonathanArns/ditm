@@ -32,6 +32,8 @@ type TemplateData struct {
 }
 
 func (p *Proxy) NewTemplateData() TemplateData {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	partitions, _ := json.Marshal(p.blockConfig.Partitions)
 	return TemplateData{
 		ModeDefault:      !p.isRecording && !p.isReplaying && !p.isInspecting,
@@ -92,7 +94,6 @@ func (p *Proxy) InspectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	if p.isReplaying {
 		p.replayTimer.Stop()
 		p.replayTimer = nil
@@ -102,6 +103,7 @@ func (p *Proxy) InspectHandler(w http.ResponseWriter, r *http.Request) {
 	p.isRecording = false
 	p.isInspecting = true
 	p.recording = *recording
+	p.mu.Unlock()
 
 	t := template.New("main")
 	t.Parse(mainTemplate)
@@ -113,7 +115,6 @@ func (p *Proxy) InspectHandler(w http.ResponseWriter, r *http.Request) {
 
 func (p *Proxy) BlockConfigHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	if p.isReplaying {
 		return
 	}
@@ -147,6 +148,7 @@ func (p *Proxy) BlockConfigHandler(w http.ResponseWriter, r *http.Request) {
 			p.blockConfig.Matcher = matcher
 		}
 	}
+	p.mu.Unlock()
 	t := template.New("main")
 	t.Parse(mainTemplate)
 	err := t.Execute(w, p.NewTemplateData())
@@ -157,11 +159,11 @@ func (p *Proxy) BlockConfigHandler(w http.ResponseWriter, r *http.Request) {
 
 func (p *Proxy) StartRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	p.isRecording = true
 	p.isInspecting = false
 	p.recording = Recording{Requests: []*Request{}}
 	p.replayingFrom = Recording{Requests: []*Request{}}
+	p.mu.Unlock()
 	t := template.New("main")
 	t.Parse(mainTemplate)
 	t.Execute(w, p.NewTemplateData())
@@ -169,13 +171,13 @@ func (p *Proxy) StartRecordingHandler(w http.ResponseWriter, r *http.Request) {
 
 func (p *Proxy) EndRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	_, err := p.writeRecording()
 	if err != nil {
 		log.Println(err)
 	}
 	p.recording = Recording{Requests: []*Request{}}
 	p.isRecording = false
+	p.mu.Unlock()
 	t := template.New("main")
 	t.Parse(mainTemplate)
 	t.Execute(w, p.NewTemplateData())
@@ -183,11 +185,11 @@ func (p *Proxy) EndRecordingHandler(w http.ResponseWriter, r *http.Request) {
 
 func (p *Proxy) SaveVolumesHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	_, err := writeVolumes()
 	if err != nil {
 		log.Println(err)
 	}
+	p.mu.Unlock()
 	t := template.New("main")
 	t.Parse(mainTemplate)
 	t.Execute(w, p.NewTemplateData())
@@ -195,7 +197,6 @@ func (p *Proxy) SaveVolumesHandler(w http.ResponseWriter, r *http.Request) {
 
 func (p *Proxy) LoadVolumesHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	filename := r.FormValue("id")
 	if filename == "" {
 		filename = latestVolumes()
@@ -204,6 +205,7 @@ func (p *Proxy) LoadVolumesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 	}
+	p.mu.Unlock()
 	t := template.New("main")
 	t.Parse(mainTemplate)
 	t.Execute(w, p.NewTemplateData())
@@ -335,7 +337,6 @@ func (p *Proxy) DiffHandler(w http.ResponseWriter, r *http.Request) {
 
 func (p *Proxy) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	var status string
 	if p.isReplaying {
 		status = "replaying"
@@ -346,11 +347,12 @@ func (p *Proxy) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		status = "none"
 	}
+	p.mu.Unlock()
 	w.Write([]byte(status))
 }
 
 func (p *Proxy) LatestRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	w.Write([]byte(strconv.Itoa(p.lastSavedId)))
+	p.mu.Unlock()
 }
