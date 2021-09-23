@@ -27,10 +27,6 @@ services:
     environment: 
       - HTTP_PROXY=ditm:5000
       - PEER=target2
-      - SEND_TIMESTAMP=true
-      - POST=false
-      - ASYNC=false
-      - DISABLE_KEEP_ALIVE=true
     logging:
       driver: jonathanarns/http-log-driver
       options:
@@ -45,10 +41,6 @@ services:
     environment: 
       - HTTP_PROXY=ditm:5000
       - PEER=target
-      - SEND_TIMESTAMP=true
-      - POST=false
-      - ASYNC=false
-      - DISABLE_KEEP_ALIVE=true
     logging:
       driver: jonathanarns/http-log-driver
       options:
