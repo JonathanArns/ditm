@@ -332,3 +332,25 @@ func (p *Proxy) DiffHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println(diff)
 	// TODO: render diff
 }
+
+func (p *Proxy) StatusHandler(w http.ResponseWriter, r *http.Request) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	var status string
+	if p.isReplaying {
+		status = "replaying"
+	} else if p.isInspecting {
+		status = "inspecting"
+	} else if p.isRecording {
+		status = "recording"
+	} else {
+		status = "none"
+	}
+	w.Write([]byte(status))
+}
+
+func (p *Proxy) LatestRecordingHandler(w http.ResponseWriter, r *http.Request) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	w.Write([]byte(strconv.Itoa(p.lastSavedId)))
+}

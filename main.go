@@ -34,6 +34,9 @@ func main() {
 	r.Path("/save_volumes").HandlerFunc(proxy.SaveVolumesHandler)
 	r.Path("/load_volumes").HandlerFunc(proxy.LoadVolumesHandler)
 	r.Path("/block_config").HandlerFunc(proxy.BlockConfigHandler)
+	r.Path("/api/status").HandlerFunc(proxy.StatusHandler)
+	r.Path("/api/latest_recording").HandlerFunc(proxy.LatestRecordingHandler)
+
 	apiSrv := &http.Server{
 		Handler: r,
 		Addr:    ":80",
