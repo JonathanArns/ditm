@@ -143,7 +143,7 @@ func (m *mixMatcher) MarkSeen(r *Request) {
 func (m *mixMatcher) Match(r *Request, i int, rec []*Request) *Request {
 	highScore := -math.MaxFloat64
 	var bestMatch *Request
-	faktor := float64(len(rec)) / 10
+	faktor := float64(len(rec))
 	for j, req := range rec {
 		if m.Seen(req) || req.FromOutside || r.Method != req.Method {
 			continue
