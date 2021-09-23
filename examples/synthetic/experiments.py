@@ -1,5 +1,6 @@
 import json
 import requests
+from statistics import median, mean
 from time import sleep
 
 proxies = {"http": "http://localhost:5000"}
@@ -19,7 +20,7 @@ def run_replay(id: int) -> int:
     res = requests.get("http://localhost:8000/api/status")
     while not res.ok or res.text == "replaying":
         res = requests.get("http://localhost:8000/api/status")
-        sleep(1)
+        sleep(0.5)
     res = requests.get("http://localhost:8000/api/latest_recording")
     return int(res.text)
 
@@ -78,14 +79,41 @@ def run_single_experiment(num_replays: int, count: int, do_async: bool, disable_
         results[matcher] = sum(tmp) / len(tmp)
     return len(recording["requests"])-1, results
 
-def run_experiments(params: list):
+# def average_results(exps: list):
+#     num_requests = 0
+#     results = {}
+#     for matcher in matchers:
+#         results[matcher] = 0
+#     for exp in exps:
+#         num_requests += exp[0]
+#         for key, val in exp[1].items():
+#             results[key] += val
+#     for key in results:
+#         results[key] = results[key] / len(exps)
+#     num_requests = num_requests / len(exps)
+#     return num_requests, results
+
+def agg_results(exps: list, op):
+    num_requests = []
     results = {}
-    for i, p in enumerate(params):
-        results[i] = run_single_experiment(*p)
-    table = ""
-    for i, vals in results.items():
-        p = params[i]
-        table += f"{p[6]} & "
+    for matcher in matchers:
+        results[matcher] = []
+    for exp in exps:
+        num_requests.append(exp[0])
+        for key, val in exp[1].items():
+            results[key].append(val)
+    for key in results:
+        results[key] = op(results[key])
+    num_requests = op(num_requests)
+    return num_requests, results
+
+def run_experiments(params: list):
+    for ps in params:
+        results = [run_single_experiment(*ps[1]) for _ in range(ps[0])]
+        means = agg_results(results, mean)
+        medians = agg_results(results, median)
+        p = ps[1]
+        table = f"{p[6]} & "
         if p[2]:
             table += "async   & "
         else:
@@ -99,21 +127,81 @@ def run_experiments(params: list):
             if p[3]:
                 table += "+ no keep alive "
             table += "& "
-        table += f"{vals[0]} & "
-        table += f"{vals[1]['heuristic']} & "
-        table += f"{vals[1]['exact']} & "
-        table += f"{vals[1]['mix']} & "
-        table += f"{vals[1]['counting']} \\\\\n"
-    print(table)
+        table += f"a: {means[0]} m: {medians[0]} & "
+        table += f"a: {means[1]['heuristic']} m: {medians[1]['heuristic']} & "
+        table += f"a: {means[1]['exact']} m: {medians[1]['exact']} & "
+        table += f"a: {means[1]['mix']} m: {medians[1]['mix']} & "
+        table += f"a: {means[1]['counting']} m: {medians[1]['counting']} \\\\"
+        print(table)
+        with open("results.txt", "a") as f:
+            f.write(table + "\n")
 
 
-# num_replays, count, do_async, disable_keep_alive, post, send_timestamp, max_shift
+# (num_experiments, [num_replays, count, do_async, disable_keep_alive, post, send_timestamp, max_shift])
 params = [
-    # [1, 100, False, False, False, False, 0],
-    # [1, 10, False, False, False, False, 0],
-    [1, 10, True, False, False, True, 0],
-    [1, 100, True, False, False, True, 0],
+    # get noasync noshuffe
+    (10, [1, 10, False, False, False, False, 0]),
+    (10, [1, 100, False, False, False, False, 0]),
+    (10, [1, 10, False, True, False, False, 0]),
+    (10, [1, 100, False, True, False, False, 0]),
+    (10, [1, 10, False, False, False, True, 0]),
+    (10, [1, 100, False, False, False, True, 0]),
+    (10, [1, 10, False, True, False, True, 0]),
+    (10, [1, 100, False, True, False, True, 0]),
+
+    # get noasync shuffe 1
+    (10, [1, 10, False, False, False, False, 1]),
+    (10, [1, 100, False, False, False, False, 1]),
+    (10, [1, 10, False, True, False, False, 1]),
+    (10, [1, 100, False, True, False, False, 1]),
+    (10, [1, 10, False, False, False, True, 1]),
+    (10, [1, 100, False, False, False, True, 1]),
+    (10, [1, 10, False, True, False, True, 1]),
+    (10, [1, 100, False, True, False, True, 1]),
+    
+    # get noasync shuffe 2
+    (10, [1, 10, False, False, False, False, 2]),
+    (10, [1, 100, False, False, False, False, 2]),
+    (10, [1, 10, False, True, False, False, 2]),
+    (10, [1, 100, False, True, False, False, 2]),
+    (10, [1, 10, False, False, False, True, 2]),
+    (10, [1, 100, False, False, False, True, 2]),
+    (10, [1, 10, False, True, False, True, 2]),
+    (10, [1, 100, False, True, False, True, 2]),
+
+    # get noasync shuffe 3
+    (10, [1, 10, False, False, False, False, 3]),
+    (10, [1, 100, False, False, False, False, 3]),
+    (10, [1, 10, False, True, False, False, 3]),
+    (10, [1, 100, False, True, False, False, 3]),
+    (10, [1, 10, False, False, False, True, 3]),
+    (10, [1, 100, False, False, False, True, 3]),
+    (10, [1, 10, False, True, False, True, 3]),
+    (10, [1, 100, False, True, False, True, 3]),
+
+    # get async
+    (10, [1, 10, True, False, False, False, 0]),
+    (10, [1, 100, True, False, False, False, 0]),
+    (10, [1, 10, True, True, False, False, 0]),
+    (10, [1, 100, True, True, False, False, 0]),
+    (10, [1, 10, True, False, False, True, 0]),
+    (10, [1, 100, True, False, False, True, 0]),
+    (10, [1, 10, True, True, False, True, 0]),
+    (10, [1, 100, True, True, False, True, 0]),
+
+    # post async
+    (10, [1, 10, True, False, True, False, 0]),
+    (10, [1, 100, True, False, True, False, 0]),
+
+    # post noasync
+    (10, [1, 10, False, False, True, False, 0]),
+    (10, [1, 100, False, False, True, False, 0]),
+    (10, [1, 10, False, False, True, False, 1]),
+    (10, [1, 100, False, False, True, False, 1]),
+    (10, [1, 10, False, False, True, False, 2]),
+    (10, [1, 100, False, False, True, False, 2]),
+    (10, [1, 10, False, False, True, False, 3]),
+    (10, [1, 100, False, False, True, False, 3]),
 ]
 
-print("first table:")
 run_experiments(params)

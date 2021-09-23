@@ -81,11 +81,19 @@ func loop(w http.ResponseWriter, r *http.Request) {
 	for i := 0; i < count; i++ {
 		tmp[i] = i
 	}
+	n := max_shift + 1
 	for i := 0; i < count; i++ {
-		randIndex := rand.Intn(min(len(tmp)-i, max_shift+1))
-		list[i] = tmp[i+randIndex]
-		tmp = append(tmp[:randIndex], tmp[randIndex:]...)
+		randIndex := rand.Intn(min(len(tmp), n))
+		list[i] = tmp[randIndex]
+		tmp = append(tmp[:randIndex], tmp[1+randIndex:]...)
+		if randIndex > 0 || n <= max_shift {
+			n -= 1
+		}
+		if n == 0 {
+			n = max_shift + 1
+		}
 	}
+	log.Println(list)
 	for _, i := range list {
 		if async {
 			go send(targetUrl, i)
