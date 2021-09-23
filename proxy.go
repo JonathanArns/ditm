@@ -141,7 +141,7 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 		request.FromOutside = true
 		request.FromName = "outside"
 	}
-	request.StreamIdentifier = request.FromName + "->" + request.ToName
+	request.StreamIdentifier = request.FromName + " " + request.ToName
 
 	request.Blocked, request.BlockedResponse = p.Block(request)
 	if !p.isInspecting {
@@ -168,7 +168,9 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		r.Body = io.NopCloser(&buf)
+		p.mu.Lock()
 		request.ResponseBody = body
+		p.mu.Unlock()
 		if request.BlockedResponse {
 			panic("We want to block this response")
 		}
@@ -218,7 +220,6 @@ func (p *Proxy) ResetReplayTimer() {
 // even if there are unseen requests from inside are before it.
 func (p *Proxy) nextOutsideRequest(alwaysSend bool) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	for _, request := range p.replayingFrom.Requests {
 		if !p.matcher.Seen(request) && request.FromOutside {
 			p.matcher.MarkSeen(request)
@@ -231,11 +232,14 @@ func (p *Proxy) nextOutsideRequest(alwaysSend bool) {
 			r.Timestamp = time.Now()
 			p.mu.Lock()
 			p.record(&r)
+			p.mu.Unlock()
 			return
 		} else if !alwaysSend && !p.matcher.Seen(request) {
+			p.mu.Unlock()
 			return // exit because we need to see some other requests first
 		}
 	}
+	p.mu.Unlock()
 	p.endReplayC <- struct{}{}
 }
 
