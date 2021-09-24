@@ -216,52 +216,216 @@ In diesem Kapitel werden anhand des beschriebenen Prototypen die folgenden Hypot
 Ziel dieses Szenarios ist es, die Grenzen von ditm im Bezug auf die ersten beiden Fragen auszuloten.
 Dazu wird eine große Menge an eindeutig identifizierbarer Requests unter leicht unterschiedlichen Bedingungen gesendet.
 \subsection{Versuchsaufbau}
-Das Test System ist ein einfacher HTTP Server mit drei Endpunkten. Zwei davon lösen jeweils auf unterschiedliche Art und Weise
-eine große Menge an Requests aus, der dritte verarbeitet diese. Es wird für den Versuch ein Cluster aus zwei identischen
+Das Test System ist ein einfacher HTTP Server mit zwei Endpunkten. Einer davon löst
+eine große Menge an Requests aus, der andere verarbeitet diese. Es wird für den Versuch ein Cluster aus zwei identischen
 Knoten verwendet, wovon einer die Rolle eines API Gateways einnimmt, über das von außen der Versuch ausgelöst wird,
 und der andere die eines dahinter verborgenen Services. Da ditm den Request-Fluss zwischen zwei Knoten des SUT immer einzeln
-betrachtet, genügen zwei Knoten aus, um das Request-Matching zu evaluieren.
-Die Requests, die der Gateway Knoten versendet, sind anhand eines Query Parameters eindeutig identifizierbar. Einer der
-Endpunkte sendet Requests in einer Schleife, der andere mittels einer sich rekursiv verzweigenden Funktion.
-Beide Endpunkte bieten unterschiedliche Konfigurationsmöglichkeiten, um den Strom an Requests zu beeinflussen.
-Die Requests aus der Schleife können in vollständig fester oder in zufällig leicht abgewandelter Reihenfolge erfolgen.
-Außerdem können die Requests synchron oder asynchron erfolgen.
-Die rekusiv ausgelösten Requests können ebenfalls synchron oder aynchron erfolgen. Synchron sind sie in fester Reihenfolge und
-nahezu äquivalent zur Schleife in fester Reihenfolge, asynchron sind sie in semi-zufälliger Reihenfolge und deutlich stärker
-germischt als die leicht gemischten Requests aus der Schleife.
-Beide Varianten bieten die Möglichkeit, entweder einfache GET Requests zu senden, die selben GET Request mit einem Zeitstempel
-als zusätzlichen Parameter oder POST Request mit einem Zeitstempel und einem zusätzlichen Füller im Body. Der Füller hat eine von
-drei Längen und dient somit als weiteres Merkmal für ditm, um Requests identifizierbar zu machen. Die Zeitstempel dienen dazu,
-Reqeusts schwieriger identifizierbar zu machen, indem ditm durch die Zeitstempel die Query Parameter, bzw. die Bodies der Requests
-nicht mehr einfach direkt miteinander vergleichen kann, um Reqeusts zu identifizieren.
-
-Für die Evaluation werden die folgenden Konfigurationen verwendet:
-- Schleife, feste Reihenfolge, synchron und asynchron, drei arten requests, 15 und 127 requests
-- Schleife, leicht gemischt, synchron und asynchron, drei arten requests, 15 und 127 requests
-- rekursiv, synchron und asynchron, drei arten requests, 15 und 127 requests
-
+betrachtet, genügen zwei Knoten aus, um die Grenzen des Request-Matchings abzustecken.
+Die Requests, die der Gateway Knoten versendet, sind anhand eines Query Parameters eindeutig identifizierbar.
+Der Endpunkt versendet die Requests in einer Schleife und bietet neben der Anzahl zu versendener Reqeusts verschiedene
+andere Konfigurationsmöglichkeiten, um den Strom von Requests zu verändern.
+Die Requests können in vollständig fester oder in unterschiedlich stark gemischter Reihenfolge erfolgen. Dabei ist konfigurierbar,
+wie weit jeder Request maximal von seiner eigentlichen Position im Fluss entfernt sein darf. Eine maximale Entfernung
+von 0 entspricht immer einem vollständig geordneten Fluss, für jeden anderen Wert wird der Fluss für jede Ausführung neu
+zufällig gemischt, so dass ditm die Requests während eines Replays also in anderer Reihenfolge erhält, als während der
+Aufzeichnung. In folgendem Beispiel sind mögliche Anordnungen von Requests dargestellt, in Klammern steht jeweils die
+entsprechende maximale Entfernung.
 \begin{verbatim}
-GET http://target:80?id=5-12
+(0): 0 1 2 3 4 5 6 7 8 9
+(1): 1 0 2 4 3 6 5 7 9 8
+(2): 0 3 2 1 5 6 4 9 7 8
+(3): 4 2 1 0 7 3 9 5 6 8
 \end{verbatim}
+Requests können außerdem optional asynchron erfolgen, was ebenfalls dazu führt dass sie in stark gemischter Reihenfolge und nahezu gleichzeitig
+gesendet werden.
+Zusätzlich besteht Möglichkeit, entweder einfache GET Requests zu senden, die selben GET Requests mit einem Zeitstempel
+als zusätzlichem Parameter oder POST Requests mit einem Zeitstempel und einem zusätzlichen Füller im Body. Der Füller hat eine von
+drei Längen, somit dient der Request-Body als weiteres Merkmal für ditm, um Requests identifizierbar zu machen. Die Zeitstempel dienen
+genau genau umgekehrt dazu, Reqeusts schwieriger identifizierbar zu machen, indem ditm durch die Zeitstempel die Query Parameter,
+bzw. die Bodies der Requests nicht mehr einfach direkt miteinander vergleichen kann, um Reqeusts zu identifizieren.
+Zu letzt gibt es die Möglichkeit, für den verwendeten HTTP Client (Go net/http) die Wiederverwendung von TCP Verbingungen mit Keep-Alive
+zu deaktivieren. Dies ist notwendig, da der Client sonst in bestimmten Situationen Retries sendet, was durch diese Einstellung
+verhindert werden kann.
 
-Für die Evaluation den Request-Matchings wird jeweils betrachtet, für wie viele Requests ditm im Replay andere Netzwerk-Bedingungen
-erzeugt hat, als in der Aufzeichnung. Für das Log-Matching wird ausgewertet, wie weit entfernt das am schlechtesten gematchte Log
-von der korrekten Position entfernt ist.
+Für die Evaluation werden einfache GET Requests, GET Requests mit Zeitstempel, GET Reqeusts ohne Keep-Alive, GET Requests mit
+Zeitstempel und ohne Keep-Alive und POST Requests verwendet. Für jede Art von Reqeust werden Experimente mit fünf unterschiedlichen
+Konfigurationen zur Reihenfolge der Requests durchgeführt. Diese sind asynchron, synchron mit fester Reihenfolge und synchron mit gemischter
+Reihenfolge mit maximalen Entfernungen von 1, 2 und 3. Zusätzlich wird jedes Experiment einmal mit 10 Requests und einmal mit 100 Requests
+durchgeführt.
+
+In jedem Experiment werden 10 voneinander unabhängige Aufzeichnungen erstellt. Von jeder Aufzeichnung wird dann mit jedem der vier
+Request-Matcher ein Replay durchgeführt. Für jedes Replay wird anhand von dazu bestimmten Log Ausgaben des Test Systems bestimmt,
+wie viele Requests ditm falsch behandelt hat. Aus diesem Wert wird dann pro Request-Matcher über die 10 erzeugten Replays der Durchschnitt
+und der Median der falsch behandelten Requests berechnet. Diese Werte bilden das Ergebnis des jeweiligen Experiments.
+Alle Experimente zum Request-Matching werden vollständig automatisiert durchgeführt und ausgewertet. % (Das Python Script hierfür ist im Repo)
+
+Da die chronologische Darstellung von Logs zwischen den Requests leider nicht so leicht automatisch auswertbar ist, werden hierfür
+zusätzliche Experimente von Hand durchgeführt und ausgewertet. Es werden insgesamt vier Experimente durchgeführt, bei denen eine
+Aufzeichnung mit jeweils 10 und 100 Requests einmal synchron und einmal asynchron erstellt wird. Das Ergebnis hierbei ist jeweils
+die maximale Entfernung einer Log Nachricht von ihrer korrekten Position und die Gesamtzahl an Nachrichten, die an falscher Stelle
+eingeordnet wurden. Da das Matching der Request- und Log-Flüsse im Replay exact gleich funktioniert, wie in der Aufzeichnung, sind
+für die Evaluation des Log-Matchings keine Replays notwendig.
 
 \subsection{Ergebnisse}
-% Tabelle mit Ergebnissen
-\begin{table}[]
-	\begin{tabular}{l l l|l l l l}
+\begin{table}
+	\begin{tabular}{|l|l|l|l|}
 		\hline
-		            & depth & num requests & heuristic & exact & mix    & counting \\ \hline
-		get 1       & 6     & 128          & 2,3,4     & 5,6,7 & 8,9,10 & 11,12,13 \\
-		            &       & 1024         & 0         & 0     &        &          \\ \hline
-		timestamp   &       & 128          & 0         & 0     &        &          \\
-		            &       & 1024         & 0         & 0     &        &          \\ \hline
-		random body &       & 128          & 0         & 0     &        &          \\
-		            &       & 1024         & 0         & 0     &        &          \\
+		Anzahl Requests & async & maximaler Fehler & Anzahl Fehler \\ \hline
+		10              & nein  &                  &               \\ \hline
+		100             & nein  &                  &               \\ \hline
+		10              & ja    &                  &               \\ \hline
+		100             & ja    &                  &               \\ \hline
 	\end{tabular}
 \end{table}
+
+\begin{table}[]
+	\begin{tabular}{l l l l|l l l l}
+		\hline
+		max shift & async?  & request config                  & num requests      & heuristic       & exact           & mix             & counting        \\ \hline
+		0         & noasync & get                             & a: 13.3 m: 13.5   & a: 0.8 m: 0.0   & a: 0.8 m: 0.0   & a: 0.8 m: 0.0   & a: 1.7 m: 0.0   \\
+		0         & noasync & get                             & a: 133.6 m: 133.0 & a: 2.9 m: 0.0   & a: 0.3 m: 0.0   & a: 2.9 m: 0.0   & a: 15.2 m: 0.0  \\
+		0         & noasync & get + no keep alive             & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   \\
+		0         & noasync & get + no keep alive             & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   \\
+		0         & noasync & get + timestamp                 & a: 13.6 m: 14.0   & a: 0.7 m: 0.0   & a: 0.9 m: 0.0   & a: 1.2 m: 0.0   & a: 2.1 m: 0.0   \\
+		0         & noasync & get + timestamp                 & a: 134.7 m: 136.5 & a: 19.6 m: 0.0  & a: 19.0 m: 0.0  & a: 9.4 m: 0.0   & a: 19.9 m: 0.0  \\
+		0         & noasync & get + timestamp + no keep alive & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   \\
+		0         & noasync & get + timestamp + no keep alive & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   \\
+		1         & noasync & get                             & a: 13 m: 13.0     & a: 1.7 m: 1.5   & a: 2.2 m: 2.0   & a: 1.7 m: 2.0   & a: 2.6 m: 2.5   \\
+		1         & noasync & get                             & a: 133.2 m: 134.0 & a: 22.7 m: 23.0 & a: 39.1 m: 38.0 & a: 23.6 m: 25.0 & a: 34.6 m: 36.5 \\
+		1         & noasync & get + no keep alive             & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 1.7 m: 2.0   & a: 0.0 m: 0.0   & a: 4.2 m: 3.5   \\
+		1         & noasync & get + no keep alive             & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 22.5 m: 22.5 & a: 0.0 m: 0.0   & a: 40.2 m: 41.0 \\
+		1         & noasync & get + timestamp                 & a: 13.8 m: 14.0   & a: 3.3 m: 3.0   & a: 3.0 m: 2.5   & a: 3.8 m: 4.0   & a: 3.0 m: 3.5   \\
+		1         & noasync & get + timestamp                 & a: 135.4 m: 137.5 & a: 37.0 m: 37.0 & a: 36.2 m: 35.0 & a: 36.7 m: 36.5 & a: 38.1 m: 39.5 \\
+		1         & noasync & get + timestamp + no keep alive & a: 10 m: 10.0     & a: 3.4 m: 3.0   & a: 4.3 m: 4.0   & a: 3.7 m: 4.0   & a: 3.5 m: 3.5   \\
+		1         & noasync & get + timestamp + no keep alive & a: 100 m: 100.0   & a: 40.7 m: 39.0 & a: 43.8 m: 45.0 & a: 40.4 m: 40.0 & a: 43.7 m: 43.0 \\
+		2         & noasync & get                             & a: 13.5 m: 14.0   & a: 2.5 m: 2.5   & a: 3.0 m: 3.0   & a: 2.5 m: 3.0   & a: 3.3 m: 4.0   \\
+		2         & noasync & get                             & a: 131.5 m: 130.0 & a: 22.5 m: 21.5 & a: 40.3 m: 42.5 & a: 21.4 m: 20.0 & a: 45.2 m: 46.0 \\
+		2         & noasync & get + no keep alive             & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 2.5 m: 2.0   & a: 0.0 m: 0.0   & a: 3.6 m: 4.0   \\
+		2         & noasync & get + no keep alive             & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 25.4 m: 25.5 & a: 0.0 m: 0.0   & a: 48.8 m: 50.5 \\
+		2         & noasync & get + timestamp                 & a: 13.4 m: 13.0   & a: 3.7 m: 4.0   & a: 4.3 m: 4.5   & a: 3.2 m: 3.5   & a: 3.4 m: 3.0   \\
+		2         & noasync & get + timestamp                 & a: 134.1 m: 133.5 & a: 42.0 m: 41.0 & a: 43.1 m: 45.0 & a: 40.0 m: 37.5 & a: 42.9 m: 42.0 \\
+		2         & noasync & get + timestamp + no keep alive & a: 10 m: 10.0     & a: 5.3 m: 5.5   & a: 4.9 m: 5.0   & a: 5.0 m: 4.5   & a: 4.4 m: 4.0   \\
+		2         & noasync & get + timestamp + no keep alive & a: 100 m: 100.0   & a: 50.6 m: 51.5 & a: 48.7 m: 48.0 & a: 50.9 m: 52.5 & a: 48.4 m: 48.0 \\
+		3         & noasync & get                             & a: 13.3 m: 14.0   & a: 2.0 m: 2.0   & a: 3.5 m: 3.0   & a: 2.3 m: 2.5   & a: 4.5 m: 4.0   \\
+		3         & noasync & get                             & a: 135.1 m: 137.0 & a: 25.8 m: 27.0 & a: 42.2 m: 39.0 & a: 24.8 m: 27.5 & a: 46.7 m: 47.0 \\
+		3         & noasync & get + no keep alive             & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 2.2 m: 2.0   & a: 0.0 m: 0.0   & a: 5.0 m: 5.0   \\
+		3         & noasync & get + no keep alive             & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 25.4 m: 25.0 & a: 0.0 m: 0.0   & a: 52.2 m: 53.0 \\
+		3         & noasync & get + timestamp                 & a: 13.2 m: 13.0   & a: 4.1 m: 4.0   & a: 5.3 m: 6.0   & a: 5.0 m: 6.0   & a: 4.8 m: 5.0   \\
+		3         & noasync & get + timestamp                 & a: 134.5 m: 134.5 & a: 48.8 m: 47.0 & a: 48.3 m: 47.5 & a: 50.8 m: 51.5 & a: 49.1 m: 48.0 \\
+		3         & noasync & get + timestamp + no keep alive & a: 10 m: 10.0     & a: 4.6 m: 5.0   & a: 4.3 m: 4.0   & a: 4.5 m: 4.5   & a: 5.7 m: 6.0   \\
+		3         & noasync & get + timestamp + no keep alive & a: 100 m: 100.0   & a: 48.5 m: 50.0 & a: 50.8 m: 51.0 & a: 49.9 m: 50.0 & a: 50.4 m: 48.5 \\
+		0         & async   & get                             & a: 13 m: 14.0     & a: 1.5 m: 1.5   & a: 3.4 m: 4.0   & a: 1.4 m: 1.0   & a: 5.5 m: 5.0   \\
+		0         & async   & get                             & a: 113.1 m: 111.5 & a: 7.2 m: 6.5   & a: 30.7 m: 31.0 & a: 7.0 m: 6.0   & a: 68.2 m: 67.0 \\
+		0         & async   & get + no keep alive             & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 2.5 m: 2.5   & a: 0.0 m: 0.0   & a: 7.3 m: 7.5   \\
+		0         & async   & get + no keep alive             & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 22.4 m: 21.5 & a: 0.0 m: 0.0   & a: 68.2 m: 65.5 \\
+		0         & async   & get + timestamp                 & a: 13.7 m: 13.5   & a: 5.0 m: 5.0   & a: 5.6 m: 5.0   & a: 6.1 m: 6.0   & a: 6.2 m: 6.5   \\
+		0         & async   & get + timestamp                 & a: 113.4 m: 108.0 & a: 60.9 m: 60.0 & a: 65.2 m: 65.0 & a: 65.0 m: 65.0 & a: 65.6 m: 66.5 \\
+		0         & async   & get + timestamp + no keep alive & a: 10 m: 10.0     & a: 5.0 m: 5.0   & a: 5.7 m: 6.0   & a: 4.9 m: 4.5   & a: 7.7 m: 7.5   \\
+		0         & async   & get + timestamp + no keep alive & a: 100 m: 100.0   & a: 61.5 m: 60.5 & a: 60.0 m: 61.0 & a: 62.4 m: 62.5 & a: 68.7 m: 69.0 \\
+		0         & async   & post                            & a: 10 m: 10.0     & a: 5.1 m: 5.0   & a: 5.4 m: 6.0   & a: 4.4 m: 4.5   & a: 7.0 m: 7.0   \\
+		0         & async   & post                            & a: 100 m: 100.0   & a: 59.6 m: 59.0 & a: 58.9 m: 60.0 & a: 58.6 m: 58.5 & a: 66.7 m: 67.5 \\
+		0         & noasync & post                            & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   \\
+		0         & noasync & post                            & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   \\
+		1         & noasync & post                            & a: 10 m: 10.0     & a: 0.7 m: 1.0   & a: 3.1 m: 2.5   & a: 0.8 m: 1.0   & a: 4.0 m: 4.0   \\
+		1         & noasync & post                            & a: 100 m: 100.0   & a: 8.0 m: 8.5   & a: 42.0 m: 41.0 & a: 7.3 m: 6.5   & a: 46.4 m: 45.5 \\
+		2         & noasync & post                            & a: 10 m: 10.0     & a: 1.3 m: 1.0   & a: 3.8 m: 3.5   & a: 1.5 m: 1.0   & a: 3.9 m: 4.0   \\
+		2         & noasync & post                            & a: 100 m: 100.0   & a: 23.6 m: 22.5 & a: 44.5 m: 44.5 & a: 24.9 m: 25.0 & a: 46.6 m: 46.5 \\
+		3         & noasync & post                            & a: 10 m: 10.0     & a: 2.3 m: 2.0   & a: 4.4 m: 5.0   & a: 3.2 m: 3.0   & a: 4.3 m: 5.0   \\
+		3         & noasync & post                            & a: 100 m: 100.0   & a: 31.2 m: 31.5 & a: 46.6 m: 45.5 & a: 27.4 m: 25.5 & a: 50.2 m: 49.5 \\
+	\end{tabular}
+\end{table}
+
+% schleife fest async results
+% number of wrong requests average over 3 attempts
+\begin{table}[]
+	\begin{tabular}{l l|l l l l}
+		\hline
+		                                & num requests & heuristic & exact & mix & counting \\ \hline
+		get                             & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + timestamp                 & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + no keep alive             & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + timestamp + no keep alive & 15           & 8,7       & 10,7  &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		post                            & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\
+	\end{tabular}
+\end{table}
+
+% schleife gemischt sync results
+\begin{table}[]
+	\begin{tabular}{l l|l l l l}
+		\hline
+		                                & num requests & heuristic & exact & mix & counting \\ \hline
+		get                             & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + timestamp                 & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + no keep alive             & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + timestamp + no keep alive & 15           &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		post                            & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\
+	\end{tabular}
+\end{table}
+
+% schleife gemischt async results
+\begin{table}[]
+	\begin{tabular}{l l|l l l l}
+		\hline
+		                                & num requests & heuristic & exact & mix & counting \\ \hline
+		get                             & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + timestamp                 & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + no keep alive             & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + timestamp + no keep alive & 15           &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		post                            & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\
+	\end{tabular}
+\end{table}
+
+% rekursiv sync results
+\begin{table}[]
+	\begin{tabular}{l l|l l l l}
+		\hline
+		                                & num requests & heuristic & exact & mix & counting \\ \hline
+		get                             & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + timestamp                 & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + no keep alive             & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + timestamp + no keep alive & 15           &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		post                            & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\
+	\end{tabular}
+\end{table}
+
+% rekursiv async results
+\begin{table}[]
+	\begin{tabular}{l l|l l l l}
+		\hline
+		                                & num requests & heuristic & exact & mix & counting \\ \hline
+		get                             & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + timestamp                 & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + no keep alive             & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		get + timestamp + no keep alive & 15           &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\ \hline
+		post                            & 128          &           &       &     &          \\
+		                                & 1024         &           &       &     &          \\
+	\end{tabular}
+\end{table}
+
 \section{Konstostand}
 \subsection{Versuchsaufbau}
 \subsection{Ergebnisse}
