@@ -4,6 +4,8 @@
 \usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{xcolor}
+\usepackage{multirow}
+\usepackage{float}
 \usepackage[english,ngerman]{babel}
 \usepackage[backend=biber,
             sorting=none,   % Keine Sortierung
@@ -90,7 +92,7 @@ außerhalb des Systems kamen, identifizieren und während des Replays zum richti
 ditm ist ein Prototyp, der primär dem Zweck dient, die zuvor beschriebene Idee zu verfizieren.
 Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstützten Netwerk-Protokolle auf HTTP beschränkt sind.
 \subsection{Funktionale Anforderungen}
-\begin{table}[]
+\begin{table}[h]
 	\begin{tabular}{|l|l|p{7cm}|}
 		\hline
 		ID   & Anforderung                   & Beschreibung                                                                                                                                                                                                          \\ \hline
@@ -108,7 +110,7 @@ Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstüt
 \end{table}
 
 \subsection{Nicht-Funktionale Anforderungen}
-\begin{table}[]
+\begin{table}[h]
 	\begin{tabular}{|l|l|p{7cm}|}
 		\hline
 		ID   & Anforderung              & Beschreibung                                                                                                                                                                                                  \\ \hline
@@ -199,9 +201,10 @@ austauschen zu können. Die Methode Match des Interfaces erwartet als Parameter 
 dessen Index im gefilterten Stream des Replays und den gesamten gefilterten Stream des Recordings.
 Insgesamt wurden X Implementierungen für das Interface mit verschiedenen Algorithmen erstellt, die im Folgenden
 dargestellt und später gegeneinander evaluiert werden.
-\subsubsection{Matcher 1}
-\subsubsection{Matcher 2}
-\subsubsection{Matcher 3}
+\subsubsection{Zählend}
+\subsubsection{Exact}
+\subsubsection{Heutistisch}
+\subsubsection{Mix}
 
 \section{Nutzung}
 \subsection{Konfiguration}
@@ -215,6 +218,9 @@ In diesem Kapitel werden anhand des beschriebenen Prototypen die folgenden Hypot
 \section{Synthetisch}
 Ziel dieses Szenarios ist es, die Grenzen von ditm im Bezug auf die ersten beiden Fragen auszuloten.
 Dazu wird eine große Menge an eindeutig identifizierbarer Requests unter leicht unterschiedlichen Bedingungen gesendet.
+Da sich ditm beim Log-Matching auf Zeitstempel verlässt und diese für die Logs von Docker kommen, ist die Erwartung,
+dass das Log-Matching in allen Situationen akzeptabel funktioniert. Für das Reqeust Matching ist die Erwartungshaltung, dass 
+der ...Mix Matcher am besten funktioniert, dicht gefolgt vom ... heuristic Matcher.
 \subsection{Versuchsaufbau}
 Das Test System ist ein einfacher HTTP Server mit zwei Endpunkten. Einer davon löst
 eine große Menge an Requests aus, der andere verarbeitet diese. Es wird für den Versuch ein Cluster aus zwei identischen
@@ -266,8 +272,17 @@ die maximale Entfernung einer Log Nachricht von ihrer korrekten Position und die
 eingeordnet wurden. Da das Matching der Request- und Log-Flüsse im Replay exact gleich funktioniert, wie in der Aufzeichnung, sind
 für die Evaluation des Log-Matchings keine Replays notwendig.
 
+\subsection{Ein Bug im SUT}
+Ziel dieser Experimente ist ganz klar, mit einem sehr kontrollierten SUT die Grenzen von ditm auf technischer Ebene zu finden.
+Schon bei der ersten händischen Durchführung der ersten Experimente viel allerdings auf, dass dabei etwas nicht stimmen konnte.
+Nicht nur waren die Ergebnisse niederschmetternd, nach genauerem hinsehen fanden sich in den Aufzeichnungen auch teilweise deutlich
+mehr Requests als für das jeweilige Experiment vorgesehen. Nachdem ditms Proxy selbst als Quelle dieser zusätzlichen Requests
+in einer langen Debugging Session nahezu sicher ausgeschlossen werden konnte, war klar: Es muss einen Bug im SUT geben.
+
+ditm erwies sich in diesem Fall als excellent geeignetes Debugging Werkzeug.
+
 \subsection{Ergebnisse}
-\begin{table}
+\begin{table}[h]
 	\begin{tabular}{|l|l|l|l|}
 		\hline
 		Anzahl Requests & async & maximaler Fehler & Anzahl Fehler \\ \hline
@@ -278,153 +293,111 @@ für die Evaluation des Log-Matchings keine Replays notwendig.
 	\end{tabular}
 \end{table}
 
-\begin{table}[]
-	\begin{tabular}{l l l l|l l l l}
+\begin{table}[h]
+	\centering
+	\caption{get}
+	\label{tab:get}
+	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
 		\hline
-		max shift & async?  & request config                  & num requests      & heuristic       & exact           & mix             & counting        \\ \hline
-		0         & noasync & get                             & a: 13.3 m: 13.5   & a: 0.8 m: 0.0   & a: 0.8 m: 0.0   & a: 0.8 m: 0.0   & a: 1.7 m: 0.0   \\
-		0         & noasync & get                             & a: 133.6 m: 133.0 & a: 2.9 m: 0.0   & a: 0.3 m: 0.0   & a: 2.9 m: 0.0   & a: 15.2 m: 0.0  \\
-		0         & noasync & get + no keep alive             & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   \\
-		0         & noasync & get + no keep alive             & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   \\
-		0         & noasync & get + timestamp                 & a: 13.6 m: 14.0   & a: 0.7 m: 0.0   & a: 0.9 m: 0.0   & a: 1.2 m: 0.0   & a: 2.1 m: 0.0   \\
-		0         & noasync & get + timestamp                 & a: 134.7 m: 136.5 & a: 19.6 m: 0.0  & a: 19.0 m: 0.0  & a: 9.4 m: 0.0   & a: 19.9 m: 0.0  \\
-		0         & noasync & get + timestamp + no keep alive & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   \\
-		0         & noasync & get + timestamp + no keep alive & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   \\
-		1         & noasync & get                             & a: 13 m: 13.0     & a: 1.7 m: 1.5   & a: 2.2 m: 2.0   & a: 1.7 m: 2.0   & a: 2.6 m: 2.5   \\
-		1         & noasync & get                             & a: 133.2 m: 134.0 & a: 22.7 m: 23.0 & a: 39.1 m: 38.0 & a: 23.6 m: 25.0 & a: 34.6 m: 36.5 \\
-		1         & noasync & get + no keep alive             & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 1.7 m: 2.0   & a: 0.0 m: 0.0   & a: 4.2 m: 3.5   \\
-		1         & noasync & get + no keep alive             & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 22.5 m: 22.5 & a: 0.0 m: 0.0   & a: 40.2 m: 41.0 \\
-		1         & noasync & get + timestamp                 & a: 13.8 m: 14.0   & a: 3.3 m: 3.0   & a: 3.0 m: 2.5   & a: 3.8 m: 4.0   & a: 3.0 m: 3.5   \\
-		1         & noasync & get + timestamp                 & a: 135.4 m: 137.5 & a: 37.0 m: 37.0 & a: 36.2 m: 35.0 & a: 36.7 m: 36.5 & a: 38.1 m: 39.5 \\
-		1         & noasync & get + timestamp + no keep alive & a: 10 m: 10.0     & a: 3.4 m: 3.0   & a: 4.3 m: 4.0   & a: 3.7 m: 4.0   & a: 3.5 m: 3.5   \\
-		1         & noasync & get + timestamp + no keep alive & a: 100 m: 100.0   & a: 40.7 m: 39.0 & a: 43.8 m: 45.0 & a: 40.4 m: 40.0 & a: 43.7 m: 43.0 \\
-		2         & noasync & get                             & a: 13.5 m: 14.0   & a: 2.5 m: 2.5   & a: 3.0 m: 3.0   & a: 2.5 m: 3.0   & a: 3.3 m: 4.0   \\
-		2         & noasync & get                             & a: 131.5 m: 130.0 & a: 22.5 m: 21.5 & a: 40.3 m: 42.5 & a: 21.4 m: 20.0 & a: 45.2 m: 46.0 \\
-		2         & noasync & get + no keep alive             & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 2.5 m: 2.0   & a: 0.0 m: 0.0   & a: 3.6 m: 4.0   \\
-		2         & noasync & get + no keep alive             & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 25.4 m: 25.5 & a: 0.0 m: 0.0   & a: 48.8 m: 50.5 \\
-		2         & noasync & get + timestamp                 & a: 13.4 m: 13.0   & a: 3.7 m: 4.0   & a: 4.3 m: 4.5   & a: 3.2 m: 3.5   & a: 3.4 m: 3.0   \\
-		2         & noasync & get + timestamp                 & a: 134.1 m: 133.5 & a: 42.0 m: 41.0 & a: 43.1 m: 45.0 & a: 40.0 m: 37.5 & a: 42.9 m: 42.0 \\
-		2         & noasync & get + timestamp + no keep alive & a: 10 m: 10.0     & a: 5.3 m: 5.5   & a: 4.9 m: 5.0   & a: 5.0 m: 4.5   & a: 4.4 m: 4.0   \\
-		2         & noasync & get + timestamp + no keep alive & a: 100 m: 100.0   & a: 50.6 m: 51.5 & a: 48.7 m: 48.0 & a: 50.9 m: 52.5 & a: 48.4 m: 48.0 \\
-		3         & noasync & get                             & a: 13.3 m: 14.0   & a: 2.0 m: 2.0   & a: 3.5 m: 3.0   & a: 2.3 m: 2.5   & a: 4.5 m: 4.0   \\
-		3         & noasync & get                             & a: 135.1 m: 137.0 & a: 25.8 m: 27.0 & a: 42.2 m: 39.0 & a: 24.8 m: 27.5 & a: 46.7 m: 47.0 \\
-		3         & noasync & get + no keep alive             & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 2.2 m: 2.0   & a: 0.0 m: 0.0   & a: 5.0 m: 5.0   \\
-		3         & noasync & get + no keep alive             & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 25.4 m: 25.0 & a: 0.0 m: 0.0   & a: 52.2 m: 53.0 \\
-		3         & noasync & get + timestamp                 & a: 13.2 m: 13.0   & a: 4.1 m: 4.0   & a: 5.3 m: 6.0   & a: 5.0 m: 6.0   & a: 4.8 m: 5.0   \\
-		3         & noasync & get + timestamp                 & a: 134.5 m: 134.5 & a: 48.8 m: 47.0 & a: 48.3 m: 47.5 & a: 50.8 m: 51.5 & a: 49.1 m: 48.0 \\
-		3         & noasync & get + timestamp + no keep alive & a: 10 m: 10.0     & a: 4.6 m: 5.0   & a: 4.3 m: 4.0   & a: 4.5 m: 4.5   & a: 5.7 m: 6.0   \\
-		3         & noasync & get + timestamp + no keep alive & a: 100 m: 100.0   & a: 48.5 m: 50.0 & a: 50.8 m: 51.0 & a: 49.9 m: 50.0 & a: 50.4 m: 48.5 \\
-		0         & async   & get                             & a: 13 m: 14.0     & a: 1.5 m: 1.5   & a: 3.4 m: 4.0   & a: 1.4 m: 1.0   & a: 5.5 m: 5.0   \\
-		0         & async   & get                             & a: 113.1 m: 111.5 & a: 7.2 m: 6.5   & a: 30.7 m: 31.0 & a: 7.0 m: 6.0   & a: 68.2 m: 67.0 \\
-		0         & async   & get + no keep alive             & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 2.5 m: 2.5   & a: 0.0 m: 0.0   & a: 7.3 m: 7.5   \\
-		0         & async   & get + no keep alive             & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 22.4 m: 21.5 & a: 0.0 m: 0.0   & a: 68.2 m: 65.5 \\
-		0         & async   & get + timestamp                 & a: 13.7 m: 13.5   & a: 5.0 m: 5.0   & a: 5.6 m: 5.0   & a: 6.1 m: 6.0   & a: 6.2 m: 6.5   \\
-		0         & async   & get + timestamp                 & a: 113.4 m: 108.0 & a: 60.9 m: 60.0 & a: 65.2 m: 65.0 & a: 65.0 m: 65.0 & a: 65.6 m: 66.5 \\
-		0         & async   & get + timestamp + no keep alive & a: 10 m: 10.0     & a: 5.0 m: 5.0   & a: 5.7 m: 6.0   & a: 4.9 m: 4.5   & a: 7.7 m: 7.5   \\
-		0         & async   & get + timestamp + no keep alive & a: 100 m: 100.0   & a: 61.5 m: 60.5 & a: 60.0 m: 61.0 & a: 62.4 m: 62.5 & a: 68.7 m: 69.0 \\
-		0         & async   & post                            & a: 10 m: 10.0     & a: 5.1 m: 5.0   & a: 5.4 m: 6.0   & a: 4.4 m: 4.5   & a: 7.0 m: 7.0   \\
-		0         & async   & post                            & a: 100 m: 100.0   & a: 59.6 m: 59.0 & a: 58.9 m: 60.0 & a: 58.6 m: 58.5 & a: 66.7 m: 67.5 \\
-		0         & noasync & post                            & a: 10 m: 10.0     & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   \\
-		0         & noasync & post                            & a: 100 m: 100.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   & a: 0.0 m: 0.0   \\
-		1         & noasync & post                            & a: 10 m: 10.0     & a: 0.7 m: 1.0   & a: 3.1 m: 2.5   & a: 0.8 m: 1.0   & a: 4.0 m: 4.0   \\
-		1         & noasync & post                            & a: 100 m: 100.0   & a: 8.0 m: 8.5   & a: 42.0 m: 41.0 & a: 7.3 m: 6.5   & a: 46.4 m: 45.5 \\
-		2         & noasync & post                            & a: 10 m: 10.0     & a: 1.3 m: 1.0   & a: 3.8 m: 3.5   & a: 1.5 m: 1.0   & a: 3.9 m: 4.0   \\
-		2         & noasync & post                            & a: 100 m: 100.0   & a: 23.6 m: 22.5 & a: 44.5 m: 44.5 & a: 24.9 m: 25.0 & a: 46.6 m: 46.5 \\
-		3         & noasync & post                            & a: 10 m: 10.0     & a: 2.3 m: 2.0   & a: 4.4 m: 5.0   & a: 3.2 m: 3.0   & a: 4.3 m: 5.0   \\
-		3         & noasync & post                            & a: 100 m: 100.0   & a: 31.2 m: 31.5 & a: 46.6 m: 45.5 & a: 27.4 m: 25.5 & a: 50.2 m: 49.5 \\
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                          \\ \cline{2-11}
+		                         & avg                                & median                          & avg                         & median                    & avg                            & median & avg  & median & avg  & median \\ \hline
+		no                       & 13.3                               & 13.5                            & 0.8                         & 0.0                       & 0.8                            & 0.0    & 0.8  & 0.0    & 1.7  & 0.0    \\ \hline
+		no                       & 133.6                              & 133.0                           & 2.9                         & 0.0                       & 0.3                            & 0.0    & 2.9  & 0.0    & 15.2 & 0.0    \\ \hline
+		1                        & 13                                 & 13.0                            & 1.7                         & 1.5                       & 2.2                            & 2.0    & 1.7  & 2.0    & 2.6  & 2.5    \\ \hline
+		1                        & 133.2                              & 134.0                           & 22.7                        & 23.0                      & 39.1                           & 38.0   & 23.6 & 25.0   & 34.6 & 36.5   \\ \hline
+		2                        & 13.5                               & 14.0                            & 2.5                         & 2.5                       & 3.0                            & 3.0    & 2.5  & 3.0    & 3.3  & 4.0    \\ \hline
+		2                        & 131.5                              & 130.0                           & 22.5                        & 21.5                      & 40.3                           & 42.5   & 21.4 & 20.0   & 45.2 & 46.0   \\ \hline
+		3                        & 13.3                               & 14.0                            & 2.0                         & 2.0                       & 3.5                            & 3.0    & 2.3  & 2.5    & 4.5  & 4.0    \\ \hline
+		3                        & 135.1                              & 137.0                           & 25.8                        & 27.0                      & 42.2                           & 39.0   & 24.8 & 27.5   & 46.7 & 47.0   \\ \hline
+		async                    & 13                                 & 14.0                            & 1.5                         & 1.5                       & 3.4                            & 4.0    & 1.4  & 1.0    & 5.5  & 5.0    \\ \hline
+		async                    & 113.1                              & 111.5                           & 7.2                         & 6.5                       & 30.7                           & 31.0   & 7.0  & 6.0    & 68.2 & 67.0   \\ \hline
 	\end{tabular}
 \end{table}
 
-% schleife fest async results
-% number of wrong requests average over 3 attempts
-\begin{table}[]
-	\begin{tabular}{l l|l l l l}
+\begin{table}[h]
+	\centering
+	\caption{get + timestamp}
+	\label{tab:get}
+	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
 		\hline
-		                                & num requests & heuristic & exact & mix & counting \\ \hline
-		get                             & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + timestamp                 & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + no keep alive             & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + timestamp + no keep alive & 15           & 8,7       & 10,7  &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		post                            & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                          \\ \cline{2-11}
+		                         & avg                                & median                          & avg                         & median                    & avg                            & median & avg  & median & avg  & median \\ \hline
+		no                       & 13.6                               & 14.0                            & 0.7                         & 0.0                       & 0.9                            & 0.0    & 1.2  & 0.0    & 2.1  & 0.0    \\ \hline
+		no                       & 134.7                              & 136.5                           & 19.6                        & 0.0                       & 19.0                           & 0.0    & 9.4  & 0.0    & 19.9 & 0.0    \\ \hline
+		1                        & 13.8                               & 14.0                            & 3.3                         & 3.0                       & 3.0                            & 2.5    & 3.8  & 4.0    & 3.0  & 3.5    \\ \hline
+		1                        & 135.4                              & 137.5                           & 37.0                        & 37.0                      & 36.2                           & 35.0   & 36.7 & 36.5   & 38.1 & 39.5   \\ \hline
+		2                        & 13.4                               & 13.0                            & 3.7                         & 4.0                       & 4.3                            & 4.5    & 3.2  & 3.5    & 3.4  & 3.0    \\ \hline
+		2                        & 134.1                              & 133.5                           & 42.0                        & 41.0                      & 43.1                           & 45.0   & 40.0 & 37.5   & 42.9 & 42.0   \\ \hline
+		3                        & 13.2                               & 13.0                            & 4.1                         & 4.0                       & 5.3                            & 6.0    & 5.0  & 6.0    & 4.8  & 5.0    \\ \hline
+		3                        & 134.5                              & 134.5                           & 48.8                        & 47.0                      & 48.3                           & 47.5   & 50.8 & 51.5   & 49.1 & 48.0   \\ \hline
+		async                    & 13.7                               & 13.5                            & 5.0                         & 5.0                       & 5.6                            & 5.0    & 6.1  & 6.0    & 6.2  & 6.5    \\ \hline
+		async                    & 113.4                              & 108.0                           & 60.9                        & 60.0                      & 65.2                           & 65.0   & 65.0 & 65.0   & 65.6 & 66.5   \\ \hline
 	\end{tabular}
 \end{table}
 
-% schleife gemischt sync results
-\begin{table}[]
-	\begin{tabular}{l l|l l l l}
+\begin{table}[h]
+	\centering
+	\caption{get + no keep alive}
+	\label{tab:get}
+	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
 		\hline
-		                                & num requests & heuristic & exact & mix & counting \\ \hline
-		get                             & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + timestamp                 & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + no keep alive             & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + timestamp + no keep alive & 15           &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		post                            & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                         \\ \cline{2-11}
+		                         & avg                                & median                          & avg                         & median                    & avg                            & median & avg & median & avg  & median \\ \hline
+		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0    & 0.0 & 0.0    & 0.0  & 0.0    \\ \hline
+		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0    & 0.0 & 0.0    & 0.0  & 0.0    \\ \hline
+		1                        & 10                                 & 10.0                            & 0.0                         & 0.0                       & 1.7                            & 2.0    & 0.0 & 0.0    & 4.2  & 3.5    \\ \hline
+		1                        & 100                                & 100.0                           & 0.0                         & 0.0                       & 22.5                           & 22.5   & 0.0 & 0.0    & 40.2 & 41.0   \\ \hline
+		2                        & 10                                 & 10.0                            & 0.0                         & 0.0                       & 2.5                            & 2.0    & 0.0 & 0.0    & 3.6  & 4.0    \\ \hline
+		2                        & 100                                & 100.0                           & 0.0                         & 0.0                       & 25.4                           & 25.5   & 0.0 & 0.0    & 48.8 & 50.5   \\ \hline
+		3                        & 10                                 & 10.0                            & 0.0                         & 0.0                       & 2.2                            & 2.0    & 0.0 & 0.0    & 5.0  & 5.0    \\ \hline
+		3                        & 100                                & 100.0                           & 0.0                         & 0.0                       & 25.4                           & 25.0   & 0.0 & 0.0    & 52.2 & 53.0   \\ \hline
+		async                    & 10                                 & 10.0                            & 0.0                         & 0.0                       & 2.5                            & 2.5    & 0.0 & 0.0    & 7.3  & 7.5    \\ \hline
+		async                    & 100                                & 100.0                           & 0.0                         & 0.0                       & 22.4                           & 21.5   & 0.0 & 0.0    & 68.2 & 65.5   \\ \hline
 	\end{tabular}
 \end{table}
 
-% schleife gemischt async results
-\begin{table}[]
-	\begin{tabular}{l l|l l l l}
+\begin{table}[h]
+	\centering
+	\caption{get + timestamp + no keep alive}
+	\label{tab:get}
+	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
 		\hline
-		                                & num requests & heuristic & exact & mix & counting \\ \hline
-		get                             & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + timestamp                 & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + no keep alive             & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + timestamp + no keep alive & 15           &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		post                            & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                          \\ \cline{2-11}
+		                         & avg                                & median                          & avg                         & median                    & avg                            & median & avg  & median & avg  & median \\ \hline
+		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0    & 0.0  & 0.0    & 0.0  & 0.0    \\ \hline
+		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0    & 0.0  & 0.0    & 0.0  & 0.0    \\ \hline
+		1                        & 10                                 & 10.0                            & 3.4                         & 3.0                       & 4.3                            & 4.0    & 3.7  & 4.0    & 3.5  & 3.5    \\ \hline
+		1                        & 100                                & 100.0                           & 40.7                        & 39.0                      & 43.8                           & 45.0   & 40.4 & 40.0   & 43.7 & 43.0   \\ \hline
+		2                        & 10                                 & 10.0                            & 5.3                         & 5.5                       & 4.9                            & 5.0    & 5.0  & 4.5    & 4.4  & 4.0    \\ \hline
+		2                        & 100                                & 100.0                           & 50.6                        & 51.5                      & 48.7                           & 48.0   & 50.9 & 52.5   & 48.4 & 48.0   \\ \hline
+		3                        & 10                                 & 10.0                            & 4.6                         & 5.0                       & 4.3                            & 4.0    & 4.5  & 4.5    & 5.7  & 6.0    \\ \hline
+		3                        & 100                                & 100.0                           & 48.5                        & 50.0                      & 50.8                           & 51.0   & 49.9 & 50.0   & 50.4 & 48.5   \\ \hline
+		async                    & 10                                 & 10.0                            & 5.0                         & 5.0                       & 5.7                            & 6.0    & 4.9  & 4.5    & 7.7  & 7.5    \\ \hline
+		async                    & 100                                & 100.0                           & 61.5                        & 60.5                      & 60.0                           & 61.0   & 62.4 & 62.5   & 68.7 & 69.0   \\ \hline
 	\end{tabular}
 \end{table}
 
-% rekursiv sync results
-\begin{table}[]
-	\begin{tabular}{l l|l l l l}
+\begin{table}[h]
+	\centering
+	\caption{post}
+	\label{tab:get}
+	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
 		\hline
-		                                & num requests & heuristic & exact & mix & counting \\ \hline
-		get                             & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + timestamp                 & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + no keep alive             & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + timestamp + no keep alive & 15           &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		post                            & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                          \\ \cline{2-11}
+		                         & avg                                & median                          & avg                         & median                    & avg                            & median & avg  & median & avg  & median \\ \hline
+		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0    & 0.0  & 0.0    & 0.0  & 0.0    \\ \hline
+		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0    & 0.0  & 0.0    & 0.0  & 0.0    \\ \hline
+		1                        & 10                                 & 10.0                            & 0.7                         & 1.0                       & 3.1                            & 2.5    & 0.8  & 1.0    & 4.0  & 4.0    \\ \hline
+		1                        & 100                                & 100.0                           & 8.0                         & 8.5                       & 42.0                           & 41.0   & 7.3  & 6.5    & 46.4 & 45.5   \\ \hline
+		2                        & 10                                 & 10.0                            & 1.3                         & 1.0                       & 3.8                            & 3.5    & 1.5  & 1.0    & 3.9  & 4.0    \\ \hline
+		2                        & 100                                & 100.0                           & 23.6                        & 22.5                      & 44.5                           & 44.5   & 24.9 & 25.0   & 46.6 & 46.5   \\ \hline
+		3                        & 10                                 & 10.0                            & 2.3                         & 2.0                       & 4.4                            & 5.0    & 3.2  & 3.0    & 4.3  & 5.0    \\ \hline
+		3                        & 100                                & 100.0                           & 31.2                        & 31.5                      & 46.6                           & 45.5   & 27.4 & 25.5   & 50.2 & 49.5   \\ \hline
+		async                    & 10                                 & 10.0                            & 5.1                         & 5.0                       & 5.4                            & 6.0    & 4.4  & 4.5    & 7.0  & 7.0    \\ \hline
+		async                    & 100                                & 100.0                           & 59.6                        & 59.0                      & 58.9                           & 60.0   & 58.6 & 58.5   & 66.7 & 67.5   \\ \hline
 	\end{tabular}
 \end{table}
 
-% rekursiv async results
-\begin{table}[]
-	\begin{tabular}{l l|l l l l}
-		\hline
-		                                & num requests & heuristic & exact & mix & counting \\ \hline
-		get                             & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + timestamp                 & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + no keep alive             & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		get + timestamp + no keep alive & 15           &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\ \hline
-		post                            & 128          &           &       &     &          \\
-		                                & 1024         &           &       &     &          \\
-	\end{tabular}
-\end{table}
 
 \section{Konstostand}
 \subsection{Versuchsaufbau}
