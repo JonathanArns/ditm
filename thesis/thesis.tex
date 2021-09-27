@@ -52,6 +52,9 @@
 \subsection{CAP}
 \subsection{Verteilter Consens}
 \section{Docker}
+Docker als leichtgewichtige Alternative zu virtuellen Maschinen ist inzwischen weitgehen bekannt und bildet das Rückrad vieler
+moderner Cloud Anwendungen. Verteilte Microservice-basierte Systeme laufen heute fast ausschließlich in Containern und damit oft
+in Docker oder ähnlichen Technologien.
 \section{Proxy}
 
 \chapter{State of the Art}
@@ -63,13 +66,15 @@
 \cite{abstracting_the_geniuses}
 
 Jepsen ist ein Test Tool, welches speziell auf das Verhalten von verteilten Systemen bei Netwerk-Unterbrechungen u.Ä. ausgerichtet ist.
-Jepsen hat sich auf dem Gebiet zu einem Industriestandart für verteilte Datenbanken entwickelt und wird aktiv für Projekte wie
+Jepsen hat sich auf dem Gebiet zu einem Industriestandart für das Testen von verteilte Datenbanken entwickelt und wird aktiv für Projekte wie
 MongoDB, Couchbase, ScyllaDB, VoltDB, Hazelcast und CockroachDB verwendet und hat in jedem dieser Systeme bereits reale Bugs aufgedeckt.
 
-Während eines Tests führt Jepsen auf einem Kontrollknoten eine Reihe von Client Prozessen aus, die Requests an das verteilte System
+Jepsen führt Tests aus, indem auf einem Kontrollknoten eine Reihe von Client Prozessen ausgeführt werden, die Requests an das verteilte System
 senden. Gleichzeitig führt Jepsen mit Hilfe von sog. Nemesis Prozessen verschiedene Fehler in das System ein. Zur Erzeugung von
 Netzwerk-Unterbrechungen verwenden die Nemesis Prozesse Linux Netwerk Tools wie iptables. Neben Netzwerk-Unterbrechungen ist Jepsen in
-der Lage verschiedene andere Fehler zu erzeugen, wie beispielsweise...
+der Lage verschiedene andere Fehler zu erzeugen, wie beispielsweise Verzerrungen zwieschen den Systemuhren der einzelnen Knoten.
+
+Jepsen ist im Kern eine Clojure Bibliothek, mit der Nutzer Tests schreiben können.
 
 
 \chapter{Systembeschreibung}
@@ -219,7 +224,7 @@ In diesem Kapitel werden anhand des beschriebenen Prototypen die folgenden Hypot
 Ziel dieses Szenarios ist es, die Grenzen von ditm im Bezug auf die ersten beiden Fragen auszuloten.
 Dazu wird eine große Menge an eindeutig identifizierbarer Requests unter leicht unterschiedlichen Bedingungen gesendet.
 Da sich ditm beim Log-Matching auf Zeitstempel verlässt und diese für die Logs von Docker kommen, ist die Erwartung,
-dass das Log-Matching in allen Situationen akzeptabel funktioniert. Für das Reqeust Matching ist die Erwartungshaltung, dass 
+dass das Log-Matching in allen Situationen akzeptabel funktioniert. Für das Reqeust Matching ist die Erwartungshaltung, dass
 der ...Mix Matcher am besten funktioniert, dicht gefolgt vom ... heuristic Matcher.
 \subsection{Versuchsaufbau}
 Das Test System ist ein einfacher HTTP Server mit zwei Endpunkten. Einer davon löst
@@ -283,15 +288,26 @@ ditm erwies sich in diesem Fall als excellent geeignetes Debugging Werkzeug.
 
 \subsection{Ergebnisse}
 \begin{table}[h]
-	\begin{tabular}{|l|l|l|l|}
+	\begin{tabular}{|l|l|l|l|l|}
 		\hline
-		Anzahl Requests & async & maximaler Fehler & Anzahl Fehler \\ \hline
-		10              & nein  &                  &               \\ \hline
-		100             & nein  &                  &               \\ \hline
-		10              & ja    &                  &               \\ \hline
-		100             & ja    &                  &               \\ \hline
+		Anzahl Requests & Anzahl Logs & async & maximaler Fehler & Anzahl Fehler \\ \hline
+		10              & 18          & nein  & 1                & 1             \\ \hline
+		100             & 178         & nein  & 1                & 8             \\ \hline
+		10              & 19          & ja    & 15               & 17            \\ \hline
+		100             & 165         & ja    & 121              & 162           \\ \hline
 	\end{tabular}
 \end{table}
+Es ist Anzumerken, dass die Anzahl der Fehler und auch der maximale Fehler bei den asynchronen Experimenten Schätzwerte sind, da durch
+die asynchrone Natur der Experimente bei manchen Logs nicht eindeutig zu sagen ist, ob sie an richtiger Stelle stehen oder nicht.
+Trotzdem sollten die Werte ausreichen, um zu demonstrieren, dass das Log-Matching bei hoch asynchronen Prozessen mit vielen schnellen Logs
+und Reqeusts an seine Grenzen kommen kann und dann effektiv unbrauchbar wird.
+
+Eine weitere interessante Beobachtung ist, dass in dem längeren der beiden synchronen Experimenten die Fehler vorwiegend eng zusammen in Clustern
+von zwei bis drei Fehlern direkt hintereinander auftreten. Bei den asynchronen Experimenten stehen die fast alle Requests gemischt mit nur
+sehr wenigen Logs am Anfang der Aufzeichnung und fast alle Logs kommen am Ende der Aufzeichnung hinter allen Reqeusts. Beides deutet darauf hin,
+dass nicht der ditm Proxy selbst, welcher die Logs sammelt, den Flaschenhals bildet, sondern bereits der Docker Daemon selbst oder wahrscheinlicher
+der verwendete HTTP-Log-Driver, da die Zeitstempel, welche zur Sortierung der Tabelle von Reqeusts und Logs verwendet werden, in diesem Teil des
+Systems generiert werden.
 
 \begin{table}[h]
 	\centering

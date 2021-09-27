@@ -76,7 +76,7 @@ def run_single_experiment(num_replays: int, count: int, do_async: bool, disable_
         for _ in range(num_replays):
             replays.append(run_replay(recording_id))
         tmp = [evaluate_replay(recording, load_recording(x)) for x in replays]
-        results[matcher] = sum(tmp) / len(tmp)
+        results[matcher] = sum(tmp) / len(tmp) if len(tmp) > 0 else 0
     return len(recording["requests"])-1, results
 
 # def average_results(exps: list):
@@ -202,6 +202,14 @@ params = [
     (10, [1, 100, False, False, True, False, 2]),
     (10, [1, 10, False, False, True, False, 3]),
     (10, [1, 100, False, False, True, False, 3]),
+]
+
+params2 = [
+    # used for log matching eval
+    (1, [0, 10, False, False, False, False, 0]),
+    (1, [0, 100, False, False, False, False, 0]),
+    (1, [0, 10, True, False, False, False, 0]),
+    (1, [0, 100, True, False, False, False, 0]),
 ]
 
 run_experiments(params)
