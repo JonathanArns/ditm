@@ -277,17 +277,42 @@ die maximale Entfernung einer Log Nachricht von ihrer korrekten Position und die
 eingeordnet wurden. Da das Matching der Request- und Log-Flüsse im Replay exact gleich funktioniert, wie in der Aufzeichnung, sind
 für die Evaluation des Log-Matchings keine Replays notwendig.
 
-\subsection{Ein Bug im SUT}
-Ziel dieser Experimente ist ganz klar, mit einem sehr kontrollierten SUT die Grenzen von ditm auf technischer Ebene zu finden.
-Schon bei der ersten händischen Durchführung der ersten Experimente viel allerdings auf, dass dabei etwas nicht stimmen konnte.
-Nicht nur waren die Ergebnisse niederschmetternd, nach genauerem hinsehen fanden sich in den Aufzeichnungen auch teilweise deutlich
-mehr Requests als für das jeweilige Experiment vorgesehen. Nachdem ditms Proxy selbst als Quelle dieser zusätzlichen Requests
-in einer langen Debugging Session nahezu sicher ausgeschlossen werden konnte, war klar: Es muss einen Bug im SUT geben.
-
-ditm erwies sich in diesem Fall als excellent geeignetes Debugging Werkzeug.
+\subsection{Erfolgreiches Debugging des SUT}
+Ziel dieser Experimente ist, mit einem sehr kontrollierten SUT die Grenzen von ditm auf technischer Ebene zu finden.
+Schon bei einer ersten händischen Durchführung der ersten Experimente viel allerdings auf, dass dabei etwas nicht stimmen konnte.
+Nicht nur waren die Ergebnisse aus ditms Sicht sehr schlecht, nach genauerem Hinsehen fanden sich in den Aufzeichnungen auch
+teilweise deutlich mehr Requests, als für das jeweilige Experiment vorgesehen, was wiederum die schlechten Ergebnisse erklärt.
+Die erste Intuition war, den Fehler in ditm zu suchen, immerhin handelte es sich um ein komplexes und wenig getestetes System.
+Erst nachdem sich die Fehlersuche hier als früchtelos erwies, viel der Blick auf das augenscheinlich sehr einfache SUT.
+Hier erwies sich ditm tatsächlich als sehr geeignetes Debugging Werkzeug für das vorhandene Problem. Mit Hilfe der chronologischen
+Darstellung von Requests und Logs konnte festgestellt werden, dass der verwendete HTTP Client unter ganz bestimmten Bedingungen
+Retries für gescheiterte Requests sendet. Dazu zählt, dass der Request idempotent sein muss, POST Requests werden also niemals
+wiederholt. Dass der Client Retries für idempotente Requests sendet, ist auch tief in der Dokumentation zu finden \cite{go_transport_docs},
+das erklärt allerdings noch nicht vollständig das beobachtete Verhalten, da nicht alle gescheiterten idempotenten Requests wiederholt werden.
+Mit Hilfe von ditm konnte festgestellt werden, dass der Client die Requests außerdem nur dann erneut versucht, wenn direkt zuvor
+ein erfolgreicher Reqeust kam. Dieses Verhalten, dass Retries nur passieren, wenn die Verbindung bereits erfolgreich verwendet wurde,
+ist nicht in der offiziellen Dokumentation dokumentiert \cite{go_transport_docs}, entspricht aber dem gewollten Verhalten, welches in
+einer Commit Nachricht in Googles Versionskontroll-System dokumentiert ist \cite{go_retry_commit}. Die mangelnde Dokumentation
+wurde im Rahmen dieser Arbeit auf Golangs Issue Tracker festgehalten und kann somit in Zukunft verbessert werden.
+Für ditm ist dies insofern ein großer Erfolg, dass dieser Bug im SUT der erste zuvor unbekannte Bug ist, den ditm gefunden hat.
+Es handelt sich zwar nicht zusätzlich um einen neuen Bug in der Go Standartbibliothek, aber trotzdem wurde auch hier ein
+ähnlicher mentaler Schritt vollzogen. Es wurde mit Hilfe von ditm eine Diskrepanz zwischen dem erwarteten und dem tatsächlichen
+Verhalten der Bibliothek gefunden und es konnten sogar die genauen Unterschiede im Verhalten festgestellt werden, die sich dann auch
+mit dem vorgesehenen Verhalten decken.
 
 \subsection{Ergebnisse}
+Die Ergebnisse für das Log-Matching sind in Tabelle \ref{tab:logs} zusammengefasst.
+Es ist anzumerken, dass die Anzahl der Fehler und auch der maximale Fehler bei den asynchronen Experimenten Schätzwerte sind, da durch
+die asynchrone Natur der Experimente bei manchen Logs nicht eindeutig zu sagen ist, ob sie an richtiger Stelle stehen oder nicht.
+Trotzdem zeigen die Werte demonstativ, dass das Log-Matching bei hoch asynchronen Prozessen mit vielen schnellen Logs
+und Reqeusts an seine Grenzen kommen kann und dann effektiv unbrauchbar wird. Ganz im Gegenteil dazu stehen die Ergebnisse der
+synchronen Experimente. Zwar gibt es auch hier durchaus Fehler, diese sind aber selten genug und vor allem klein genug, dass das Log-Matching
+hier erheblich zur Effektivität von ditm als Debugging Werkzeug beitragen kann, wie sich auch schon im vorangegangenen Kapitel in
+der Praxis gezeigt hat.
 \begin{table}[h]
+	\centering
+	\caption{Ergebnisse der Log-Matching Experimente}
+	\label{tab:logs}
 	\begin{tabular}{|l|l|l|l|l|}
 		\hline
 		Anzahl Requests & Anzahl Logs & async & maximaler Fehler & Anzahl Fehler \\ \hline
@@ -297,17 +322,13 @@ ditm erwies sich in diesem Fall als excellent geeignetes Debugging Werkzeug.
 		100             & 165         & ja    & 121              & 162           \\ \hline
 	\end{tabular}
 \end{table}
-Es ist Anzumerken, dass die Anzahl der Fehler und auch der maximale Fehler bei den asynchronen Experimenten Schätzwerte sind, da durch
-die asynchrone Natur der Experimente bei manchen Logs nicht eindeutig zu sagen ist, ob sie an richtiger Stelle stehen oder nicht.
-Trotzdem sollten die Werte ausreichen, um zu demonstrieren, dass das Log-Matching bei hoch asynchronen Prozessen mit vielen schnellen Logs
-und Reqeusts an seine Grenzen kommen kann und dann effektiv unbrauchbar wird.
 
 Eine weitere interessante Beobachtung ist, dass in dem längeren der beiden synchronen Experimenten die Fehler vorwiegend eng zusammen in Clustern
-von zwei bis drei Fehlern direkt hintereinander auftreten. Bei den asynchronen Experimenten stehen die fast alle Requests gemischt mit nur
-sehr wenigen Logs am Anfang der Aufzeichnung und fast alle Logs kommen am Ende der Aufzeichnung hinter allen Reqeusts. Beides deutet darauf hin,
-dass nicht der ditm Proxy selbst, welcher die Logs sammelt, den Flaschenhals bildet, sondern bereits der Docker Daemon selbst oder wahrscheinlicher
-der verwendete HTTP-Log-Driver, da die Zeitstempel, welche zur Sortierung der Tabelle von Reqeusts und Logs verwendet werden, in diesem Teil des
-Systems generiert werden.
+von zwei bis drei Fehlern direkt hintereinander auftreten. Bei den asynchronen Experimenten stehen sogar fast alle Logs ganz am Ende der Aufzeichnung
+und fast alle Requests gemischt mit nur sehr wenigen Logs am Anfang. Beides deutet darauf hin, dass irgendwo in der Logging Pipeline möglicherweise
+ein Buffer nicht schnell genug abgearbeitet wird und sich die Log-Nachrichten so anstauen können. Es ist außerdem naheliegend, dass nicht der ditm Proxy
+selbst, welcher die Logs sammelt, den Flaschenhals bildet, sondern bereits der Docker Daemon oder noch wahrscheinlicher der verwendete HTTP-Log-Driver,
+da die Zeitstempel, welche zur Sortierung der Tabelle von Reqeusts und Logs verwendet werden, in diesem Teil des Systems generiert werden.
 
 \begin{table}[h]
 	\centering
