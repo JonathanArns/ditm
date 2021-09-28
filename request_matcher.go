@@ -4,18 +4,6 @@ import (
 	"math"
 )
 
-// Ideas for matcher heuristics:
-
-// Position in stream
-// timing
-// URI
-// length of body
-// length of URI
-// names of the query params
-// length of individual query params
-
-// try to also make a metric with only data that would be available on tcp
-
 // A Matcher returns a pointer to the Request from rec,
 // that matches r the best.
 // If no match is found, nil is returned.
@@ -40,7 +28,7 @@ func (m *countingMatcher) MarkSeen(r *Request) {
 }
 
 func (m *countingMatcher) Match(r *Request, i int, rec []*Request) *Request {
-	if i < len(rec) {
+	if i < len(rec) && !m.Seen(rec[i]) && !rec[i].FromOutside {
 		m.MarkSeen(rec[i])
 		return rec[i]
 	}
@@ -74,6 +62,9 @@ func (m *heuristicMatcher) Match(r *Request, i int, rec []*Request) *Request {
 			score += 1 * faktor
 		}
 		score -= math.Abs(float64(len(req.To)-len(r.To))) * faktor / 10
+		if string(req.Body) == string(r.Body) {
+			score += 1 * faktor
+		}
 		score -= math.Abs(float64(len(req.Body)-len(r.Body))) * faktor / 10
 		if score > highScore {
 			highScore = score

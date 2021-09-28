@@ -98,6 +98,9 @@ ditm ist ein Prototyp, der primär dem Zweck dient, die zuvor beschriebene Idee 
 Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstützten Netwerk-Protokolle auf HTTP beschränkt sind.
 \subsection{Funktionale Anforderungen}
 \begin{table}[h]
+	\centering
+    \caption{Funktionale Anforderungen}
+	\label{tab:fa}
 	\begin{tabular}{|l|l|p{7cm}|}
 		\hline
 		ID   & Anforderung                   & Beschreibung                                                                                                                                                                                                          \\ \hline
@@ -116,6 +119,9 @@ Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstüt
 
 \subsection{Nicht-Funktionale Anforderungen}
 \begin{table}[h]
+	\centering
+	\caption{Nicht-Funktionale Anforderungen}
+	\label{tab:nfa}
 	\begin{tabular}{|l|l|p{7cm}|}
 		\hline
 		ID   & Anforderung              & Beschreibung                                                                                                                                                                                                  \\ \hline
@@ -191,7 +197,7 @@ Das Frontend selbst ist eine einfache, serverseitig gerenderte, HTML Seite mit d
 um SSEs zu empfangen und zu verarbeiten. Die Seite ist mittels Bootstrap gestyled und in Tabs aufgeteilt.
 \subsection{Request Matcher}
 Die Logik zur Entscheidung, ob ein Request, bzw. eine Response, während eines Replays geblockt werden soll,
-ist das Kernstück des Proxys, welches es ermöglicht, Aufzeichnungen zuverlässig wiederzugeben.
+ist ein Kernstück des Proxys, welches es ermöglicht, Aufzeichnungen zuverlässig wiederzugeben.
 Das Problem lässt sich darauf herunterbrechen, genau den Request im ursprünglichen Recording zu identifizieren,
 dem der aktuelle Request während des Replays entspricht. Das liegt daran, dass sich der Proxy während eines
 Replays immer exact wie während der Aufnahme verhalten soll.
@@ -201,16 +207,107 @@ Recording als auch im Replay nach dem StreamIdentifier des aktuellen Requests zu
 kleinere Request Streams entstehen. Der StreamIdentifier wird zusammengesetzt aus den Namen des Clients
 und des Servers für den jeweiligen Request, ein so gefilterter Stream stellt also den gesamten Verkehr
 zwischen genau zwei Knoten des SUT dar.
-Der Rest des Matchings ist über ein Single-Method-Interface abstrahiert, um leicht mehrere Implementierungen
-austauschen zu können. Die Methode Match des Interfaces erwartet als Parameter den aktuellen Request,
-dessen Index im gefilterten Stream des Replays und den gesamten gefilterten Stream des Recordings.
-Insgesamt wurden X Implementierungen für das Interface mit verschiedenen Algorithmen erstellt, die im Folgenden
-dargestellt und später gegeneinander evaluiert werden.
+Der Rest des Matchings ist wie folgt über ein Interface abstrahiert, um leicht mehrere Implementierungen
+austauschen zu können.
+\begin{verbatim}
+type Matcher interface {
+   	Match(r *Request, i int, rec []*Request) *Request
+   	Seen(r *Request) bool
+    MarkSeen(r *Request)
+}
+\end{verbatim}
+Die Methode Match erwartet als Parameter den aktuellen Request, dessen Index im gefilterten Stream des Replays
+und den gesamten gefilterten Stream des Recordings und gibt einen Pointer auf den Request im Recording zurück,
+der das beste Match darstellt. Die Methoden Seen und MarkSeen dienen dazu, Requests zu markieren, falls sie bereits
+im aktuellen Replay vorgekommen sind, bzw. abzufragen, ob ein Request bereits markiert wurde. Es wird also nach jedem Aufruf
+von Match der zurück gegebene Request markiert. Eine Methode um Requests zu entmarkieren wird nicht benötigt, da für
+jedes Replay ein neuer Matcher initialisiert wird. Insgesamt wurden vier Implementierungen für das Interface mit
+verschiedenen Algorithmen für Match erstellt, die im Folgenden dargestellt und später gegeneinander evaluiert werden.
+Alle vier Implementierungen verwenden eine Hashtabelle zur Umsetzung der Seen und MarkSeen Funktionalität und ignorieren
+bei jedem Aufruf von Match bereits markierte Requests, sowie Requests, die von außerhalt des SUT stammen.
 \subsubsection{Zählend}
+Mit Abstand der einfachste Request-Matcher ist der zählende Matcher. Dieser bestimmt Matches allein aufgrund der Position
+von Requests in den jeweiligen Streams. Es wird also immer der Request als Match bestimmt, welcher im Recording den Index i hat,
+wobei i der zweite Parameter der Match Methode ist. Ist der entsprechende Request bereits markiert oder von außerhalb des SUT,
+wird kein Match zurück gegeben, was bei allen Matchern dazu führt, dass ditm den Request nicht manipuliert.
+Der Zählende Matcher ist nicht als ernsthafter Versuch gemeint, einen guten Matcher zu entwickeln. Vielmehr soll
+er als Vergleichsgrundlage für die anderen Matcher dienen.
 \subsubsection{Exact}
-\subsubsection{Heutistisch}
+Alle weiteren Matcher, der Exacte eingeschlossen, verwenden ein Punktesystem, in dem allen Requests des Recordings für verschiedene
+Eigenschaften Punkte zugewiesen werden und am Ende der Request mit der höchsten Punktzahl als Match zurück gegeben wird.
+Der Exacte Matcher vergibt einen Punkt, falls die Requests an gleicher Stelle in ihren Streams stehen, falls die URIs der
+Requests gleich sind, falls die Länge der URIs gleich ist, falls die Bodies gleich sind und falls die Länge der Bodies gleich ist.
+Sei i der Index im Replay, j der Index im Recording, req der aktuelle Request im Replay und r der aktuelle
+Request im Recording, dann wird der Score für r also wie folgt berechnet.
+\begin{verbatim}
+score := 0.0
+if i == j {
+    score += 1
+}
+if req.To == r.To {
+    score += 1
+}
+if len(req.To) == len(r.To) {
+    score += 1
+}
+if string(req.Body) == string(r.Body) {
+    score += 1
+}
+if len(req.Body) == len(r.Body) {
+    score += 1
+}
+\end{verbatim}
+Dieser Matcher sollte sich in Situationen mit gemischten Request Reihenfolgen bereits deutlich besser verhalten, als der
+einfache zählende Matcher, da er neben der Reihenfolge auch andere Eigenschaften der Requests betrachtet. Trotzdem ist es auch
+hier vorstellbar, dass der Matcher deutliche Probleme haben wird, sobald er auf eine Menge ähnlicher Requests trifft, die nur
+leicht gemischt sind.
 \subsubsection{Mix}
-
+Um dieses Problem noch weiter anzugehen, betrachtet der Mix Matcher nicht nur, ob die Position der Requests absolut gleich
+ist, sondern den relativen Abstand der Requests zueinander, und bewertet Requests mit geringerem Abstand besser. Alle
+anderen Eigentschaften werden weiterhin absolut miteinander verglichen. Um die Gewichtung zwischen dem relativen Abstand
+und den konstanten Komponenten des Scores anzupassen, werden diese mit der Länge des Recordings als Faktor multipliziert.
+Das führt dazu, dass Gleichheit in anderen Eigenschaften höher gewichtet wird, als die Position eines Requests und diese
+nur dann mit ins Gewicht fällt, wenn es mehrere Requests im Recording gibt, die ansonsten gleich gut passen.
+\begin{verbatim}
+faktor := float64(len(rec)) // Länge des Recordings
+score := 0.0
+score -= math.Abs(float64(j - i)) // Relativer Abstand der Requests
+if req.To == r.To {
+    score += 1 * faktor
+}
+if len(req.To) == len(r.To) {
+    score += 1 * faktor
+}
+if string(req.Body) == string(r.Body) {
+    score += 1 * faktor
+}
+if len(req.Body) == len(r.Body) {
+    score += 1 * faktor
+}
+\end{verbatim}
+\subsubsection{Heuristisch}
+Der Heuristische Matcher unterscheidet sich vom Mix Matcher nur in zwei Stellen. Anstatt die Längen der URIs und Bodies
+absolut miteinander zu vergleichen, wird hier wie bei der Position die Differenz zwischen den beiden genommen und eine kleinere
+Differenz besser bewertet. Die Werte werden weiterhing mit der Länge des Recordings als Faktor multipliziert. Um die Tatsache
+auszugleichen, dass die Differenz selbst größere Werte annehmen kann, als die konstanten Werte, wird sie allerdings zusätzlich
+durch 10 dividiert.
+\begin{verbatim}
+faktor := float64(len(rec))
+score := 0.0
+score -= math.Abs(float64(j - i))
+if req.To == r.To {
+    score += 1 * faktor
+}
+score -= math.Abs(float64(len(req.To)-len(r.To))) * faktor / 10
+if string(req.Body) == string(r.Body) {
+    score += 1 * faktor
+}
+score -= math.Abs(float64(len(req.Body)-len(r.Body))) * faktor / 10
+\end{verbatim}
+Obwohl der heuristische Matcher komplexer ist, als der Mix Matcher und insgesamt feinere Unterschiede zwischen Requests
+berücksichtigen kann, ist nicht von vornherein zu sagen, ob das von Vorteil ist. Unter anderem wird auch diese Frage in
+der Evaluation von ditm empirisch angegangen. Es ist durchaus denkbar, dass es auch von der bestimmten Situation abhängt,
+welcher Matcher sich besser verhält.
 \section{Nutzung}
 \subsection{Konfiguration}
 \subsection{Bedienung}
