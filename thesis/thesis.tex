@@ -1,7 +1,5 @@
 \documentclass[12pt,a4paper]{report}
 \linespread{1.2}
-\setlength{\parskip}{0.5em}
-\setlength{\parindent}{0em}
 
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
@@ -39,6 +37,8 @@
 \maketitle
 
 \tableofcontents
+\setlength{\parindent}{0em}
+\setlength{\parskip}{0.5em}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Document beginning %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -67,18 +67,18 @@ in Docker oder ähnlichen Technologien.
 \section{Chaos Testing}
 \cite{why_is_random_testing_effective}
 \subsection{Jepsen}
-\cite{abstracting_the_geniuses}
-
-Jepsen ist ein Test-Framework in der Sprache Clojure, welches speziell auf das Verhalten von verteilten Systemen bei Netwerk-Unterbrechungen u.Ä. ausgerichtet ist.
-Jepsen hat sich auf dem Gebiet zu einem Industriestandart für das Testen von verteilte Datenbanken entwickelt und wird aktiv für Projekte wie
-MongoDB, Couchbase, ScyllaDB, VoltDB, Hazelcast und CockroachDB verwendet und hat in jedem dieser Systeme bereits reale Bugs aufgedeckt.
+Einen ähnlichen Anzatz zum Chaos-Engineering verfolgt auch Jepsen.
+Jepsen ist ein Test-Framework in der Sprache Clojure, welches speziell auf das Verhalten von verteilten Systemen bei
+Netwerk-Unterbrechungen u.Ä. ausgerichtet ist. Jepsen hat sich auf dem Gebiet zu einem Industriestandart für das Testen von
+verteilte Datenbanken entwickelt \cite{abstracting_the_geniuses} und wird für Projekte wie MongoDB, etcd, VoltDB, Hazelcast,
+Elasticsearch und CockroachDB verwendet und hat in jedem dieser Systeme bereits reale Bugs aufgedeckt \cite{jepsen_analyses}.
 
 Bei Jepsen-Tests werden auf einem Kontrollknoten eine Reihe von Client Prozessen ausgeführt, die Requests an das SUT senden.
 Gleichzeitig werden mit Hilfe von sog. Nemesis Prozessen verschiedene Fehler in das System eingeführt. Zur Erzeugung von
 Netzwerk-Unterbrechungen verwendet Jepsen die Linux Netwerk Tools wie iptables. Neben Netzwerk-Unterbrechungen ist Jepsen in
 der Lage, verschiedene andere Fehler zu erzeugen, wie beispielsweise Verzerrungen zwischen den Systemuhren der einzelnen Knoten.
 Am Ende eines Tests wird verifiziert, ob alle durchgeführten Operationen unter den Regeln des SUT linearisierbar sind. Sind sie das
-nicht, hat Jepsen einen Bug gefunden, vorrausgesetzt die Regeln des Systems sind korrekt definiert.
+nicht, hat Jepsen einen Bug gefunden, vorrausgesetzt die Regeln des SUT sind korrekt modelliert.
 
 
 \chapter{Systembeschreibung}
@@ -402,6 +402,7 @@ Verhalten der Bibliothek gefunden und es konnten sogar die genauen Unterschiede 
 mit dem vorgesehenen Verhalten decken.
 
 \subsection{Ergebnisse}
+\subsubsection{Log-Matching}
 Die Ergebnisse für das Log-Matching sind in Tabelle \ref{tab:logs} zusammengefasst.
 Es ist anzumerken, dass die Anzahl der Fehler und auch der maximale Fehler bei den asynchronen Experimenten Schätzwerte sind, da durch
 die asynchrone Natur der Experimente bei manchen Logs nicht eindeutig zu sagen ist, ob sie an richtiger Stelle stehen oder nicht.
@@ -431,6 +432,19 @@ ein Buffer nicht schnell genug abgearbeitet wird und sich die Log-Nachrichten so
 selbst, welcher die Logs sammelt, den Flaschenhals bildet, sondern bereits der Docker Daemon oder noch wahrscheinlicher der verwendete HTTP-Log-Driver,
 da die Zeitstempel, welche zur Sortierung der Tabelle von Reqeusts und Logs verwendet werden, in diesem Teil des Systems generiert werden.
 
+\subsubsection{Request-Matching}
+Die Ergebnisse der Experimente zur Evaluation den Request-Matchings sind gruppiert nach Art der Requests, so dass pro Tabelle
+der Einfluss von Zufall in der Reihenfolge der Requests auf das Matching erkennbar wird. Die vom beschriebenen Bug im SUT
+betroffenen Experimente sind in den Tabellen \ref{tab:get} und \ref{tab:get_ts} dargestellt und daran erkennbar, dass die Anzahl
+der Requests von den vorgesehenen 10 und 100 abweicht. Interessant in diesen Experimenten ist zu beobachten, dass selbst bei
+ungemischten Reqeust-Flüssen Fehler passieren, der Blick auf dem Median zeigt aber, dass dies nur in weniger als der Hälfte der
+Durchführungen der Fall sein kann. Die Erklärung hierfür ist, dass durch den Bug ein vorangegangener Aufruf des SUT einen
+Einfluss auf den nächsten haben kann, falls der letzte Request des vorangegangenen Aufrufs erfolgreich war und der erste Request
+des neuen Aufrufs geblockt wird. In diesem Fall wird der erste Request erneut versucht, was in isolation selbst mit dem Bug
+nicht passieren sollte. Tritt dieser Fall ein, verändert sich dadurch die Reihenfolge des Gesamten Request-Flusses, da direkt am
+Anfang ein zusätzlicher Request eingefügt wird, was zu den beobachteten Fehlern führt. Tabelle \ref{tab:get_nka} zeigt, dass
+diese Fehler in der Tat durch den Bug ausgelöst werden, da sie nicht auftreten, wenn die Retries mittels no-keep-alive
+verhindert werden.
 \begin{table}[h]
 	\centering
 	\caption{get}
@@ -455,7 +469,7 @@ da die Zeitstempel, welche zur Sortierung der Tabelle von Reqeusts und Logs verw
 \begin{table}[h]
 	\centering
 	\caption{get + timestamp}
-	\label{tab:get}
+	\label{tab:get_ts}
 	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
 		\hline
 		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                          \\ \cline{2-11}
@@ -476,7 +490,7 @@ da die Zeitstempel, welche zur Sortierung der Tabelle von Reqeusts und Logs verw
 \begin{table}[h]
 	\centering
 	\caption{get + no keep alive}
-	\label{tab:get}
+	\label{tab:get_nka}
 	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
 		\hline
 		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                         \\ \cline{2-11}
@@ -497,7 +511,7 @@ da die Zeitstempel, welche zur Sortierung der Tabelle von Reqeusts und Logs verw
 \begin{table}[h]
 	\centering
 	\caption{get + timestamp + no keep alive}
-	\label{tab:get}
+	\label{tab:get_ts_nka}
 	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
 		\hline
 		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                          \\ \cline{2-11}
@@ -518,7 +532,7 @@ da die Zeitstempel, welche zur Sortierung der Tabelle von Reqeusts und Logs verw
 \begin{table}[h]
 	\centering
 	\caption{post}
-	\label{tab:get}
+	\label{tab:post}
 	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
 		\hline
 		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                          \\ \cline{2-11}
