@@ -1,4 +1,7 @@
-\documentclass[a4paper]{report}
+\documentclass[12pt,a4paper]{report}
+\linespread{1.2}
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0em}
 
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
@@ -50,6 +53,7 @@
 \section{Verteilte Systeme}
 \subsection{Partition Tolerance}
 \subsection{CAP}
+\subsection{Linearisierbarkeit}
 \subsection{Verteilter Consens}
 \section{Docker}
 Docker als leichtgewichtige Alternative zu virtuellen Maschinen ist inzwischen weitgehen bekannt und bildet das Rückrad vieler
@@ -65,16 +69,16 @@ in Docker oder ähnlichen Technologien.
 \subsection{Jepsen}
 \cite{abstracting_the_geniuses}
 
-Jepsen ist ein Test Tool, welches speziell auf das Verhalten von verteilten Systemen bei Netwerk-Unterbrechungen u.Ä. ausgerichtet ist.
+Jepsen ist ein Test-Framework in der Sprache Clojure, welches speziell auf das Verhalten von verteilten Systemen bei Netwerk-Unterbrechungen u.Ä. ausgerichtet ist.
 Jepsen hat sich auf dem Gebiet zu einem Industriestandart für das Testen von verteilte Datenbanken entwickelt und wird aktiv für Projekte wie
 MongoDB, Couchbase, ScyllaDB, VoltDB, Hazelcast und CockroachDB verwendet und hat in jedem dieser Systeme bereits reale Bugs aufgedeckt.
 
-Jepsen führt Tests aus, indem auf einem Kontrollknoten eine Reihe von Client Prozessen ausgeführt werden, die Requests an das verteilte System
-senden. Gleichzeitig führt Jepsen mit Hilfe von sog. Nemesis Prozessen verschiedene Fehler in das System ein. Zur Erzeugung von
-Netzwerk-Unterbrechungen verwenden die Nemesis Prozesse Linux Netwerk Tools wie iptables. Neben Netzwerk-Unterbrechungen ist Jepsen in
-der Lage verschiedene andere Fehler zu erzeugen, wie beispielsweise Verzerrungen zwieschen den Systemuhren der einzelnen Knoten.
-
-Jepsen ist im Kern eine Clojure Bibliothek, mit der Nutzer Tests schreiben können.
+Bei Jepsen-Tests werden auf einem Kontrollknoten eine Reihe von Client Prozessen ausgeführt, die Requests an das SUT senden.
+Gleichzeitig werden mit Hilfe von sog. Nemesis Prozessen verschiedene Fehler in das System eingeführt. Zur Erzeugung von
+Netzwerk-Unterbrechungen verwendet Jepsen die Linux Netwerk Tools wie iptables. Neben Netzwerk-Unterbrechungen ist Jepsen in
+der Lage, verschiedene andere Fehler zu erzeugen, wie beispielsweise Verzerrungen zwischen den Systemuhren der einzelnen Knoten.
+Am Ende eines Tests wird verifiziert, ob alle durchgeführten Operationen unter den Regeln des SUT linearisierbar sind. Sind sie das
+nicht, hat Jepsen einen Bug gefunden, vorrausgesetzt die Regeln des Systems sind korrekt definiert.
 
 
 \chapter{Systembeschreibung}
@@ -171,8 +175,8 @@ Die verschiedenen Ansätze, die diese Arbeit betrachtet, werden in Kap. X Reques
 
 \section{Implementierung}
 Als Programmiersprache wird für die Implementierung auf Go gesetzt. Go bietet sich an, da die Standartbibliothek
-sehr einfache, aber robuste APIs für den Umgang mit Netzwerken bietet und die Sprache insgesamt eine schnelle
-Entwicklungsgeschwindigkeit erlaubt.
+umfassende, robuste APIs für den Umgang mit Netzwerken bietet und die Sprache insgesamt eine schnelle
+Entwicklungsgeschwindigkeit erlaubt, ohne Performance zu vernachlässigen.
 \subsection{Datenspeicherung}
 Als Speicherformat für ditm wurden einfache Dateien in JSON Format gewählt. So wird jedes Recording Datenobjekt in
 einer eigenen Datei serialisiert gespeichert. Dieses Format wurde einer Datenbank aus mehreren Gründen vorgezogen.
