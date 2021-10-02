@@ -48,7 +48,8 @@
 
 
 \chapter{Einleitung}
-
+\cite{analysis_of_network_partition_failures}
+\cite{chaos_engineering}
 \chapter{Grundlagen}
 \section{Verteilte Systeme}
 \subsection{Partition Tolerance}
@@ -64,7 +65,10 @@ in Docker oder ähnlichen Technologien.
 \chapter{State of the Art}
 \cite{debugging_distributed_systems_2016}
 \section{Tracing}
-\section{Chaos Testing}
+\section{Failure / Chaos Testing}
+Failure Testing ist eine Familie von Ansätzen zum Testen der Fehlertoleranz verteilter Systeme. Die Grundidee ist immer, wie ein
+normaler Client mit dem System zu interagieren und zeitgleich die Umgebung des Systems zu manipulieren, beispielsweise mit
+Netzwerk-Unterbrechungen.
 \cite{why_is_random_testing_effective}
 \subsection{Jepsen}
 Einen ähnlichen Anzatz zum Chaos-Engineering verfolgt auch Jepsen.
@@ -79,7 +83,15 @@ Netzwerk-Unterbrechungen verwendet Jepsen die Linux Netwerk Tools wie iptables. 
 der Lage, verschiedene andere Fehler zu erzeugen, wie beispielsweise Verzerrungen zwischen den Systemuhren der einzelnen Knoten.
 Am Ende eines Tests wird verifiziert, ob alle durchgeführten Operationen unter den Regeln des SUT linearisierbar sind. Sind sie das
 nicht, hat Jepsen einen Bug gefunden, vorrausgesetzt die Regeln des SUT sind korrekt modelliert.
+\subsection{Replay Debugging}
+\cite{distributed_replay_debugging_1997}
+\cite{failify_masters_thesis}
+% idea exists, seems very promising
+% different approaches with different advantages and drawbacks
 
+\section{Was fehlt noch??}
+% leicht verwendbare chaos failure testing
+% zuverlässige reproduktion von bugs
 
 \chapter{Systembeschreibung}
 Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
@@ -87,7 +99,10 @@ Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im R
 Die grundlegende Idee dieser Arbeit ist ein Tool, welches nach Record and Replay Prinzip beim Debugging von Bugs im Zusammenhang
 mit Netwerk-Unterbrechungen in verteilten Systemen helfen soll. Mit Hilfe eines solchen Tools sollen Netwerk-Unterbrechungen
 während Test Durchläufen simuliert werden. Das Tool soll außerdem diese Test Durchläufe aufzeichnen und zum späteren Zeitpunkt
-wieder abspielen können, insbesondere mit den gleichen Netzwerk-Bedingungen wie während der Aufzeichnung.
+wieder abspielen können, insbesondere mit den gleichen Netzwerk-Bedingungen wie während der Aufzeichnung. Ein großer Unterschied
+zu existierenden Failure Testing Tools ist, dass anstelle einer Programmierschnittstelle für automatisierte Tests eine interaktive
+Nutzererfahrung angestrebt wird. Nutzer sollen die Möglichkeit haben, Netzwerk-Unterbrechungen erzeugen zu können, während sie mit
+dem System interagieren.
 
 Der Kern der Arbeit ist dabei speziell der verfolgte Ansatz für ein solches System. Dieser ist, alle Nachrichten innerhalb eines
 verteilten Systems über einen Proxy zu leiten, der diese inklusive Metadaten aufzeichnet und in der Lage ist, kontrolliert
@@ -562,8 +577,17 @@ verhindert werden.
 \subsection{Ergebnisse}
 
 \chapter{Ergebnis}
-
+% currently I expect to write here, that the proxy failure mechanism is too flawed
+% and that the interactive failure testing model is a solid idea that needs to be developed further
+% the interactive model is good at tightening the feedback loop
 \chapter{Future Work}
+% keep and extend the idea of an interactive, graphical tool / debugger,
+% while switching out failure mechanism for ssh, and extending to allow clock drift etc (like failify does it in docker)
+
+% explore additional UI features: a builting graphical request 'builder',
+% a smart diff tool for recordings / action sequences
+% a drag and drop test case / replay editor to build predefined action sequences,
+% enable using replays from an interactive session as an automated regression test
 
 \chapter{Fazit}
 
