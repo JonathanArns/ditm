@@ -3,10 +3,10 @@ version: "3.9"
 services:
   ditm:
     image: ditm
-    container_name: hw-ditm
+    container_name: st-ditm
     hostname: ditm
     environment:
-      CONTAINER_HOST_NAMES: target,target2
+      CONTAINER_HOST_NAMES: tenant-management,atomic-engine,measures-microservice
     volumes:
       - ./volumes/volumes:/volumes
       - ./volumes/recordings:/recordings
@@ -15,43 +15,67 @@ services:
       - "8000:80"
       - "5000:5000"
     depends_on:
-      - target
-      - target2
+      - TM
+      - AE
+      - MM
   
   TM:
-    image: tenant-management
+    image: tenant-management:ditm
     container_name: TM
     hostname: tenant-management
     ports:
-      - "8080:80"
+      - "8080:8000"
     environment: 
       - HTTP_PROXY=ditm:5000
+      - ATOMIC_ENGINE_API_URL=atomic-engine
+      - MEASURES_API_URL=measures-microservice
+      # don't worry, all of these are not production secrets
+      - ATOMIC_ENGINE_API_KEY=KDUJNBpb.dyfr46g91s9GYq9oiPf8rD1pN8mlmg0W
+      - MEASURES_API_KEY=smFUFEq1.R1aB90jEw2FNxADcgNmXxTztjatlnWaY
+      - JWT_SIGNING_KEY=abcdefghijklmnopqrxtuvwxyz
+      - DEBUG=True
+      - ENVIRONMENT=development
+      - DJANGO_SETTINGS_MODULE=tenant_management.settings.development
+    volumes:
+      - ./tm:/db
     logging:
       driver: jonathanarns/http-log-driver
       options:
         endpoint: http://localhost:8000/log
 
   AE:
-    image: atomic-engine
+    image: atomic-engine:ditm
     container_name: AE
     hostname: atomic-engine
     ports:
-      - "8081:80"
+      - "8081:8000"
     environment: 
       - HTTP_PROXY=ditm:5000
+      - JWT_SIGNING_KEY=abcdefghijklmnopqrxtuvwxyz
+      - DEBUG=True
+      - ENVIRONMENT=development
+      - DJANGO_SETTINGS_MODULE=atomic_engine.settings.development
+    volumes:
+      - ./ae:/db
     logging:
       driver: jonathanarns/http-log-driver
       options:
         endpoint: http://localhost:8000/log
 
   MM:
-    image: measures-microservice
+    image: measures-microservice:ditm
     container_name: MM
     hostname: measures-microservice
     ports:
-      - "8082:80"
+      - "8082:8000"
     environment: 
       - HTTP_PROXY=ditm:5000
+      - JWT_SIGNING_KEY=abcdefghijklmnopqrxtuvwxyz
+      - DEBUG=True
+      - ENVIRONMENT=development
+      - DJANGO_SETTINGS_MODULE=measures_microservice.settings.development
+    volumes:
+      - ./mm:/db
     logging:
       driver: jonathanarns/http-log-driver
       options:
