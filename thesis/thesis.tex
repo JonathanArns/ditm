@@ -66,13 +66,17 @@ in Docker oder ähnlichen Technologien.
 \cite{debugging_distributed_systems_2016}
 \section{Tracing}
 \section{Failure / Chaos Testing}
-Failure Testing ist eine Familie von Ansätzen zum Testen der Fehlertoleranz verteilter Systeme. Die Grundidee ist immer, wie ein
-normaler Client mit dem System zu interagieren und zeitgleich die Umgebung des Systems zu manipulieren, beispielsweise mit
-Netzwerk-Unterbrechungen.
+Failure Testing ist eine Familie von Ansätzen zum Testen der Fehlertoleranz verteilter Systeme. Die Grundidee ist immer, als
+Client mit dem System zu interagieren und zeitgleich die Umgebung des Systems zu manipulieren, beispielsweise mit
+Netzwerk-Unterbrechungen. Failure Tests werden als automatisierte Integrationstests über eine Programmierschnittstelle definiert
+und beinhalten den Auf- und Abbau des Systems, eine Reihe definierter Interaktionen mit dem System und in der Regel zufällige
+Fehler-Injektionen in die Systemumgebung. Zusätzlich wird oft nach Tests die Einhaltung von Invarianten des Systems anhand eines
+Modells geprüft, um in zufallsgetriebenen Tests automatisch Bugs identifizieren zu können.
+
 \cite{why_is_random_testing_effective}
+\cite{failify_masters_thesis}
 \subsection{Jepsen}
-Einen ähnlichen Anzatz zum Chaos-Engineering verfolgt auch Jepsen.
-Jepsen ist ein Test-Framework in der Sprache Clojure, welches speziell auf das Verhalten von verteilten Systemen bei
+Jepsen ist ein Failure-Testing-Framework in der Sprache Clojure, welches speziell auf das Verhalten von verteilten Systemen bei
 Netwerk-Unterbrechungen u.Ä. ausgerichtet ist. Jepsen hat sich auf dem Gebiet zu einem Industriestandart für das Testen von
 verteilte Datenbanken entwickelt \cite{abstracting_the_geniuses} und wird für Projekte wie MongoDB, etcd, VoltDB, Hazelcast,
 Elasticsearch und CockroachDB verwendet und hat in jedem dieser Systeme bereits reale Bugs aufgedeckt \cite{jepsen_analyses}.
@@ -85,7 +89,6 @@ Am Ende eines Tests wird verifiziert, ob alle durchgeführten Operationen unter 
 nicht, hat Jepsen einen Bug gefunden, vorrausgesetzt die Regeln des SUT sind korrekt modelliert.
 \subsection{Replay Debugging}
 \cite{distributed_replay_debugging_1997}
-\cite{failify_masters_thesis}
 % idea exists, seems very promising
 % different approaches with different advantages and drawbacks
 
@@ -96,21 +99,29 @@ nicht, hat Jepsen einen Bug gefunden, vorrausgesetzt die Regeln des SUT sind kor
 \chapter{Systembeschreibung}
 Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
 \section{Idee}
-Die grundlegende Idee dieser Arbeit ist ein Tool, welches nach Record and Replay Prinzip beim Debugging von Bugs im Zusammenhang
-mit Netwerk-Unterbrechungen in verteilten Systemen helfen soll. Mit Hilfe eines solchen Tools sollen Netwerk-Unterbrechungen
-während Test Durchläufen simuliert werden. Das Tool soll außerdem diese Test Durchläufe aufzeichnen und zum späteren Zeitpunkt
-wieder abspielen können, insbesondere mit den gleichen Netzwerk-Bedingungen wie während der Aufzeichnung. Ein großer Unterschied
-zu existierenden Failure Testing Tools ist, dass anstelle einer Programmierschnittstelle für automatisierte Tests eine interaktive
-Nutzererfahrung angestrebt wird. Nutzer sollen die Möglichkeit haben, Netzwerk-Unterbrechungen erzeugen zu können, während sie mit
-dem System interagieren.
+Die grundlegende Idee dieser Arbeit ist ein Tool, welches die Ideen des Failure Testings mit denen des Record and Replay
+Debuggings vereint. Dieses Tool soll nach Record and Replay Prinzip beim Debugging von Bugs im Zusammenhang mit
+Netwerk-Unterbrechungen in verteilten Systemen helfen. Mit Hilfe des Tools sollen wie beim Failure Testing Netwerk-Unterbrechungen
+während Test Durchläufen simuliert werden, allerdings nicht wie beim Failure-Testing in programmatisch von vorn herein definierten
+Testfällen, sondern interaktiv, während der Nutzer mit dem System interagiert. Um gefundene Bugs dennoch zuverlässig reproduzieren
+zu können, soll das Tool Situationen aufzeichnen und zum späteren Zeitpunkt wieder abspielen können, insbesondere mit den gleichen
+simulierten Netzwerk-Bedingungen wie während der Aufzeichnung.
 
-Der Kern der Arbeit ist dabei speziell der verfolgte Ansatz für ein solches System. Dieser ist, alle Nachrichten innerhalb eines
-verteilten Systems über einen Proxy zu leiten, der diese inklusive Metadaten aufzeichnet und in der Lage ist, kontrolliert
-Netwerk-Unterbrechungen zu simulieren, indem einzelne Nachrichten geblockt, bzw. nicht weiter geleitet, werden.
-Mit diesem Aufbau soll dann auch ein Replay der Netzwerk-Bedingungen anhand eines zuvor durch den Proxy aufgezeichneten
-Test Durchlaufs möglich sein, sofern der Proxy in der Lage ist, während des Replays für jeden erhaltenen Request zu identifizieren,
-welchem Request aus der Aufzeichnung er jeweils zuzuordnen ist. Zudem muss der Proxy Requests, die in der Aufzeichnung von
-außerhalb des Systems kamen, identifizieren und während des Replays zum richtigen Zeitpunkt selbstständig in das System senden.
+Ein großer Fokus der Arbeit ist dabei speziell auf dem verfolgten Ansatz für ein solches System. Dieser ist, alle Nachrichten
+innerhalb eines verteilten Systems über einen Proxy zu leiten, der diese inklusive Metadaten aufzeichnet und in der Lage ist,
+kontrolliert Netwerk-Unterbrechungen zu simulieren, indem einzelne Nachrichten geblockt, bzw. nicht weiter geleitet, werden.  Mit
+diesem Aufbau soll auch ein Replay der Netzwerk-Bedingungen anhand eines zuvor durch den Proxy aufgezeichneten Test Durchlaufs
+möglich sein, sofern der Proxy in der Lage ist, während des Replays für jeden erhaltenen Request zu identifizieren, welchem
+Request aus der Aufzeichnung er jeweils zuzuordnen ist. Zudem muss der Proxy Requests, die in der Aufzeichnung von außerhalb des
+Systems kamen, identifizieren und während des Replays zum richtigen Zeitpunkt selbstständig in das System senden.
+
+Ein Proxy wird den anderen, verbreiteteren Fehler-Mechanismen des Failure-Testings vorgezogen, da die Erwartung ist, dass dieser
+sich insbesondere besser für Replays eignet. Das liegt daran, dass ein Proxy jede Nachricht des SUT einzeln betrachten und
+gegebenenfalls blocken kann, andere Mechanismen, die sich rein auf zeitliche Abstände und die Reihenfolge von Operationen
+verlassen, ermöglichen dies nicht ohne weiteres. Dadurch soll das Tool besser mit Unterschieden in der zeitlichen Reihenfolge von
+Nachrichten umgehen können, die im Replay auftreten können, zum Beispiel weil Replays schneller als das originale Recording
+ablaufen, falls im Recording ein Mensch mit dem SUT interagiert hat, dessen Aktionen deutlich schneller als in Echtzeit agbespielt
+werden.
 
 \section{Anforderungen}
 ditm ist ein Prototyp, der primär dem Zweck dient, die zuvor beschriebene Idee zu verfizieren.
@@ -456,10 +467,13 @@ ungemischten Reqeust-Flüssen Fehler passieren, der Blick auf dem Median zeigt a
 Durchführungen der Fall sein kann. Die Erklärung hierfür ist, dass durch den Bug ein vorangegangener Aufruf des SUT einen
 Einfluss auf den nächsten haben kann, falls der letzte Request des vorangegangenen Aufrufs erfolgreich war und der erste Request
 des neuen Aufrufs geblockt wird. In diesem Fall wird der erste Request erneut versucht, was in isolation selbst mit dem Bug
-nicht passieren sollte. Tritt dieser Fall ein, verändert sich dadurch die Reihenfolge des Gesamten Request-Flusses, da direkt am
+nicht passieren sollte. Tritt dieser Fall ein, verändert sich dadurch die Reihenfolge des gesamten Request-Flusses, da direkt am
 Anfang ein zusätzlicher Request eingefügt wird, was zu den beobachteten Fehlern führt. Tabelle \ref{tab:get_nka} zeigt, dass
 diese Fehler in der Tat durch den Bug ausgelöst werden, da sie nicht auftreten, wenn die Retries mittels no-keep-alive
-verhindert werden.
+verhindert werden. Des weiteren zeigt sich an den jeweils geringeren Request Anzahlen, dass der Bug deutlich weniger bei den
+asynchronen Experimenten auftritt, vermutlich, weil dort weniger Verbindungen wiederverwendet werden, als im synchronen
+Versuchsaufbau. Das seltenere Auftreten des Bugs erklärt auch die deutlich bessere Performance der heuristischen und Mix-Matcher
+bei den asynchronen Experimenten im Vergleich zu den synchron gemischten in Tabelle \ref{tab:get}.
 \begin{table}[h]
 	\centering
 	\caption{get}
@@ -480,6 +494,12 @@ verhindert werden.
 		async                    & 113.1                              & 111.5                           & 7.2                         & 6.5                       & 30.7                           & 31.0   & 7.0  & 6.0    & 68.2 & 67.0   \\ \hline
 	\end{tabular}
 \end{table}
+
+Obwohl ein korrektes Request-Matching bei gemischter Reihenfolge durch den Bug effektiv unmöglich wird, da schlichtweg nicht die
+gleichen Requests im Recording und im Replay sind, ist zu erkennen, dass der Heuristische und der Mix-Matcher sich hier insgesamt
+deutlich besser verhalten, als die anderen beiden. Das ist in so fern relevant, dass auch in realen Szenarien durchaus
+unterschiedliche Mengen an Requests in Recording und Replay sein können, beispielsweise wenn im Laufe eines Debugging Workflows
+ein möglicher Bugfix getestet werden soll.
 
 \begin{table}[h]
 	\centering
@@ -502,6 +522,10 @@ verhindert werden.
 	\end{tabular}
 \end{table}
 
+Tabelle \ref{tab:get_nka} zeigt, dass ditm problemlos mit stark gemischten Requests umgehen kann, sofern diese keine zufälligen
+anderen komponenten enthalten. Auch hier verhalten sich wieder der Heutristische und der Mix-Matcher am besten, die beiden anderen
+Matcher haben erneut deutliche Probleme.
+
 \begin{table}[h]
 	\centering
 	\caption{get + no keep alive}
@@ -522,6 +546,10 @@ verhindert werden.
 		async                    & 100                                & 100.0                           & 0.0                         & 0.0                       & 22.4                           & 21.5   & 0.0 & 0.0    & 68.2 & 65.5   \\ \hline
 	\end{tabular}
 \end{table}
+
+Treten in gemischten Request-Flüssen außerdem zufällige Komponenten auf, die das Request Matching zusätzlich erschweren, führt das
+dazu, dass alle Requests-Matcher Fehler machen. Weiterhin sind der Heuristische und der Mix-Matcher mit Abstand am besten, einen
+klaren Favoriten gibt es hier aber zwischen den beiden nicht, wie Tabelle \ref{tab:get_ts_nka} zeigt.
 
 \begin{table}[h]
 	\centering
@@ -544,6 +572,15 @@ verhindert werden.
 	\end{tabular}
 \end{table}
 
+Auch in den Experimenten in Tabelle \ref{tab:post}, die als zusätzliches Differenzierungsmerkmal drei unterschiedliche
+Request-Body Längen über einen weiteren Parameter einführen, erziehlt kein Matcher selbst in den am leichtesten gemischten
+Experimenten perfekte Ergebnisse. Trotzdem ist eine deutlich bessere Performance im Vergleich zu Tabelle \ref{tab:get_ts_nka} zu
+erkennen. Vor allem in leicht gemischten Experimenten machen der Heuristische und der Mix-Matcher nur weniger als halb so viele
+Fehler.
+
+Insgesamt lässt sich sagen, dass die zwei komplexesten Matcher wie erwartet in allen Experimenten die besten Ergebnisse erzielen,
+zwischen den beiden besteht dann aber kein relevanter Unterschied mehr, der in diesen Ergebnissen erkennbar wird. 
+
 \begin{table}[h]
 	\centering
 	\caption{post}
@@ -565,6 +602,16 @@ verhindert werden.
 	\end{tabular}
 \end{table}
 
+Auch wenn die hier dargestellten Ergebnisse auf den ersten Blick zeigen, dass ditm sehr viele Fehler macht, sind diese Ergebnisse
+doch positiv zu werten, wenn mit in Betracht gezogen wird, dass vorwiegend Szenarien verwendet wurden, die absichtlich schwierig
+für ditm sein sollte, um die Limits der Request-Matcher herauszufinden. Die Erwartung ist, dass in den meisten realen Anwendungsfällen
+nur sehr wenige gemischte Requests im gleichen Fluss auftreten, da ein Fluss immer genau den Verkehr zwischen nur zwei Knoten
+abbildet. Reale Systeme senden vielmehr viele Requests zwischen unterschiedlichen Knoten des Systems, die ditm aufgrund
+dessen von vornherein getrennt betrachtet und somit auch keine Fehler beim Matching macht. Die Experimente haben also gezeigt,
+dass es durchaus Situationen geben kann, in denen ditm nicht funktioniert. Vor allem haben sie aber auch demonstriert, dass ditm
+mit Schwierigkeiten umgehen kann, sofern diese nicht zu gehäuft auftreten. Leicht identifizierbare Reqeusts in stark gemischter
+Reihenfolge sind kein Problem, genauso wie schwierig identifizierbare Reqests, die in größtenteils korrekter Reihenfolge
+auftreten. Erst wenn beides zusammen kommt, funktioniert ditms Matching nicht mehr.
 
 \section{Konstostand}
 \subsection{Versuchsaufbau}
@@ -588,6 +635,8 @@ verhindert werden.
 % a smart diff tool for recordings / action sequences
 % a drag and drop test case / replay editor to build predefined action sequences,
 % enable using replays from an interactive session as an automated regression test
+
+% vielleicht EBPF basiertes system, das wie proxy einzelne Requests blocken kann, aber auf jedem Knoten einzeln agiert?
 
 \chapter{Fazit}
 
