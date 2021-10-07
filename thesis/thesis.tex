@@ -7,6 +7,7 @@
 \usepackage{xcolor}
 \usepackage{multirow}
 \usepackage{float}
+\usepackage[font={small,it}]{caption}
 \usepackage[english,ngerman]{babel}
 \usepackage[backend=biber,
             sorting=none,   % Keine Sortierung
@@ -91,6 +92,9 @@ nicht, hat Jepsen einen Bug gefunden, vorrausgesetzt die Regeln des SUT sind kor
 \cite{distributed_replay_debugging_1997}
 % idea exists, seems very promising
 % different approaches with different advantages and drawbacks
+\subsection{Debugger für Verteilte Systeme}
+\cite{oddity_graphical_debugger}
+\cite{gotcha_interactive_debugger}
 
 \section{Was fehlt noch??}
 % leicht verwendbare chaos failure testing
@@ -129,7 +133,7 @@ Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstüt
 \subsection{Funktionale Anforderungen}
 \begin{table}[h]
 	\centering
-    \caption{Funktionale Anforderungen}
+	\caption{Funktionale Anforderungen}
 	\label{tab:fa}
 	\begin{tabular}{|l|l|p{7cm}|}
 		\hline
@@ -171,9 +175,14 @@ einem verteilten System aufzeichnen und Nachrichten wahlweise nicht weiter leite
 Docker Container direkt neben dem SUT und hängt auch im gleichen Docker Netzwerk wie das SUT. Neben dem Proxy hat
 ditm eine weitere Komponente, ein Docker Log Driver Plugin, welches Container Logs an den Proxy sendet.
 \subsection{Datenfluss}
+\begin{figure}[H]
+	\centering
+    \includegraphics[width=\linewidth]{img/ditm-Dataflow.pdf}
+    \caption{Datenflussdiagramm für ditm}
+    \label{fig:dataflow}
+\end{figure}
 
 \subsection{Datenmodell}
-% Klassendiagramm
 Das Datenmodell von ditm ist einfach gehalten. Das Top Level Datenobjekt ist das Recording, dieses enthält zwei chronologisch
 geordnete Listen, eine mit den Log Nachrichten des SUT und eine mit den aufgezeichneten Requests. Beide Listen enthalten
 die jeweiligen Objekte für alle Knoten des SUT, ohne diese weiter voneinander zu trennen. Sollte eine gefilterte Liste
@@ -182,22 +191,39 @@ eine Referenz auf einen Volume Snapshot, sofern für das Recording einer existie
 Die eigentlichen Request Datenobjekte enthalten neben dem Request Body eine Menge Metadaten, die teilweise vom Request selbst
 stammen und teilweise durch ditm erzeugt wurden, beispielsweise ob der Request geblockt wurde oder nicht.
 Log Nachrichten umfassen neben der eigentlichen Nachricht ebenfalls wichtige Metadaten, wie den Namen des Containers, der die
-Nachricht geloggt hat.
+Nachricht geloggt hat. In Abbildung \ref{fig:class} ist das beschriebene Datenmodell in einem Klassendiagramm dargestellt. Die
+Implementierungen des Matcher-Interfaces fehlen im Klassendiagramm, da sich hier keine Unterschiede zwischen den einzelnen
+Implementierungen zeigen würden und diese gesondert in Kapitel ... behandelt werden. Die Methoden der Klasse Proxy wurden
+ebenfalls aus Platzgründen weg gelassen und da diese hier konkret von geringerem Interesse sind. Ein Proxy nimmt im Prototypen die
+Rolle eines Gottobjekts ein, dieses Design-Pattern wurde für den Prototypen solideren Patterns vorgezogen, um die Entwicklung
+einfach zu halten und Erweiterungen, bzw. Änderungen des Datenmodells währenddessen zu erleichtern.
+\begin{figure}[H]
+	\centering
+    \includegraphics[width=\linewidth]{img/ditm-Class.pdf}
+    \caption{Klassendiagramm für ditm ohne Proxy-Methoden und Matcher-Implementierungen}
+    \label{fig:class}
+\end{figure}
+
 \subsection{Weg eines Requests}
-% aktivitäts diagramm Abb. X
 Um eine konkrete Vorstellung von der Arbeitsweise des Proxys zu vermitteln, wird im folgenden beispielhaft der Weg eines
 Requests durch das System beschrieben. In diesem Kontext wird der Ursprung des Requests als Client und das Ziel des
-Requests als Server bezeichnet, beide sind Knoten des SUT. Abb. X stellt zunächst den groben Ablauf auf Systemebene dar.
+Requests als Server bezeichnet, beide sind Knoten des SUT. Abbildung \ref{fig:activity} stellt zunächst den groben Ablauf auf Systemebene dar.
 Wichtig ist zu bemerken, dass der Proxy bereits beim ersten erhalten des Requests die komplette Analyse durchführt und
 nicht nur entscheidet, ob der Request geblockt werden soll, sondern die Entscheidung auch direkt für die Response trifft,
 ohne die Response jemals gesehen zu haben. Tatsächlich wird die Response gar nicht von ditm betrachtet, stattdessen wird
-die Analyse vollständig am Request durchgeführt. Die einzige Interaktion des Proxys mit der Response ist, diese zu blocken,
-falls vorher festgelegt oder sie ansonsten direkt weiter zu leiten.
+die Analyse vollständig am Request durchgeführt. Die einzige Interaktion des Proxys mit der Response ist, diese zur Anzeige im
+Frontend aufzuzeichnen, sie zu blocken falls vorher festgelegt oder sie ansonsten direkt weiter zu leiten.
 Der Grund dafür ist, dass fast alle für ditm relevanten Metadaten bereits aus dem Request abgeleitet werden können. Zwar
-könnten die Länge der Response und die Response Header möglicherweise ebenfalls von Interesse sein, der Tradeoff wird
+könnten die Länge der Response und die Response Header möglicherweise ebenfalls von Interesse sein, der Kompromiss wird
 hier aber in Kauf genommen, da das die Implementierung erheblich vereinfacht und auch so genügend Metadaten vorliegen,
-um verschiedene Ansätze zur Entscheidung, ob ein Reqeust im Replay geblockt werden soll, zu evaluieren.
-Die verschiedenen Ansätze, die diese Arbeit betrachtet, werden in Kap. X Request Matcher behandelt.
+um verschiedene Algorithmen zur Entscheidung, ob ein Reqeust im Replay geblockt werden soll, zu evaluieren.
+Die verschiedenen Ansätze, die diese Arbeit betrachtet, werden in Kapitel ... behandelt.
+\begin{figure}[H]
+	\centering
+    \includegraphics[width=\linewidth]{img/ditm-Activity.pdf}
+    \caption{Aktivitätsdiagramm der Interaktion von ditm mit Client und Server eines Requests}
+    \label{fig:activity}
+\end{figure}
 
 \section{Implementierung}
 Als Programmiersprache wird für die Implementierung auf Go gesetzt. Go bietet sich an, da die Standartbibliothek
@@ -579,7 +605,7 @@ erkennen. Vor allem in leicht gemischten Experimenten machen der Heuristische un
 Fehler.
 
 Insgesamt lässt sich sagen, dass die zwei komplexesten Matcher wie erwartet in allen Experimenten die besten Ergebnisse erzielen,
-zwischen den beiden besteht dann aber kein relevanter Unterschied mehr, der in diesen Ergebnissen erkennbar wird. 
+zwischen den beiden besteht dann aber kein relevanter Unterschied mehr, der in diesen Ergebnissen erkennbar wird.
 
 \begin{table}[h]
 	\centering
