@@ -214,6 +214,7 @@ func (p *Proxy) LoadVolumesHandler(w http.ResponseWriter, r *http.Request) {
 func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
 	id := r.FormValue("id")
+	keepMode, _ := strconv.ParseBool(r.FormValue("keep_mode"))
 	p.isRecording = false
 	recording, err := loadRecording(id)
 	if err != nil {
@@ -228,7 +229,9 @@ func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
 	p.isReplaying = true
 	p.isInspecting = false
 	p.blockConfig.previousMode = p.blockConfig.Mode
-	p.blockConfig.Mode = "replay"
+	if !keepMode {
+		p.blockConfig.Mode = "replay"
+	}
 	p.replayTimer = time.AfterFunc(time.Duration(3)*time.Second, p.EndReplay)
 	p.mu.Unlock()
 	t := template.New("main")

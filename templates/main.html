@@ -74,7 +74,8 @@
 						<tr>
 							<th scope="col">ID</th>
 							<th scope="col">Show</th>
-							<th scope="col">Start</th>
+							<th scope="col">Replay</th>
+							<th scope="col">Rerun</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -83,6 +84,7 @@
 							<td>{{.}}</td>
 							<td><a href="/load_recording?id={{.}}">Show</a></td>
 							<td><a href="/start_replay?id={{.}}">Start</a></td>
+							<td><a href="/start_replay?id={{.}}&keep_mode=true">Start</a></td>
 						</tr>
 						{{end}}
 					</tbody>
