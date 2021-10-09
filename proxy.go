@@ -113,8 +113,6 @@ func (p *Proxy) Block(r *Request) (request bool, response bool) {
 // before either proxying the request or calling panig() to close the connection.
 func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
-	p.ResetReplayTimer()
-
 	var buf bytes.Buffer
 	tee := io.TeeReader(r.Body, &buf)
 	body, err := io.ReadAll(tee)
@@ -178,7 +176,9 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	proxy.ServeHTTP(w, r)
 	if p.isReplaying {
-		p.nextOutsideRequest(false)
+		if p.nextOutsideRequest(false) {
+			p.ResetReplayTimer()
+		}
 	}
 }
 
@@ -211,34 +211,37 @@ func (p *Proxy) ResetReplayTimer() {
 	if p.replayTimer == nil {
 		return
 	}
-	p.replayTimer.Reset(time.Duration(300) * time.Millisecond)
+	p.replayTimer.Reset(time.Duration(1500) * time.Millisecond)
 }
 
 // Checks if the next unseen request in the recording is an
 // outside request, if so, sends the request.
 // If alwaysSend is true, the next unseen request is always sent,
 // even if there are unseen requests from inside are before it.
-func (p *Proxy) nextOutsideRequest(alwaysSend bool) {
+func (p *Proxy) nextOutsideRequest(alwaysSend bool) bool {
 	p.mu.Lock()
 	for _, request := range p.replayingFrom.Requests {
-		if !p.matcher.Seen(request) && request.FromOutside {
-			p.matcher.MarkSeen(request)
-			r := *request // make a copy of request, to record it with new timestamp
-			r.Timestamp = time.Now()
-			p.record(&r)
-			p.mu.Unlock()
-			_, err := send(request)
-			if err != nil {
-				log.Println(err)
+		if !p.matcher.Seen(request) {
+			if request.FromOutside {
+				p.matcher.MarkSeen(request)
+				r := *request // make a copy of request, to record it with new timestamp
+				r.Timestamp = time.Now()
+				p.record(&r)
+				p.mu.Unlock()
+				_, err := send(request)
+				if err != nil {
+					log.Println(err)
+				}
+				return true
+			} else if !alwaysSend {
+				p.mu.Unlock()
+				return true // exit because we need to see some other requests first
 			}
-			return
-		} else if !alwaysSend && !p.matcher.Seen(request) {
-			p.mu.Unlock()
-			return // exit because we need to see some other requests first
 		}
 	}
 	p.mu.Unlock()
 	p.endReplayC <- struct{}{}
+	return false
 }
 
 func send(r *Request) (*http.Response, error) {
