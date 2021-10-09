@@ -239,12 +239,11 @@ func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
 
 func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 	t := template.New("recording").Funcs(template.FuncMap{
-		"abbreviate": func(data []byte) string {
-			str := string(data)
-			if len(str) < 20 {
-				return str
+		"abbreviate": func(str string, i int) template.HTML {
+			if len(str) <= i {
+				return template.HTML(strings.TrimSpace(template.HTMLEscapeString(str)))
 			}
-			return str[0:20] + "..."
+			return template.HTML("<abbr title=\"" + strings.TrimSpace(template.HTMLEscapeString(str)) + "\">" + template.HTMLEscapeString(str[0:i]) + "</abbr>")
 		},
 		"string": func(data []byte) string {
 			return string(data)

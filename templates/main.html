@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-	<meta charset="UTF-8">
+  <meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css"
 		integrity="sha384-KyZXEAg3QhqLMpG8r+8fhAXLRk2vvoC2f3B09zVXn8CA5QIVfZOJ3BCsw2P0p/We" crossorigin="anonymous">
@@ -141,12 +141,15 @@
 		source.onmessage = function (e) {
 			let table = document.getElementById("event_table")
 			let rows = table.rows
-			let newRow = document.createElement("tr")
-			newRow.innerHTML = e.data
+			let tmp = document.createElement("tbody")
+			tmp.innerHTML = e.data
+			let newRow = tmp.firstChild
+			console.log(newRow)
 			let timestamp = newRow.getElementsByTagName("td")[0].innerHTML
 			var i
 			for (i = 1; i < rows.length; i++) {
 				if (rows[i].getElementsByTagName("td")[0].innerHTML > timestamp) {
+				  console.log(rows[i])
 					table.insertBefore(newRow, rows[i])
 					return
 				}
@@ -160,9 +163,15 @@
 </body>
 
 <style>
-	#event_table td:nth-child(1) {
-		font-family: monospace;
-	}
+#event_table td:nth-child(1) {
+  font-family: monospace;
+}
+tr.red {
+  background-color: #fcc;
+}
+tr.green {
+  background-color: #cfc;
+}
 </style>
 
 </html>
