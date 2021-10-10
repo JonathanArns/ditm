@@ -1,8 +1,8 @@
 {{if .IsRequest}}
-<tr class="{{if or .Request.Blocked .Request.BlockedResponse}}red{{else}}green{{end}}">
+<tr class="{{if .Request.FromOutside}}blue{{else}}{{if or .Request.Blocked .Request.BlockedResponse}}red{{else}}green{{end}}{{end}}">
   <td>{{.Request.Timestamp.Format "15:04:05.000000"}}</td>
   <td>{{.Request.FromName}}</td>
-  <td>{{abbreviate .Request.To 40}}</td>
+  <td>{{.Request.Method}} {{abbreviate .Request.To 36}}</td>
   <td>{{abbreviate (string .Request.Body) 15}}</td>
   <td>{{abbreviate (string .Request.ResponseBody) 15}}</td>
   <td>{{if .Request.Blocked}}-\-&gt{{else}}{{if .Request.BlockedResponse}}&lt-\-{{else}}&lt--&gt{{end}}{{end}}</td>
