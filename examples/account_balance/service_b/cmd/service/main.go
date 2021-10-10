@@ -3,10 +3,10 @@ package main
 import (
 	"log"
 
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_b/internal/api"
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_b/internal/svc/command"
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_b/internal/svc/query"
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_b/pkg/httpclient"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_b/internal/api"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_b/internal/svc/command"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_b/internal/svc/query"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_b/pkg/httpclient"
 	"github.com/gorilla/mux"
 )
 

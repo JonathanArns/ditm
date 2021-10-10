@@ -1,6 +1,6 @@
 package api
 
-import "github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/domain"
+import "github.com/JonathanArns/ditm/examples/account_balance/service_a/internal/domain"
 
 type CreateRequest struct {
 	ID           int    `json:"ID"`

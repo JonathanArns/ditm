@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/pkg/inmemory"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/pkg/inmemory"
 	"github.com/gorilla/mux"
 )
 

@@ -1,4 +1,4 @@
-module github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a
+module github.com/JonathanArns/ditm/examples/account_balance/service_a
 
 go 1.17
 

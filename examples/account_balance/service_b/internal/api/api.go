@@ -3,8 +3,8 @@ package api
 import (
 	"net/http"
 
-	middelware "github.com/KonstantinGasser/ditm/examples/account_balance_example/service_b/internal/api/middleware"
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_b/internal/ports"
+	middelware "github.com/JonathanArns/ditm/examples/account_balance/service_b/internal/api/middleware"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_b/internal/ports"
 	"github.com/gorilla/mux"
 )
 

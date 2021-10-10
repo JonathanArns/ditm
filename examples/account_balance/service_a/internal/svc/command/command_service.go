@@ -3,8 +3,8 @@ package command
 import (
 	"context"
 
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/domain"
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/ports"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/internal/domain"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/internal/ports"
 )
 
 type service struct {

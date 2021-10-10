@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/domain"
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/ports"
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/pkg/inmemory"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/internal/domain"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/internal/ports"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/pkg/inmemory"
 )
 
 func TestDeposit(t *testing.T) {

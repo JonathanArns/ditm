@@ -8,10 +8,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/domain"
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/svc/command"
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/svc/query"
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/pkg/inmemory"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/internal/domain"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/internal/svc/command"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/internal/svc/query"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/pkg/inmemory"
 	"github.com/gorilla/mux"
 )
 

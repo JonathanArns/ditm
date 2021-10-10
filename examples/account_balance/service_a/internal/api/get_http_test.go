@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/domain"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/internal/domain"
 	"github.com/gorilla/mux"
 )
 

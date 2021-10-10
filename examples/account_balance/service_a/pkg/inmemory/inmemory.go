@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand"
 	"sync"
-	"time"
 
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/domain"
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/pkg/helper"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/internal/domain"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/pkg/helper"
 )
 
 const (
@@ -69,8 +67,6 @@ func (db *DB) Release(ctx context.Context, ID int) error {
 	}
 	// DEBUG OUTPUT
 	defer log.Printf("[db:Release:%v] unlocking for ID:%d\n", ctx.Value(helper.CtxReqIP), ID)
-	// DEBUG: MAKING THINGS OBVIOUSE :)
-	time.Sleep(time.Duration(rand.Intn(5)+2) * time.Second)
 	<-resource.acquire
 
 	return nil

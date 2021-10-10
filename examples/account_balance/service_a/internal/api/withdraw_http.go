@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/domain"
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/pkg/inmemory"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/internal/domain"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/pkg/inmemory"
 )
 
 func (api ApiServer) HandlerWithdraw(w http.ResponseWriter, r *http.Request) {

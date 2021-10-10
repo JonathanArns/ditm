@@ -3,7 +3,7 @@ package ports
 import (
 	"context"
 
-	"github.com/KonstantinGasser/ditm/examples/account_balance_example/service_a/internal/domain"
+	"github.com/JonathanArns/ditm/examples/account_balance/service_a/internal/domain"
 )
 
 type QuerySvc interface {

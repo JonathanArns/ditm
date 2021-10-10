@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	apiBase          = "http://localhost:8080"
+	apiBase          = "http://target-a:8080"
 	apiCreateAccount = "/api/account"
 	apiGetAccount    = "/api/account"
 	apiDeposit       = "/api/account/deposit"
