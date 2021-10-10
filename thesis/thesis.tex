@@ -7,6 +7,35 @@
 \usepackage{xcolor}
 \usepackage{multirow}
 \usepackage{float}
+\usepackage{listings}
+\usepackage{listings-golang}
+\lstset{ % add your own preferences
+    frame=single,
+    basicstyle=\linespread{0.9}\footnotesize\ttfamily,
+    keywordstyle=\color{red},
+    numbers=left,
+    numbersep=5pt,
+    showstringspaces=false, 
+    stringstyle=\color{blue},
+    tabsize=4,
+    language=Golang % this is it !
+}
+\lstdefinelanguage{yaml}{
+  keywords={true,false,null,y,n},
+  keywordstyle=\color{darkgray}\bfseries,
+  ndkeywords={},
+  ndkeywordstyle=\color{black}\bfseries,
+  identifierstyle=\color{black},
+  sensitive=false,
+  %moredelim=[l]{}{:},
+  comment=[l]{#},
+  morecomment=[s]{/*}{*/},
+  commentstyle=\color{purple}\ttfamily,
+  stringstyle=\color{blue}\ttfamily,
+  %morestring=[l]{-}{},
+  morestring=[b]',
+  morestring=[b]"
+}
 \usepackage[font={small,it}]{caption}
 \usepackage[english,ngerman]{babel}
 \usepackage[backend=biber,
@@ -18,6 +47,11 @@
             minnames=1,     % und nur den ersten Autor angeben
             style=numeric-comp,]{biblatex}
 \addbibresource{literatur.bib}
+\usepackage[colorlinks=true,
+            urlcolor=black,
+            linkcolor=black,
+            filecolor=black,
+            citecolor=black,]{hyperref}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -96,7 +130,9 @@ nicht, hat Jepsen einen Bug gefunden, vorrausgesetzt die Regeln des SUT sind kor
 \cite{oddity_graphical_debugger}
 \cite{gotcha_interactive_debugger}
 
-\section{Was fehlt noch??}
+\section{Was fehlt noch?}
+% hier kommt future work of existing papers
+
 % leicht verwendbare chaos failure testing
 % zuverlässige reproduktion von bugs
 
@@ -131,7 +167,7 @@ werden.
 ditm ist ein Prototyp, der primär dem Zweck dient, die zuvor beschriebene Idee zu verfizieren.
 Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstützten Netwerk-Protokolle auf HTTP beschränkt sind.
 \subsection{Funktionale Anforderungen}
-\begin{table}[h]
+\begin{table}[H]
 	\centering
 	\caption{Funktionale Anforderungen}
 	\label{tab:fa}
@@ -152,7 +188,7 @@ Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstüt
 \end{table}
 
 \subsection{Nicht-Funktionale Anforderungen}
-\begin{table}[h]
+\begin{table}[H]
 	\centering
 	\caption{Nicht-Funktionale Anforderungen}
 	\label{tab:nfa}
@@ -170,16 +206,16 @@ Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstüt
 \end{table}
 
 \section{Architektur}
-Das Herzstück des Systems ist entsprechend der Idee ein eigens entwickelter HTTP Proxy, welcher den Netzwerk-Verkehr in
-einem verteilten System aufzeichnen und Nachrichten wahlweise nicht weiter leiten kann. Dieser Proxy läuft in einem
-Docker Container direkt neben dem SUT und hängt auch im gleichen Docker Netzwerk wie das SUT. Neben dem Proxy hat
-ditm eine weitere Komponente, ein Docker Log Driver Plugin, welches Container Logs an den Proxy sendet.
-\subsection{Datenfluss}
+Das Herzstück des Systems ist entsprechend der Idee ein eigens entwickelter HTTP Proxy, welcher den Netzwerk-Verkehr in einem
+verteilten System aufzeichnen und Nachrichten wahlweise nicht weiter leiten kann. Dieser Proxy läuft in einem Docker Container
+direkt neben dem SUT und ist auch Teil des gleichen Docker Netzwerks wie das SUT. Außer dem Proxy hat ditm eine weitere eigens
+entwickelte Komponente, ein Docker-Log-Driver-Plugin, welches Container-Logs an den Proxy sendet. Die Datenflüsse zwischen
+Komponenten des Systems sind in Abbildung \ref{fig:dataflow} im Kontext eines SUT mit zwei Knoten dargestellt.
 \begin{figure}[H]
 	\centering
-    \includegraphics[width=\linewidth]{img/ditm-Dataflow.pdf}
-    \caption{Datenflussdiagramm für ditm}
-    \label{fig:dataflow}
+	\includegraphics[width=\linewidth]{img/ditm-Dataflow.pdf}
+	\caption{Datenflussdiagramm für ditm}
+	\label{fig:dataflow}
 \end{figure}
 
 \subsection{Datenmodell}
@@ -199,9 +235,9 @@ Rolle eines Gottobjekts ein, dieses Design-Pattern wurde für den Prototypen sol
 einfach zu halten und Erweiterungen, bzw. Änderungen des Datenmodells währenddessen zu erleichtern.
 \begin{figure}[H]
 	\centering
-    \includegraphics[width=\linewidth]{img/ditm-Class.pdf}
-    \caption{Klassendiagramm für ditm ohne Proxy-Methoden und Matcher-Implementierungen}
-    \label{fig:class}
+	\includegraphics[width=\linewidth]{img/ditm-Class.pdf}
+	\caption{Klassendiagramm für ditm ohne Proxy-Methoden und Matcher-Implementierungen}
+	\label{fig:class}
 \end{figure}
 
 \subsection{Weg eines Requests}
@@ -220,9 +256,9 @@ um verschiedene Algorithmen zur Entscheidung, ob ein Reqeust im Replay geblockt 
 Die verschiedenen Ansätze, die diese Arbeit betrachtet, werden in Kapitel ... behandelt.
 \begin{figure}[H]
 	\centering
-    \includegraphics[width=\linewidth]{img/ditm-Activity.pdf}
-    \caption{Aktivitätsdiagramm der Interaktion von ditm mit Client und Server eines Requests}
-    \label{fig:activity}
+	\includegraphics[width=\linewidth]{img/ditm-Activity.pdf}
+	\caption{Aktivitätsdiagramm der Interaktion von ditm mit Client und Server eines Requests}
+	\label{fig:activity}
 \end{figure}
 
 \section{Implementierung}
@@ -265,13 +301,13 @@ und des Servers für den jeweiligen Request, ein so gefilterter Stream stellt al
 zwischen genau zwei Knoten des SUT dar.
 Der Rest des Matchings ist wie folgt über ein Interface abstrahiert, um leicht mehrere Implementierungen
 austauschen zu können.
-\begin{verbatim}
+\begin{lstlisting}
 type Matcher interface {
    	Match(r *Request, i int, rec []*Request) *Request
    	Seen(r *Request) bool
     MarkSeen(r *Request)
 }
-\end{verbatim}
+\end{lstlisting}
 Die Methode Match erwartet als Parameter den aktuellen Request, dessen Index im gefilterten Stream des Replays
 und den gesamten gefilterten Stream des Recordings und gibt einen Pointer auf den Request im Recording zurück,
 der das beste Match darstellt. Die Methoden Seen und MarkSeen dienen dazu, Requests zu markieren, falls sie bereits
@@ -295,7 +331,7 @@ Der Exacte Matcher vergibt einen Punkt, falls die Requests an gleicher Stelle in
 Requests gleich sind, falls die Länge der URIs gleich ist, falls die Bodies gleich sind und falls die Länge der Bodies gleich ist.
 Sei i der Index im Replay, j der Index im Recording, req der aktuelle Request im Replay und r der aktuelle
 Request im Recording, dann wird der Score für r also wie folgt berechnet.
-\begin{verbatim}
+\begin{lstlisting}
 score := 0.0
 if i == j {
     score += 1
@@ -312,7 +348,7 @@ if string(req.Body) == string(r.Body) {
 if len(req.Body) == len(r.Body) {
     score += 1
 }
-\end{verbatim}
+\end{lstlisting}
 Dieser Matcher sollte sich in Situationen mit gemischten Request Reihenfolgen bereits deutlich besser verhalten, als der
 einfache zählende Matcher, da er neben der Reihenfolge auch andere Eigenschaften der Requests betrachtet. Trotzdem ist es auch
 hier vorstellbar, dass der Matcher deutliche Probleme haben wird, sobald er auf eine Menge ähnlicher Requests trifft, die nur
@@ -324,7 +360,7 @@ anderen Eigentschaften werden weiterhin absolut miteinander verglichen. Um die G
 und den konstanten Komponenten des Scores anzupassen, werden diese mit der Länge des Recordings als Faktor multipliziert.
 Das führt dazu, dass Gleichheit in anderen Eigenschaften höher gewichtet wird, als die Position eines Requests und diese
 nur dann mit ins Gewicht fällt, wenn es mehrere Requests im Recording gibt, die ansonsten gleich gut passen.
-\begin{verbatim}
+\begin{lstlisting}
 faktor := float64(len(rec)) // Länge des Recordings
 score := 0.0
 score -= math.Abs(float64(j - i)) // Relativer Abstand der Requests
@@ -340,14 +376,14 @@ if string(req.Body) == string(r.Body) {
 if len(req.Body) == len(r.Body) {
     score += 1 * faktor
 }
-\end{verbatim}
+\end{lstlisting}
 \subsubsection{Heuristisch}
 Der Heuristische Matcher unterscheidet sich vom Mix Matcher nur in zwei Stellen. Anstatt die Längen der URIs und Bodies
 absolut miteinander zu vergleichen, wird hier wie bei der Position die Differenz zwischen den beiden genommen und eine kleinere
 Differenz besser bewertet. Die Werte werden weiterhing mit der Länge des Recordings als Faktor multipliziert. Um die Tatsache
 auszugleichen, dass die Differenz selbst größere Werte annehmen kann, als die konstanten Werte, wird sie allerdings zusätzlich
 durch 10 dividiert.
-\begin{verbatim}
+\begin{lstlisting}
 faktor := float64(len(rec))
 score := 0.0
 score -= math.Abs(float64(j - i))
@@ -359,13 +395,66 @@ if string(req.Body) == string(r.Body) {
     score += 1 * faktor
 }
 score -= math.Abs(float64(len(req.Body)-len(r.Body))) * faktor / 10
-\end{verbatim}
+\end{lstlisting}
 Obwohl der heuristische Matcher komplexer ist, als der Mix Matcher und insgesamt feinere Unterschiede zwischen Requests
 berücksichtigen kann, ist nicht von vornherein zu sagen, ob das von Vorteil ist. Unter anderem wird auch diese Frage in
 der Evaluation von ditm empirisch angegangen. Es ist durchaus denkbar, dass es auch von der bestimmten Situation abhängt,
 welcher Matcher sich besser verhält.
 \section{Nutzung}
 \subsection{Konfiguration}
+ditm wird am einfachsten über docker-compose konfiguriert, dort werden Umgebungsvariablen und Docker-Volumes für das SUT und für
+ditm selbst gesetzt. Außerdem muss für den vollen Funktionsumfang der HTTP-Log-Driver ebenfalls in docker-compose konfiguriert
+werden, ohne diesen fehlt die Aggregation der Log-Nachrichten. Vor der ersten Verwendung muss der Driver außerdem installiert
+werden, dies ist möglich, indem das Repository \url{https://github.com/JonathanArns/http-log-driver} gecloned und darin der Befehl
+\textbf{make all} ausgeführt wird. Merke, dass in docker-compose nur alle zum Starten nötigen Einstellungen geschehen, alles andere ist Teil
+der Benutzeroberfäche. Eine beispielhafte Konfiguration sieht wie folgt aus.
+\begin{lstlisting}[language=yaml]
+version: "3.9"
+
+services:
+  ditm:
+    image: ditm
+    hostname: ditm
+    environment:
+      # Liste der SUT Hostnames
+      CONTAINER_HOST_NAMES: target,target2  
+    volumes:
+      # enthaelt alle Volumes der SUT-Container
+      - ./volumes:/volumes  
+      - ./recordings:/recordings
+      - ./snapshots:/snapshots
+    ports:
+      - "8000:80"    # Browser UI
+      - "5000:5000"  # Proxy
+    depends_on:
+      - target
+      - target2
+  
+  target:
+    image: <image>
+    hostname: target
+    environment: 
+      - HTTP_PROXY=ditm:5000
+    volumes:
+      - ./volumes/target:/volume
+    logging:
+      driver: jonathanarns/http-log-driver
+      options:
+        endpoint: http://localhost:8000/log
+
+  target2:
+    image: <image>
+    hostname: target2
+    environment: 
+      - HTTP_PROXY=ditm:5000
+    volumes:
+      - ./volumes/target2:/volume
+    logging:
+      driver: jonathanarns/http-log-driver
+      options:
+        endpoint: http://localhost:8000/log
+\end{lstlisting}
+
 \subsection{Bedienung}
 
 \chapter{Evaluation}
@@ -463,7 +552,7 @@ und Reqeusts an seine Grenzen kommen kann und dann effektiv unbrauchbar wird. Ga
 synchronen Experimente. Zwar gibt es auch hier durchaus Fehler, diese sind aber selten genug und vor allem klein genug, dass das Log-Matching
 hier erheblich zur Effektivität von ditm als Debugging Werkzeug beitragen kann, wie sich auch schon im vorangegangenen Kapitel in
 der Praxis gezeigt hat.
-\begin{table}[h]
+\begin{table}[H]
 	\centering
 	\caption{Ergebnisse der Log-Matching Experimente}
 	\label{tab:logs}
@@ -500,24 +589,24 @@ verhindert werden. Des weiteren zeigt sich an den jeweils geringeren Request Anz
 asynchronen Experimenten auftritt, vermutlich, weil dort weniger Verbindungen wiederverwendet werden, als im synchronen
 Versuchsaufbau. Das seltenere Auftreten des Bugs erklärt auch die deutlich bessere Performance der heuristischen und Mix-Matcher
 bei den asynchronen Experimenten im Vergleich zu den synchron gemischten in Tabelle \ref{tab:get}.
-\begin{table}[h]
+\begin{table}[H]
 	\centering
 	\caption{get}
 	\label{tab:get}
-	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
+	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                          \\ \cline{2-11}
-		                         & avg                                & median                          & avg                         & median                    & avg                            & median & avg  & median & avg  & median \\ \hline
-		no                       & 13.3                               & 13.5                            & 0.8                         & 0.0                       & 0.8                            & 0.0    & 0.8  & 0.0    & 1.7  & 0.0    \\ \hline
-		no                       & 133.6                              & 133.0                           & 2.9                         & 0.0                       & 0.3                            & 0.0    & 2.9  & 0.0    & 15.2 & 0.0    \\ \hline
-		1                        & 13                                 & 13.0                            & 1.7                         & 1.5                       & 2.2                            & 2.0    & 1.7  & 2.0    & 2.6  & 2.5    \\ \hline
-		1                        & 133.2                              & 134.0                           & 22.7                        & 23.0                      & 39.1                           & 38.0   & 23.6 & 25.0   & 34.6 & 36.5   \\ \hline
-		2                        & 13.5                               & 14.0                            & 2.5                         & 2.5                       & 3.0                            & 3.0    & 2.5  & 3.0    & 3.3  & 4.0    \\ \hline
-		2                        & 131.5                              & 130.0                           & 22.5                        & 21.5                      & 40.3                           & 42.5   & 21.4 & 20.0   & 45.2 & 46.0   \\ \hline
-		3                        & 13.3                               & 14.0                            & 2.0                         & 2.0                       & 3.5                            & 3.0    & 2.3  & 2.5    & 4.5  & 4.0    \\ \hline
-		3                        & 135.1                              & 137.0                           & 25.8                        & 27.0                      & 42.2                           & 39.0   & 24.8 & 27.5   & 46.7 & 47.0   \\ \hline
-		async                    & 13                                 & 14.0                            & 1.5                         & 1.5                       & 3.4                            & 4.0    & 1.4  & 1.0    & 5.5  & 5.0    \\ \hline
-		async                    & 113.1                              & 111.5                           & 7.2                         & 6.5                       & 30.7                           & 31.0   & 7.0  & 6.0    & 68.2 & 67.0   \\ \hline
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
+		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg  & med  & avg  & med  \\ \hline
+		no                       & 13.3                               & 13.5                            & 0.8                         & 0.0                       & 0.8                            & 0.0  & 0.8  & 0.0  & 1.7  & 0.0  \\ \hline
+		no                       & 133.6                              & 133.0                           & 2.9                         & 0.0                       & 0.3                            & 0.0  & 2.9  & 0.0  & 15.2 & 0.0  \\ \hline
+		1                        & 13                                 & 13.0                            & 1.7                         & 1.5                       & 2.2                            & 2.0  & 1.7  & 2.0  & 2.6  & 2.5  \\ \hline
+		1                        & 133.2                              & 134.0                           & 22.7                        & 23.0                      & 39.1                           & 38.0 & 23.6 & 25.0 & 34.6 & 36.5 \\ \hline
+		2                        & 13.5                               & 14.0                            & 2.5                         & 2.5                       & 3.0                            & 3.0  & 2.5  & 3.0  & 3.3  & 4.0  \\ \hline
+		2                        & 131.5                              & 130.0                           & 22.5                        & 21.5                      & 40.3                           & 42.5 & 21.4 & 20.0 & 45.2 & 46.0 \\ \hline
+		3                        & 13.3                               & 14.0                            & 2.0                         & 2.0                       & 3.5                            & 3.0  & 2.3  & 2.5  & 4.5  & 4.0  \\ \hline
+		3                        & 135.1                              & 137.0                           & 25.8                        & 27.0                      & 42.2                           & 39.0 & 24.8 & 27.5 & 46.7 & 47.0 \\ \hline
+		async                    & 13                                 & 14.0                            & 1.5                         & 1.5                       & 3.4                            & 4.0  & 1.4  & 1.0  & 5.5  & 5.0  \\ \hline
+		async                    & 113.1                              & 111.5                           & 7.2                         & 6.5                       & 30.7                           & 31.0 & 7.0  & 6.0  & 68.2 & 67.0 \\ \hline
 	\end{tabular}
 \end{table}
 
@@ -527,24 +616,24 @@ deutlich besser verhalten, als die anderen beiden. Das ist in so fern relevant, 
 unterschiedliche Mengen an Requests in Recording und Replay sein können, beispielsweise wenn im Laufe eines Debugging Workflows
 ein möglicher Bugfix getestet werden soll.
 
-\begin{table}[h]
+\begin{table}[H]
 	\centering
 	\caption{get + timestamp}
 	\label{tab:get_ts}
-	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
+	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                          \\ \cline{2-11}
-		                         & avg                                & median                          & avg                         & median                    & avg                            & median & avg  & median & avg  & median \\ \hline
-		no                       & 13.6                               & 14.0                            & 0.7                         & 0.0                       & 0.9                            & 0.0    & 1.2  & 0.0    & 2.1  & 0.0    \\ \hline
-		no                       & 134.7                              & 136.5                           & 19.6                        & 0.0                       & 19.0                           & 0.0    & 9.4  & 0.0    & 19.9 & 0.0    \\ \hline
-		1                        & 13.8                               & 14.0                            & 3.3                         & 3.0                       & 3.0                            & 2.5    & 3.8  & 4.0    & 3.0  & 3.5    \\ \hline
-		1                        & 135.4                              & 137.5                           & 37.0                        & 37.0                      & 36.2                           & 35.0   & 36.7 & 36.5   & 38.1 & 39.5   \\ \hline
-		2                        & 13.4                               & 13.0                            & 3.7                         & 4.0                       & 4.3                            & 4.5    & 3.2  & 3.5    & 3.4  & 3.0    \\ \hline
-		2                        & 134.1                              & 133.5                           & 42.0                        & 41.0                      & 43.1                           & 45.0   & 40.0 & 37.5   & 42.9 & 42.0   \\ \hline
-		3                        & 13.2                               & 13.0                            & 4.1                         & 4.0                       & 5.3                            & 6.0    & 5.0  & 6.0    & 4.8  & 5.0    \\ \hline
-		3                        & 134.5                              & 134.5                           & 48.8                        & 47.0                      & 48.3                           & 47.5   & 50.8 & 51.5   & 49.1 & 48.0   \\ \hline
-		async                    & 13.7                               & 13.5                            & 5.0                         & 5.0                       & 5.6                            & 5.0    & 6.1  & 6.0    & 6.2  & 6.5    \\ \hline
-		async                    & 113.4                              & 108.0                           & 60.9                        & 60.0                      & 65.2                           & 65.0   & 65.0 & 65.0   & 65.6 & 66.5   \\ \hline
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
+		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg  & med  & avg  & med  \\ \hline
+		no                       & 13.6                               & 14.0                            & 0.7                         & 0.0                       & 0.9                            & 0.0  & 1.2  & 0.0  & 2.1  & 0.0  \\ \hline
+		no                       & 134.7                              & 136.5                           & 19.6                        & 0.0                       & 19.0                           & 0.0  & 9.4  & 0.0  & 19.9 & 0.0  \\ \hline
+		1                        & 13.8                               & 14.0                            & 3.3                         & 3.0                       & 3.0                            & 2.5  & 3.8  & 4.0  & 3.0  & 3.5  \\ \hline
+		1                        & 135.4                              & 137.5                           & 37.0                        & 37.0                      & 36.2                           & 35.0 & 36.7 & 36.5 & 38.1 & 39.5 \\ \hline
+		2                        & 13.4                               & 13.0                            & 3.7                         & 4.0                       & 4.3                            & 4.5  & 3.2  & 3.5  & 3.4  & 3.0  \\ \hline
+		2                        & 134.1                              & 133.5                           & 42.0                        & 41.0                      & 43.1                           & 45.0 & 40.0 & 37.5 & 42.9 & 42.0 \\ \hline
+		3                        & 13.2                               & 13.0                            & 4.1                         & 4.0                       & 5.3                            & 6.0  & 5.0  & 6.0  & 4.8  & 5.0  \\ \hline
+		3                        & 134.5                              & 134.5                           & 48.8                        & 47.0                      & 48.3                           & 47.5 & 50.8 & 51.5 & 49.1 & 48.0 \\ \hline
+		async                    & 13.7                               & 13.5                            & 5.0                         & 5.0                       & 5.6                            & 5.0  & 6.1  & 6.0  & 6.2  & 6.5  \\ \hline
+		async                    & 113.4                              & 108.0                           & 60.9                        & 60.0                      & 65.2                           & 65.0 & 65.0 & 65.0 & 65.6 & 66.5 \\ \hline
 	\end{tabular}
 \end{table}
 
@@ -552,24 +641,24 @@ Tabelle \ref{tab:get_nka} zeigt, dass ditm problemlos mit stark gemischten Reque
 anderen komponenten enthalten. Auch hier verhalten sich wieder der Heutristische und der Mix-Matcher am besten, die beiden anderen
 Matcher haben erneut deutliche Probleme.
 
-\begin{table}[h]
+\begin{table}[H]
 	\centering
 	\caption{get + no keep alive}
 	\label{tab:get_nka}
-	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
+	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                         \\ \cline{2-11}
-		                         & avg                                & median                          & avg                         & median                    & avg                            & median & avg & median & avg  & median \\ \hline
-		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0    & 0.0 & 0.0    & 0.0  & 0.0    \\ \hline
-		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0    & 0.0 & 0.0    & 0.0  & 0.0    \\ \hline
-		1                        & 10                                 & 10.0                            & 0.0                         & 0.0                       & 1.7                            & 2.0    & 0.0 & 0.0    & 4.2  & 3.5    \\ \hline
-		1                        & 100                                & 100.0                           & 0.0                         & 0.0                       & 22.5                           & 22.5   & 0.0 & 0.0    & 40.2 & 41.0   \\ \hline
-		2                        & 10                                 & 10.0                            & 0.0                         & 0.0                       & 2.5                            & 2.0    & 0.0 & 0.0    & 3.6  & 4.0    \\ \hline
-		2                        & 100                                & 100.0                           & 0.0                         & 0.0                       & 25.4                           & 25.5   & 0.0 & 0.0    & 48.8 & 50.5   \\ \hline
-		3                        & 10                                 & 10.0                            & 0.0                         & 0.0                       & 2.2                            & 2.0    & 0.0 & 0.0    & 5.0  & 5.0    \\ \hline
-		3                        & 100                                & 100.0                           & 0.0                         & 0.0                       & 25.4                           & 25.0   & 0.0 & 0.0    & 52.2 & 53.0   \\ \hline
-		async                    & 10                                 & 10.0                            & 0.0                         & 0.0                       & 2.5                            & 2.5    & 0.0 & 0.0    & 7.3  & 7.5    \\ \hline
-		async                    & 100                                & 100.0                           & 0.0                         & 0.0                       & 22.4                           & 21.5   & 0.0 & 0.0    & 68.2 & 65.5   \\ \hline
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                  \\ \cline{2-11}
+		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg & med & avg  & med  \\ \hline
+		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0 & 0.0 & 0.0  & 0.0  \\ \hline
+		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0 & 0.0 & 0.0  & 0.0  \\ \hline
+		1                        & 10                                 & 10.0                            & 0.0                         & 0.0                       & 1.7                            & 2.0  & 0.0 & 0.0 & 4.2  & 3.5  \\ \hline
+		1                        & 100                                & 100.0                           & 0.0                         & 0.0                       & 22.5                           & 22.5 & 0.0 & 0.0 & 40.2 & 41.0 \\ \hline
+		2                        & 10                                 & 10.0                            & 0.0                         & 0.0                       & 2.5                            & 2.0  & 0.0 & 0.0 & 3.6  & 4.0  \\ \hline
+		2                        & 100                                & 100.0                           & 0.0                         & 0.0                       & 25.4                           & 25.5 & 0.0 & 0.0 & 48.8 & 50.5 \\ \hline
+		3                        & 10                                 & 10.0                            & 0.0                         & 0.0                       & 2.2                            & 2.0  & 0.0 & 0.0 & 5.0  & 5.0  \\ \hline
+		3                        & 100                                & 100.0                           & 0.0                         & 0.0                       & 25.4                           & 25.0 & 0.0 & 0.0 & 52.2 & 53.0 \\ \hline
+		async                    & 10                                 & 10.0                            & 0.0                         & 0.0                       & 2.5                            & 2.5  & 0.0 & 0.0 & 7.3  & 7.5  \\ \hline
+		async                    & 100                                & 100.0                           & 0.0                         & 0.0                       & 22.4                           & 21.5 & 0.0 & 0.0 & 68.2 & 65.5 \\ \hline
 	\end{tabular}
 \end{table}
 
@@ -577,24 +666,24 @@ Treten in gemischten Request-Flüssen außerdem zufällige Komponenten auf, die 
 dazu, dass alle Requests-Matcher Fehler machen. Weiterhin sind der Heuristische und der Mix-Matcher mit Abstand am besten, einen
 klaren Favoriten gibt es hier aber zwischen den beiden nicht, wie Tabelle \ref{tab:get_ts_nka} zeigt.
 
-\begin{table}[h]
+\begin{table}[H]
 	\centering
 	\caption{get + timestamp + no keep alive}
 	\label{tab:get_ts_nka}
-	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
+	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                          \\ \cline{2-11}
-		                         & avg                                & median                          & avg                         & median                    & avg                            & median & avg  & median & avg  & median \\ \hline
-		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0    & 0.0  & 0.0    & 0.0  & 0.0    \\ \hline
-		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0    & 0.0  & 0.0    & 0.0  & 0.0    \\ \hline
-		1                        & 10                                 & 10.0                            & 3.4                         & 3.0                       & 4.3                            & 4.0    & 3.7  & 4.0    & 3.5  & 3.5    \\ \hline
-		1                        & 100                                & 100.0                           & 40.7                        & 39.0                      & 43.8                           & 45.0   & 40.4 & 40.0   & 43.7 & 43.0   \\ \hline
-		2                        & 10                                 & 10.0                            & 5.3                         & 5.5                       & 4.9                            & 5.0    & 5.0  & 4.5    & 4.4  & 4.0    \\ \hline
-		2                        & 100                                & 100.0                           & 50.6                        & 51.5                      & 48.7                           & 48.0   & 50.9 & 52.5   & 48.4 & 48.0   \\ \hline
-		3                        & 10                                 & 10.0                            & 4.6                         & 5.0                       & 4.3                            & 4.0    & 4.5  & 4.5    & 5.7  & 6.0    \\ \hline
-		3                        & 100                                & 100.0                           & 48.5                        & 50.0                      & 50.8                           & 51.0   & 49.9 & 50.0   & 50.4 & 48.5   \\ \hline
-		async                    & 10                                 & 10.0                            & 5.0                         & 5.0                       & 5.7                            & 6.0    & 4.9  & 4.5    & 7.7  & 7.5    \\ \hline
-		async                    & 100                                & 100.0                           & 61.5                        & 60.5                      & 60.0                           & 61.0   & 62.4 & 62.5   & 68.7 & 69.0   \\ \hline
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
+		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg  & med  & avg  & med  \\ \hline
+		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
+		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
+		1                        & 10                                 & 10.0                            & 3.4                         & 3.0                       & 4.3                            & 4.0  & 3.7  & 4.0  & 3.5  & 3.5  \\ \hline
+		1                        & 100                                & 100.0                           & 40.7                        & 39.0                      & 43.8                           & 45.0 & 40.4 & 40.0 & 43.7 & 43.0 \\ \hline
+		2                        & 10                                 & 10.0                            & 5.3                         & 5.5                       & 4.9                            & 5.0  & 5.0  & 4.5  & 4.4  & 4.0  \\ \hline
+		2                        & 100                                & 100.0                           & 50.6                        & 51.5                      & 48.7                           & 48.0 & 50.9 & 52.5 & 48.4 & 48.0 \\ \hline
+		3                        & 10                                 & 10.0                            & 4.6                         & 5.0                       & 4.3                            & 4.0  & 4.5  & 4.5  & 5.7  & 6.0  \\ \hline
+		3                        & 100                                & 100.0                           & 48.5                        & 50.0                      & 50.8                           & 51.0 & 49.9 & 50.0 & 50.4 & 48.5 \\ \hline
+		async                    & 10                                 & 10.0                            & 5.0                         & 5.0                       & 5.7                            & 6.0  & 4.9  & 4.5  & 7.7  & 7.5  \\ \hline
+		async                    & 100                                & 100.0                           & 61.5                        & 60.5                      & 60.0                           & 61.0 & 62.4 & 62.5 & 68.7 & 69.0 \\ \hline
 	\end{tabular}
 \end{table}
 
@@ -607,24 +696,24 @@ Fehler.
 Insgesamt lässt sich sagen, dass die zwei komplexesten Matcher wie erwartet in allen Experimenten die besten Ergebnisse erzielen,
 zwischen den beiden besteht dann aber kein relevanter Unterschied mehr, der in diesen Ergebnissen erkennbar wird.
 
-\begin{table}[h]
+\begin{table}[H]
 	\centering
 	\caption{post}
 	\label{tab:post}
-	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|}
+	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                          \\ \cline{2-11}
-		                         & avg                                & median                          & avg                         & median                    & avg                            & median & avg  & median & avg  & median \\ \hline
-		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0    & 0.0  & 0.0    & 0.0  & 0.0    \\ \hline
-		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0    & 0.0  & 0.0    & 0.0  & 0.0    \\ \hline
-		1                        & 10                                 & 10.0                            & 0.7                         & 1.0                       & 3.1                            & 2.5    & 0.8  & 1.0    & 4.0  & 4.0    \\ \hline
-		1                        & 100                                & 100.0                           & 8.0                         & 8.5                       & 42.0                           & 41.0   & 7.3  & 6.5    & 46.4 & 45.5   \\ \hline
-		2                        & 10                                 & 10.0                            & 1.3                         & 1.0                       & 3.8                            & 3.5    & 1.5  & 1.0    & 3.9  & 4.0    \\ \hline
-		2                        & 100                                & 100.0                           & 23.6                        & 22.5                      & 44.5                           & 44.5   & 24.9 & 25.0   & 46.6 & 46.5   \\ \hline
-		3                        & 10                                 & 10.0                            & 2.3                         & 2.0                       & 4.4                            & 5.0    & 3.2  & 3.0    & 4.3  & 5.0    \\ \hline
-		3                        & 100                                & 100.0                           & 31.2                        & 31.5                      & 46.6                           & 45.5   & 27.4 & 25.5   & 50.2 & 49.5   \\ \hline
-		async                    & 10                                 & 10.0                            & 5.1                         & 5.0                       & 5.4                            & 6.0    & 4.4  & 4.5    & 7.0  & 7.0    \\ \hline
-		async                    & 100                                & 100.0                           & 59.6                        & 59.0                      & 58.9                           & 60.0   & 58.6 & 58.5   & 66.7 & 67.5   \\ \hline
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
+		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg  & med  & avg  & med  \\ \hline
+		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
+		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
+		1                        & 10                                 & 10.0                            & 0.7                         & 1.0                       & 3.1                            & 2.5  & 0.8  & 1.0  & 4.0  & 4.0  \\ \hline
+		1                        & 100                                & 100.0                           & 8.0                         & 8.5                       & 42.0                           & 41.0 & 7.3  & 6.5  & 46.4 & 45.5 \\ \hline
+		2                        & 10                                 & 10.0                            & 1.3                         & 1.0                       & 3.8                            & 3.5  & 1.5  & 1.0  & 3.9  & 4.0  \\ \hline
+		2                        & 100                                & 100.0                           & 23.6                        & 22.5                      & 44.5                           & 44.5 & 24.9 & 25.0 & 46.6 & 46.5 \\ \hline
+		3                        & 10                                 & 10.0                            & 2.3                         & 2.0                       & 4.4                            & 5.0  & 3.2  & 3.0  & 4.3  & 5.0  \\ \hline
+		3                        & 100                                & 100.0                           & 31.2                        & 31.5                      & 46.6                           & 45.5 & 27.4 & 25.5 & 50.2 & 49.5 \\ \hline
+		async                    & 10                                 & 10.0                            & 5.1                         & 5.0                       & 5.4                            & 6.0  & 4.4  & 4.5  & 7.0  & 7.0  \\ \hline
+		async                    & 100                                & 100.0                           & 59.6                        & 59.0                      & 58.9                           & 60.0 & 58.6 & 58.5 & 66.7 & 67.5 \\ \hline
 	\end{tabular}
 \end{table}
 
@@ -639,14 +728,54 @@ mit Schwierigkeiten umgehen kann, sofern diese nicht zu gehäuft auftreten. Leic
 Reihenfolge sind kein Problem, genauso wie schwierig identifizierbare Reqests, die in größtenteils korrekter Reihenfolge
 auftreten. Erst wenn beides zusammen kommt, funktioniert ditms Matching nicht mehr.
 
-\section{Konstostand}
-\subsection{Versuchsaufbau}
-\subsection{Ergebnisse}
-\section{Raft}
-\subsection{Versuchsaufbau}
-\subsection{Ergebnisse}
-\section{Microservices}
-\subsection{Versuchsaufbau}
+\section{Debugging}
+Im Folgenden sollen die tatsächlichen Debugging Möglichkeiten von ditm möglichst empirisch evaluiert werden. Dazu werden Systeme mit
+bekannten Bugs verwendet, mit dem Ziel zu zeigen, dass ditm dabei helfen kann, eben jene Bugs zu identifizieren, nachzuvollziehen
+und durch Replays einfach deterministisch zu reproduzieren.
+
+\subsection{Szenarien}
+Es werden insgesamt drei verschiedene Systeme verwendet, in denen jeweils mindestens ein Bug im Zusammenhang mit
+Netzwerk-Unterbrechungen bekannt ist.
+
+\subsubsection{Bank}
+Das erste System ist eine kleine Bank Simulation mit einem zentralen Server, der Kontodaten transaktionell verwaltet und einem API
+Gateway, welches die Funktionalitäten des Systems kapselt. Es werden insgesamt vier Operationen unterstützt, das Anlegen eines
+Kontos, das Abfragen eines Kontostands und das Ein- und Auszahlen von Geld auf einem Konto. Das System wurde speziell für dieses
+Szenario entwickelt und enthält einen Bug, welcher dazu führt, dass Ein- und Auszahlungen doppelt auf einem Konto verbucht werden
+können.
+
+Konkret tritt dieses Problem auf, weil das API Gateway automatisch Retries für fehlgeschlagene Operationen sendet und die Ein- und
+Auszahlung nicht idempotent sind. Um den Bug zu reproduzieren, muss ein Ein- oder Auszahlungsrequest an das API Gateway gesendet
+werden und die Response auf den Request zwischen Bankserver und Gateway geblockt werden.
+
+\subsubsection{Raft}
+Das zweite System ist eine vollständige Implementierung des Raft Konsens Algorithmus in der Form eines Append-Logs. Es handelt
+sich um ein Hobby-Projekt, welches nicht in der Realität verwendet wird. Dennoch bietet die Implementierung alle nötige
+Funktionalität, um daran Bugs aus realen verteilen Systemen, die ähnliche Algorithmen verwenden, nachstellen zu können. Dazu
+zählen Systeme wie MongoDB und VoltDB. Die Bugs, welche hier nachgestellt werden, wurden Ursprünglich mit Hilfe von Jepsen entdeckt.
+
+\subsubsection{Startup}
+Das dritte und letzte System ist das Produktionssystem eines jungen Startups. Konkret handelt es sich um eine SaaS-Lösung für
+das Sustainability Reporting von Mittelständischen Unternehmen. Das System setzt auf eine Service-orientierte Architektur mit
+vier Services, von denen einer zusätzlich die Rolle eines API Gateways einnimmt. Im Kontext von ditm kann einer der vier Services
+nicht verwendet werden, da dieser von AWS Services wie S3 abhängig ist, es wird hier also ein Cluster aus drei Knoten verwendet.
+Die anderen Services sind von dem fehlenden Service nicht abhängig und können auch in dieser kleineren Konstellation problemlos
+funktionieren.
+
+\subsection{Bekannte Bugs}
+In Tabelle \ref{tab:known_bugs} sind alle bekannten Bugs in den jeweiligen Systemen beschrieben, die hier mit Hilfe von ditm
+untersucht werden sollen.
+\begin{table}[H]
+	\centering
+	\caption{Bekannte Bugs in den jeweiligen Systemen}
+	\label{tab:known_bugs}
+	\begin{tabular}{|l|l|}
+		\hline
+		System & Beschreibung    \\ \hline
+		Bank   & Beschreibung... \\ \hline
+	\end{tabular}
+\end{table}
+
 \subsection{Ergebnisse}
 
 \chapter{Ergebnis}
@@ -654,6 +783,8 @@ auftreten. Erst wenn beides zusammen kommt, funktioniert ditms Matching nicht me
 % and that the interactive failure testing model is a solid idea that needs to be developed further
 % the interactive model is good at tightening the feedback loop
 \chapter{Future Work}
+% hier kommt future work, die ich als experte sehe, auch im kontext meiner arbeit
+
 % keep and extend the idea of an interactive, graphical tool / debugger,
 % while switching out failure mechanism for ssh, and extending to allow clock drift etc (like failify does it in docker)
 
