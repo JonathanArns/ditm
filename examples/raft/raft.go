@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"sync"
@@ -25,11 +26,11 @@ const (
 
 	// A big enough buffer size to avoid blocking on sending the RPC.
 	defaultBufferSize            = 1000
-	rpcTimeout                   = 100 * time.Millisecond
-	heartbeatTimeout             = 200 * time.Millisecond
-	electionTimeout              = 1 * time.Second
-	minElectionTimeoutMultiplier = 1
-	maxElectionTimeoutMultiplier = 5
+	rpcTimeout                   = time.Duration(100) * time.Millisecond
+	heartbeatTimeout             = time.Duration(200) * time.Millisecond
+	electionTimeout              = time.Duration(100) * time.Millisecond
+	minElectionTimeoutMultiplier = 4
+	maxElectionTimeoutMultiplier = 10
 )
 
 type response struct {
@@ -180,7 +181,8 @@ func (s *server) getCurrentPeers() map[int]string {
 }
 
 func newElectionCountdown() time.Duration {
-	return electionTimeout * time.Duration(rand.Intn(maxElectionTimeoutMultiplier-minElectionTimeoutMultiplier)+minElectionTimeoutMultiplier)
+	x := rand.Intn(maxElectionTimeoutMultiplier - minElectionTimeoutMultiplier)
+	return electionTimeout * time.Duration(x+minElectionTimeoutMultiplier)
 }
 
 func (s *server) shouldStepDown() bool {
@@ -212,6 +214,7 @@ func (s *server) run() {
 		if s.shouldStepDown() {
 			s.mu.Lock()
 			s.running = false
+			log.Println("STEPPING DOWN")
 			s.mu.Unlock()
 			break
 		}
@@ -221,18 +224,21 @@ func (s *server) run() {
 		case <-time.After(heartbeatTimeout):
 			switch s.role {
 			case FOLLOWER:
+				s.mu.Lock()
 				// No request from leader. Count down election.
 				s.cummulativeHeartbeatTimeout += heartbeatTimeout
 				if electionCountdown < s.cummulativeHeartbeatTimeout {
 					// Start election.
 					s.role = CANDIDATE
 				}
+				s.mu.Unlock()
 			case LEADER:
 				// No request from client. Need to send heartbeat.
 				s.mu.Lock()
 				s.broadcastEntry()
 				s.mu.Unlock()
 			case CANDIDATE:
+				s.mu.Lock()
 				if electionCountdown < s.cummulativeHeartbeatTimeout {
 					// Clear election countdown.
 					electionCountdown = newElectionCountdown()
@@ -249,6 +255,7 @@ func (s *server) run() {
 						}
 					}
 				}
+				s.mu.Unlock()
 			}
 		}
 	}
@@ -278,6 +285,7 @@ func sendHelper(hostname string, req interface{}) response {
 		return response{Err: err}
 	}
 	body, _ := io.ReadAll(resp.Body)
+	log.Println(string(body))
 	re := response{}
 	err = json.Unmarshal(body, &re)
 	if err != nil {
@@ -309,12 +317,19 @@ func (s *server) send(reqs map[int]interface{}) map[int]response {
 func (s *server) handleRequestHelper(w http.ResponseWriter, r *http.Request, potentialLogEntry logEntry) {
 	switch s.role {
 	case FOLLOWER:
-		// redirect client request to leader.
-		url := s.getCurrentPeers()[s.leaderId] + "/" + strings.TrimPrefix(r.URL.Path, "/")
-		http.Redirect(w, r, url, http.StatusSeeOther)
+		// proxy client request to leader.
+		leaderHost := s.getCurrentPeers()[s.leaderId]
+		req := &http.Request{Method: r.Method, Body: r.Body, Header: r.Header.Clone()}
+		req.URL, _ = url.Parse("http://" + leaderHost + "/" + strings.TrimPrefix(r.URL.Path, "/"))
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+		io.Copy(w, resp.Body)
 	case CANDIDATE:
 		// No leader yet, returns error to client.
-		data, _ := json.Marshal(response{Err: fmt.Errorf("no leader yet; please try later")})
+		data, _ := json.Marshal(response{Err: fmt.Errorf("no leader; please try later")})
 		w.Write(data)
 	case LEADER:
 		s.logs = append(s.logs, potentialLogEntry)
@@ -332,7 +347,10 @@ func (s *server) handle(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/")
 	log.Println(path)
 	s.inbound <- struct{}{}
-	data, err := io.ReadAll(r.Body)
+	buf := bytes.NewBuffer([]byte{})
+	tee := io.TeeReader(r.Body, buf)
+	data, err := io.ReadAll(tee)
+	r.Body = io.NopCloser(buf)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -345,7 +363,6 @@ func (s *server) handle(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		log.Println(req)
 		s.handleRequestHelper(w, r, logEntry{Term: s.currentTerm, Val: ADD, ServerAddr: req.ServerAddr, ServerID: req.ServerId})
 	case "remove_server":
 		req := removeServerRequest{}
@@ -354,8 +371,7 @@ func (s *server) handle(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		log.Println(req)
-		s.handleRequestHelper(w, r, logEntry{Term: s.currentTerm, Val: REMOVE, ServerID: req.ServerId})
+		s.handleRequestHelper(w, r, logEntry{Term: s.currentTerm, Val: REMOVE, ServerID: req.ServerId, ServerAddr: "x"})
 	case "client":
 		if r.Method == http.MethodGet {
 			data, _ := json.Marshal(s.logs[0 : s.committedIndex+1])
@@ -368,7 +384,6 @@ func (s *server) handle(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		log.Println(req)
 		s.handleRequestHelper(w, r, logEntry{Term: s.currentTerm, Val: req.Val})
 	case "append_entry":
 		req := appendEntryRequest{}
@@ -377,7 +392,6 @@ func (s *server) handle(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		log.Println(req)
 
 		if req.Term < s.currentTerm {
 			data, _ := json.Marshal(response{Term: s.currentTerm})
@@ -413,7 +427,6 @@ func (s *server) handle(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		log.Println(req)
 
 		if req.Term < s.currentTerm || s.cummulativeHeartbeatTimeout < minElectionTimeoutMultiplier*electionTimeout {
 			data, _ := json.Marshal(response{Term: s.currentTerm})

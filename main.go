@@ -68,11 +68,10 @@ func InitProxy() *Proxy {
 			log.Println(err)
 			panic("Unknown hostname: " + name)
 		}
-		log.Println("NAME:", name, ", addrs:", addrs)
+		log.Println("Added target with name:", name, ", addrs:", addrs)
 		for _, addr := range addrs {
 			proxy.hostNames[addr] = name
 		}
 	}
-
 	return proxy
 }

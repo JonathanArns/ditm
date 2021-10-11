@@ -6,7 +6,7 @@ services:
     container_name: raft-ditm
     hostname: ditm
     environment:
-      CONTAINER_HOST_NAMES: raft1,raft2,raft3
+      CONTAINER_HOST_NAMES: raft1,raft2,raft3,raft4,raft5
     volumes:
       - ./volumes/volumes:/volumes
       - ./volumes/recordings:/recordings
@@ -18,6 +18,8 @@ services:
       - raft1
       - raft2
       - raft3
+      - raft4
+      - raft5
   
   raft1:
     image: simple-raft
@@ -27,7 +29,7 @@ services:
       - HTTP_PROXY=ditm:5000
       - RAFT_ID=1
       - RAFT_FORCE_LEADER=true
-      - RAFT_PEERS={"2":"raft2", "3":"raft3"}
+      - RAFT_PEERS={"2":"raft2", "3":"raft3", "5":"raft5", "4":"raft4"}
     logging:
       driver: jonathanarns/http-log-driver
       options:
@@ -40,7 +42,7 @@ services:
     environment: 
       - HTTP_PROXY=ditm:5000
       - RAFT_ID=2
-      - RAFT_PEERS={"1":"raft1", "3":"raft3"}
+      - RAFT_PEERS={"1":"raft1", "3":"raft3", "5":"raft5", "4":"raft4"}
     logging:
       driver: jonathanarns/http-log-driver
       options:
@@ -53,7 +55,33 @@ services:
     environment: 
       - HTTP_PROXY=ditm:5000
       - RAFT_ID=3
-      - RAFT_PEERS={"1":"raft1", "2":"raft2"}
+      - RAFT_PEERS={"1":"raft1", "2":"raft2", "5":"raft5", "4":"raft4"}
+    logging:
+      driver: jonathanarns/http-log-driver
+      options:
+        endpoint: http://localhost:8000/log
+
+  raft4:
+    image: simple-raft
+    container_name: raft4
+    hostname: raft4
+    environment: 
+      - HTTP_PROXY=ditm:5000
+      - RAFT_ID=4
+      - RAFT_PEERS={"1":"raft1", "2":"raft2", "3":"raft3", "5":"raft5"}
+    logging:
+      driver: jonathanarns/http-log-driver
+      options:
+        endpoint: http://localhost:8000/log
+
+  raft5:
+    image: simple-raft
+    container_name: raft5
+    hostname: raft5
+    environment: 
+      - HTTP_PROXY=ditm:5000
+      - RAFT_ID=5
+      - RAFT_PEERS={"1":"raft1", "2":"raft2", "3":"raft3", "4":"raft4"}
     logging:
       driver: jonathanarns/http-log-driver
       options:
