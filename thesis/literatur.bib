@@ -204,3 +204,72 @@
 	location = {Athens, Greece},
 	series = {Onward! 2019},
 }
+
+@inproceedings{log_analysis_at_google,
+	author = {Xu, Wei and Huang, Ling and Fox, Armando and Patterson, David and
+	          Jordan, Michael},
+	title = {Experience Mining Google's Production Console Logs},
+	year = {2010},
+	publisher = {USENIX Association},
+	address = {USA},
+	abstract = {We describe our early experience in applying our console log
+	            mining techniques [19, 20] to logs from production Google systems
+	            with thousands of nodes. This data set is five orders of
+	            magnitude in size and contains almost 20 times as many messages
+	            types as the Hadoop data set we used in [19]. It also has many
+	            properties that are unique to large scale production deployments
+	            (e.g., the system stays on for several months and multiple
+	            versions of the software can run concurrently). Our early
+	            experience shows that our techniques, including source code based
+	            log parsing, state and sequence based feature creation and
+	            problem detection, work well on this production data set. We also
+	            discuss our experience in using our log parser to assist the log
+	            sanitization.},
+	booktitle = {Proceedings of the 2010 Workshop on Managing Systems via Log
+	             Analysis and Machine Learning Techniques},
+	pages = {5},
+	numpages = {1},
+	location = {Vancouver, BC, Canada},
+	series = {SLAML'10},
+}
+
+@techreport{dapper_tracing,
+	title = {Dapper, a Large-Scale Distributed Systems Tracing Infrastructure},
+	author = {Benjamin H. Sigelman and Luiz André Barroso and Mike Burrows and
+	          Pat Stephenson and Manoj Plakal and Donald Beaver and Saul Jaspan
+	          and Chandan Shanbhag},
+	year = {2010},
+	URL = {https://research.google.com/archive/papers/dapper-2010-1.pdf},
+	institution = {Google, Inc.},
+}
+
+@misc{so_you_want_to_trace,
+	author = {Sambasivan, Raja and Fonseca, Rodrigo and Shafer, Ilari and Ganger
+	          , Gregory},
+	year = {2014},
+	month = {04},
+	title = {So, you want to trace your distributed system? Key design insights
+	         from years of practical experience},
+	howpublished = {Parallel Data Laboratory, Carnegie Mellon University},
+}
+
+@inproceedings{magpie_tracing,
+	title = {Using Magpie for request extraction and workload modelling.},
+	author = {Barham, Paul and Donnelly, Austin and Isaacs, Rebecca and Mortier,
+	          Richard},
+	booktitle = {Proceedings of the 6th {USENIX} Symposium on Operating Systems
+	             Desing and Implementation ({OSDI} 04)},
+	volume = {4},
+	pages = {18--18},
+	year = {2004},
+}
+
+@inproceedings{distributed_replay_debugging_2006,
+	title = {Replay debugging for distributed applications},
+	author = {Geels, Dennis Michael and Altekar, Gautam and Shenker, Scott and
+	          Stoica, Ion},
+	year = {2006},
+	school = {University of California, Berkeley},
+	booktitle = {Proceedings of the 2006 {USENIX} Annual Technical Conference},
+	pages = {289-300},
+}

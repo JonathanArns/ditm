@@ -20,22 +20,22 @@
     tabsize=4,
     language=Golang % this is it !
 }
-\lstdefinelanguage{yaml}{
-  keywords={true,false,null,y,n},
-  keywordstyle=\color{darkgray}\bfseries,
-  ndkeywords={},
-  ndkeywordstyle=\color{black}\bfseries,
-  identifierstyle=\color{black},
-  sensitive=false,
-  %moredelim=[l]{}{:},
-  comment=[l]{#},
-  morecomment=[s]{/*}{*/},
-  commentstyle=\color{purple}\ttfamily,
-  stringstyle=\color{blue}\ttfamily,
-  %morestring=[l]{-}{},
-  morestring=[b]',
-  morestring=[b]"
-}
+% \lstdefinelanguage{yaml}{
+%   keywords={true,false,null,y,n},
+%   keywordstyle=\color{darkgray}\bfseries,
+%   ndkeywords={},
+%   ndkeywordstyle=\color{black}\bfseries,
+%   identifierstyle=\color{black},
+%   sensitive=false,
+%   %moredelim=[l]{}{:},
+%   comment=[l]{#},
+%   morecomment=[s]{/*}{*/},
+%   commentstyle=\color{purple}\ttfamily,
+%   stringstyle=\color{blue}\ttfamily,
+%   %morestring=[l]{-}{},
+%   morestring=[b]',
+%   morestring=[b]"
+% }
 \usepackage[font={small,it}]{caption}
 \usepackage[english,ngerman]{babel}
 \usepackage[backend=biber,
@@ -84,7 +84,6 @@
 
 \chapter{Einleitung}
 \cite{analysis_of_network_partition_failures}
-\cite{chaos_engineering}
 \chapter{Grundlagen}
 \section{Verteilte Systeme}
 \subsection{Partition Tolerance}
@@ -98,13 +97,20 @@ in Docker oder ähnlichen Technologien.
 \section{Proxy}
 
 \chapter{State of the Art}
+Im Umgang mit Fehlern in verteilten Systemen werden eine Reihe verschiedener Ansätze mit unterschiedlichen Zielen verfolgt.
+Failure Testing und Chaos Engineering sind zwei ähnliche Methoden, die sich darauf verlassen, Fehler mit Hilfe von Tests zu
+finden, mit dem Unterschied, dass Failure Testing in einer Test-Umgebung und Chaos Engineering in der Produktions-Umgebung
+stattfinden. Daneben gibt es Log-Analyse und Tracing Systeme, die vor allem dazu dienen, aufgetretene Fehler nachzuvollziehen. Zu
+diesem Zweck gibt es ebenfalls eine Handvoll weiterer, oft experimenteller Debugging Tools. Diese reichen von Tools, die einem
+normalen Debugger ähneln, bis hin zu Tools, die sich vor allem auf die Visualisierung von Systemen und Abläufen konzentrieren.
+Nachfolgend werden die genannten Methoden und jeweils wichtige Tools weiter erläutert.
 \cite{debugging_distributed_systems_2016}
-\section{Tracing}
-\section{Failure / Chaos Testing}
-Failure Testing ist eine Familie von Ansätzen zum Testen der Fehlertoleranz verteilter Systeme. Die Grundidee ist immer, als
+
+\section{Failure Testing}
+Failure Testing ist eine breiter Ansatz zum Testen der Fehlertoleranz verteilter Systeme. Die Grundidee ist immer, als
 Client mit dem System zu interagieren und zeitgleich die Umgebung des Systems zu manipulieren, beispielsweise mit
 Netzwerk-Unterbrechungen. Failure Tests werden als automatisierte Integrationstests über eine Programmierschnittstelle definiert
-und beinhalten den Auf- und Abbau des Systems, eine Reihe definierter Interaktionen mit dem System und in der Regel zufällige
+und beinhalten den Aufbau und Abbau des Systems, eine Reihe definierter Interaktionen mit dem System und in der Regel zufällige
 Fehler-Injektionen in die Systemumgebung. Zusätzlich wird oft nach Tests die Einhaltung von Invarianten des Systems anhand eines
 Modells geprüft, um in zufallsgetriebenen Tests automatisch Bugs identifizieren zu können.
 
@@ -122,16 +128,73 @@ Netzwerk-Unterbrechungen verwendet Jepsen die Linux Netwerk Tools wie iptables. 
 der Lage, verschiedene andere Fehler zu erzeugen, wie beispielsweise Verzerrungen zwischen den Systemuhren der einzelnen Knoten.
 Am Ende eines Tests wird verifiziert, ob alle durchgeführten Operationen unter den Regeln des SUT linearisierbar sind. Sind sie das
 nicht, hat Jepsen einen Bug gefunden, vorrausgesetzt die Regeln des SUT sind korrekt modelliert.
-\subsection{Replay Debugging}
-\cite{distributed_replay_debugging_1997}
-% idea exists, seems very promising
-% different approaches with different advantages and drawbacks
-\subsection{Debugger für Verteilte Systeme}
+
+\section{Chaos Engineering}
+Chaos Engineering verfolgt das Ziel, die Resilienz und Verfügbarkeit von großen, heterogenen verteilten Systemen in Produktion zu
+verbessern. Dazu werden direkt in der Produktions-Umgebung Experimente mit Fehlern wie Abstürzen von Virtuellen Maschinen und
+Netwerk-Unterbrechungen durchgeführt, um Schwachstellen zu identifizieren und zu verifizieren, dass das System im Ernstfall mit
+derartigen Fehlern umgehen kann. Der Ablauf eines Experiments wird dabei in vier Schritten definiert.
+\begin{enumerate}
+    \item Definiere den Ruhezustand des Systems anhand vorhandener Ausgaben Systems.
+    \item Erwarte, dass der Ruhezustand sowohl in der Kontrollgruppe, als auch in der Versuchsgruppe bestehen bleibt.
+    \item Injiziere Ereignisse wie Server-Abstürze und Netzwerk-Unterbrechungen in der Versuchsgruppe von Services.
+    \item Versuche die Hypothese anhand der Unterschiede zwischen Kontroll- und Versuchsgruppe zu widerlegen.
+\end{enumerate}
+Bekannt gemacht wurde die Methode mit dem bei Netflix entwickelten Chaos Monkey. Dieser ist ein Service, der automatisiert während
+der normalen Arbeiteszeiten Fehler im Produktionssystem erzeugt. Die injizierten Fehlern sind dabei Abstürze von internen
+Services, Abstürze von virtuellen Maschinen und Netzwerk-Unterbrechungen und Netzwerk-Latenz für einzelne Nachrichten. Netflix
+stellt heraus, dass als Folge dessen Entwickler ihre Services resilient gegen dearartige Fehler bauen und die Verfügbarkeit des
+Systems sich dadurch deutlich verbessert. Zusätzlich zu automatisierten Tools wie dem Chaos Monkey wird beim Chaos Engineering
+auf manuelle Experimente gesetzt, die Teilweise sehr große Störungen wie Netzwerk-Unterbrechungen zu großen Teilen des Systems in
+Form von ganzen AWS Regionen umfassen. Erweisen sich manuelle Experimente als effektiv, werden diese wiederum nach und nach
+automatisiert.
+
+Chaos Engineering eignet sich besonders gut für sehr große, heterogene Systeme, wie die großer Organisationen wie Netflix. Dort hat
+sich die Methode aus der Not heraus entwickelt und als Best Practice und fester Teil der Engineering Kultur etabliert. Failure Testing in
+kontrollierten Test-Umgebungen ist für solche Systeme schon allein aufgrund der komplexen Deployments ungeeignet.
+\cite{chaos_engineering}
+
+\section{Log-Analyse}
+Log Analyse ist ein leichtgewichtiger Black-Box Ansatz zur Fehleridentifikation und -Analyse, der sich für Systeme eignet, welche
+nicht modifiziert werden können \cite{debugging_distributed_systems_2016}. Es werden so viele Logs wie möglich aus den
+verschiedenen Teilen eines Systems aggregiert und gemeinsam analysiert. Aufgrund der großen Menge an Logs sind diese allein oft
+nicht direkt für einen Menschen verwendbar. Stattdessen werden Data-Mining-Techniken eingesetzt, um nützliche Information aus den
+aggregierten Logs zu extrahieren \cite{log_analysis_at_google}.
+
+\section{Tracing}
+Eine deutlich schwergewichtigere Lösung ist das Tracing eines verteilten Systems. Die Idee ist, jede Aktion, die im Zusammenhang
+mit einem User-Request passiert, aggregiert aufzuzeichnen, um so den gesamten Weg eines Requests durch das System zeigen zu können.
+Dabei können verschiedene Informationen aufgezeichnet werden, unter anderem Log Nachrichten und RPC Aufrufe, bzw. interne
+Nachrichten, je nach dem, was das Ziel des konkreten Tracing Systems ist. Im Gegensatz zur einfachen Log Analyse erfordert Tracing
+Eingriffe in das verteilte System, um die notwendigen Informationen zu generieren und mit Trace-IDs zu kennzeichnen. Die erzeugten
+Traces können dafür in der Regel gut visualisiert werden und bieten Entwicklern in dieser Form direkt nützliche Einsichten in das
+System. \cite{dapper_tracing}
+
+Tracing ist eine vielseitige Methode, die je nach Implementierung unterschiedliche Use-Cases bedienen kann. Neben verteiltem
+Profiling zur Identifikation von Bottlenecks im System und der Diagnose von Problemen im Ruhezustand des Systems zählt
+Anomalieerkennung in verteilten Systemen zu diesen Use-Cases. Dazu gehört sowohl die Erkennung, als auch das Debugging von selten
+auftretenden Problemen, die beispielsweise durch Netzwerk-Unterbrechungen ausgelöst werden können. \cite{so_you_want_to_trace}
+
+Ähnlich wie Chaos Engineering wird Tracing von Organisationen mit großen, heterogenen Systemen in Produktions-Umgebungen
+eingesetzt. Mit Dapper \cite{dapper_tracing} hat Google eine eigene Tracing Lösung geschaffen, die sich vor allem für das
+Profiling von Systemen und die Diagnose von Problemen im Ruhezustand des Systems eignet \cite{so_you_want_to_trace}. Magpie
+\cite{magpie_tracing} ist ein Tracing System, welches sich insbesondere zur Annomalieerkennung eignet, sowohl für Probleme in der
+Korrektheit, als auch der Performance von verteilten Systemen \cite{so_you_want_to_trace}.
+
+\section{Debugging}
+\subsection{Klassisches Debugging}
 \cite{oddity_graphical_debugger}
 \cite{gotcha_interactive_debugger}
+\subsection{Record and Replay Debugging}
+\cite{distributed_replay_debugging_1997} % Ada95, record system, replay single node, first distributed rr
+\cite{distributed_replay_debugging_2006} % liblog, only c++
+% idea exists, seems very promising
+% different approaches with different advantages and drawbacks
 
 \section{Was fehlt noch?}
 % hier kommt future work of existing papers
+
+% Generellere Chaos Engineering Tools, die Frage ist, inwiefern interne Tools notwendig sind \cite{chaos_engineering}
 
 % leicht verwendbare chaos failure testing
 % zuverlässige reproduktion von bugs
@@ -361,9 +424,9 @@ und den konstanten Komponenten des Scores anzupassen, werden diese mit der Läng
 Das führt dazu, dass Gleichheit in anderen Eigenschaften höher gewichtet wird, als die Position eines Requests und diese
 nur dann mit ins Gewicht fällt, wenn es mehrere Requests im Recording gibt, die ansonsten gleich gut passen.
 \begin{lstlisting}
-faktor := float64(len(rec)) // Länge des Recordings
+faktor := float64(len(rec)) // Laenge des Recordings
 score := 0.0
-score -= math.Abs(float64(j - i)) // Relativer Abstand der Requests
+score -= math.Abs(float64(j - i)) // Abstand der Requests
 if req.To == r.To {
     score += 1 * faktor
 }
@@ -390,11 +453,15 @@ score -= math.Abs(float64(j - i))
 if req.To == r.To {
     score += 1 * faktor
 }
-score -= math.Abs(float64(len(req.To)-len(r.To))) * faktor / 10
+score -= math.Abs(
+    float64(len(req.To)-len(r.To))
+) * faktor / 10
 if string(req.Body) == string(r.Body) {
     score += 1 * faktor
 }
-score -= math.Abs(float64(len(req.Body)-len(r.Body))) * faktor / 10
+score -= math.Abs(
+    float64(len(req.Body)-len(r.Body))
+) * faktor / 10
 \end{lstlisting}
 Obwohl der heuristische Matcher komplexer ist, als der Mix Matcher und insgesamt feinere Unterschiede zwischen Requests
 berücksichtigen kann, ist nicht von vornherein zu sagen, ob das von Vorteil ist. Unter anderem wird auch diese Frage in
@@ -408,7 +475,8 @@ werden, ohne diesen fehlt die Aggregation der Log-Nachrichten. Vor der ersten Ve
 werden, dies ist möglich, indem das Repository \url{https://github.com/JonathanArns/http-log-driver} gecloned und darin der Befehl
 \textbf{make all} ausgeführt wird. Merke, dass in docker-compose nur alle zum Starten nötigen Einstellungen geschehen, alles andere ist Teil
 der Benutzeroberfäche. Eine beispielhafte Konfiguration sieht wie folgt aus.
-\begin{lstlisting}[language=yaml]
+% \begin{lstlisting}[language=yaml]
+\begin{lstlisting}
 version: "3.9"
 
 services:
@@ -591,7 +659,7 @@ Versuchsaufbau. Das seltenere Auftreten des Bugs erklärt auch die deutlich bess
 bei den asynchronen Experimenten im Vergleich zu den synchron gemischten in Tabelle \ref{tab:get}.
 \begin{table}[H]
 	\centering
-	\caption{get}
+	\caption{Ergebnisse der Request-Matching Experimente mit einfachen GET Requests}
 	\label{tab:get}
 	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
@@ -618,7 +686,7 @@ ein möglicher Bugfix getestet werden soll.
 
 \begin{table}[H]
 	\centering
-	\caption{get + timestamp}
+	\caption{Ergebnisse der Request-Matching Experimente mit GET Requests mit Zeitstempeln}
 	\label{tab:get_ts}
 	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
@@ -643,7 +711,7 @@ Matcher haben erneut deutliche Probleme.
 
 \begin{table}[H]
 	\centering
-	\caption{get + no keep alive}
+	\caption{Ergebnisse der Request-Matching Experimente mit GET Requests mit no-keep-alive header}
 	\label{tab:get_nka}
 	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
@@ -668,7 +736,7 @@ klaren Favoriten gibt es hier aber zwischen den beiden nicht, wie Tabelle \ref{t
 
 \begin{table}[H]
 	\centering
-	\caption{get + timestamp + no keep alive}
+	\caption{Ergebnisse der Request-Matching Experimente mit GET Requests mit Zeitstempeln und no-keep-alive header}
 	\label{tab:get_ts_nka}
 	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
@@ -698,7 +766,7 @@ zwischen den beiden besteht dann aber kein relevanter Unterschied mehr, der in d
 
 \begin{table}[H]
 	\centering
-	\caption{post}
+	\caption{Ergebnisse der Request-Matching Experimente mit POST Requests}
 	\label{tab:post}
 	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline

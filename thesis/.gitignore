@@ -8,4 +8,5 @@
 *.run.xml
 *.synctex.gz
 *.toc
+*.out
 thesis.pdf
