@@ -1,23 +1,32 @@
 % Encoding: UTF-8
-@article{debugging_distributed_systems_2016,
+@article{challenges_and_options,
 	author = {Beschastnikh, Ivan and Wang, Patty and Brun, Yuriy and Ernst,
-	          Michael D.},
-	title = {Debugging Distributed Systems},
+	          Michael D,},
+	title = {Debugging Distributed Systems: Challenges and Options for
+	         Validation and Debugging},
 	year = {2016},
-	issue_date = {August 2016},
+	issue_date = {March-April 2016},
 	publisher = {Association for Computing Machinery},
 	address = {New York, NY, USA},
-	volume = {59},
-	number = {8},
-	issn = {0001-0782},
-	url = {https://doi.org/10.1145/2909480},
-	doi = {10.1145/2909480},
-	abstract = {ShiViz is a new distributed system debugging visualization tool.
-	            },
-	journal = {Commun. ACM},
-	month = jul,
-	pages = {32–37},
-	numpages = {6},
+	volume = {14},
+	number = {2},
+	issn = {1542-7730},
+	url = {https://doi.org/10.1145/2927299.2940294},
+	doi = {10.1145/2927299.2940294},
+	abstract = {Distributed systems pose unique challenges for software
+	            developers. Reasoning about concurrent activities of system nodes
+	            and even understanding the system’s communication topology can be
+	            difficult. A standard approach to gaining insight into system
+	            activity is to analyze system logs. Unfortunately, this can be a
+	            tedious and complex process. This article looks at several key
+	            features and debugging challenges that differentiate distributed
+	            systems from other kinds of software. The article presents
+	            several promising tools and ongoing research to help resolve
+	            these challenges.},
+	journal = {Queue},
+	month = mar,
+	pages = {91–110},
+	numpages = {20},
 }
 
 @article{why_is_random_testing_effective,
@@ -169,6 +178,27 @@
 	volume = {abs/1806.05300},
 }
 
+@article{ShiViz_visual_debugger,
+	author = {Beschastnikh, Ivan and Wang, Patty and Brun, Yuriy and Ernst,
+	          Michael D.},
+	title = {Debugging Distributed Systems},
+	year = {2016},
+	issue_date = {August 2016},
+	publisher = {Association for Computing Machinery},
+	address = {New York, NY, USA},
+	volume = {59},
+	number = {8},
+	issn = {0001-0782},
+	url = {https://doi.org/10.1145/2909480},
+	doi = {10.1145/2909480},
+	abstract = {ShiViz is a new distributed system debugging visualization tool.
+	            },
+	journal = {Commun. ACM},
+	month = jul,
+	pages = {32–37},
+	numpages = {6},
+}
+
 @inproceedings{gotcha_interactive_debugger,
 	author = {Achar, Rohan and Dawn, Pritha and Lopes, Cristina V.},
 	title = {GoTcha: An Interactive Debugger for GoT-Based Distributed Systems},
@@ -272,4 +302,91 @@
 	school = {University of California, Berkeley},
 	booktitle = {Proceedings of the 2006 {USENIX} Annual Technical Conference},
 	pages = {289-300},
+}
+
+@inproceedings{debugAR_AR_debugger,
+	author = {Reipschl\"{a}ger, Patrick and Ozkan, Burcu Kulahcioglu and Mathur,
+	          Aman Shankar and Gumhold, Stefan and Majumdar, Rupak and Dachselt,
+	          Raimund},
+	title = {DebugAR: Mixed Dimensional Displays for Immersive Debugging of
+	         Distributed Systems},
+	year = {2018},
+	isbn = {9781450356213},
+	publisher = {Association for Computing Machinery},
+	address = {New York, NY, USA},
+	url = {https://doi.org/10.1145/3170427.3188679},
+	doi = {10.1145/3170427.3188679},
+	abstract = {Distributed systems are very complex and in case of errors hard
+	            to debug. The high number of messages with non deterministic
+	            delivery timings, as well as message losses, data corruption and
+	            node crashes cannot be efficiently analyzed with traditional GUI
+	            tools. We propose to use immersive technologies in a
+	            multi-display environment to tackle these shortcomings. Our
+	            DebugAR approach shows a representation of the current systems
+	            state, message provenance, and the lifetime of participating
+	            nodes and offers layouting techniques. By providing a screen that
+	            shows a traditional text-log, we bridge the gap to conventional
+	            tools. Additionally, we propose an interactive 3D visualization
+	            of the message flow, combining an interactive tabletop with
+	            augmented reality using a head-mounted display. We are confident
+	            that our proposed solution can not only be used to analyze
+	            distributed system, but also for other time-dependent networks.},
+	booktitle = {Extended Abstracts of the 2018 CHI Conference on Human Factors
+	             in Computing Systems},
+	pages = {1–6},
+	numpages = {6},
+	keywords = {3d visualizations, multi-display environments, debugging,
+	            distributed systems, interactive surfaces, augmented reality},
+	location = {Montreal QC, Canada},
+	series = {CHI EA '18},
+}
+
+@inproceedings{normal_record_and_replay,
+	author = {Honarmand, Nima and Torrellas, Josep},
+	booktitle = {2014 ACM/IEEE 41st International Symposium on Computer
+	             Architecture (ISCA)},
+	title = {Replay debugging: Leveraging record and replay for program
+	         debugging},
+	year = {2014},
+	volume = {},
+	number = {},
+	pages = {455-456},
+	doi = {10.1109/ISCA.2014.6853229},
+}
+
+% might be good for saying that debugging distributed systems is hard
+@article{designing_and_testing_distributed_virtual_environments,
+	author = {Valadares, Arthur and Gabrielova, Eugenia and Lopes, Cristina
+	          Videira},
+	title = {On designing and testing distributed virtual environments},
+	journal = {Concurrency and Computation: Practice and Experience},
+	volume = {28},
+	number = {12},
+	pages = {3291-3312},
+	keywords = {performance, testing, distributed systems, distributed virtual
+	            environments, distributed simulations},
+	doi = {https://doi.org/10.1002/cpe.3803},
+	url = {https://onlinelibrary.wiley.com/doi/abs/10.1002/cpe.3803},
+	eprint = {https://onlinelibrary.wiley.com/doi/pdf/10.1002/cpe.3803},
+	abstract = {Summary Distributed real-time (DRT) systems are among the most
+	            complex software systems to design, test, maintain, and evolve.
+	            The existence of components distributed over a network often
+	            conflicts with real-time requirements, leading to design
+	            strategies that depend on domain-specific and even
+	            application-specific knowledge. Distributed virtual environment (
+	            DVE) systems are DRT systems that connect multiple users
+	            instantly with each other and with a shared virtual space over a
+	            network. DVE systems deviate from traditional DRT systemsx in the
+	            importance of the quality of the end user experience. We present
+	            an analysis of important, but challenging, issues in the design,
+	            testing, and evaluation of DVE systems through the lens of
+	            experiments with a concrete DVE, OpenSimulator. We frame our
+	            observations within six dimensions of well-known design concerns:
+	            correctness, fault tolerance/prevention, scalability, time
+	            sensitivity, consistency, and overhead of distribution.
+	            Furthermore, we place our experimental work in a broader
+	            historical context, showing that these challenges are intrinsic
+	            to DVEs and suggesting lines of future research. Copyright © 2016
+	            John Wiley \& Sons, Ltd.},
+	year = {2016},
 }

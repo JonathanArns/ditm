@@ -104,7 +104,7 @@ stattfinden. Daneben gibt es Log-Analyse und Tracing Systeme, die vor allem dazu
 diesem Zweck gibt es ebenfalls eine Handvoll weiterer, oft experimenteller Debugging Tools. Diese reichen von Tools, die einem
 normalen Debugger ähneln, bis hin zu Tools, die sich vor allem auf die Visualisierung von Systemen und Abläufen konzentrieren.
 Nachfolgend werden die genannten Methoden und jeweils wichtige Tools weiter erläutert.
-\cite{debugging_distributed_systems_2016}
+\cite{challenges_and_options}
 
 \section{Failure Testing}
 Failure Testing ist eine breiter Ansatz zum Testen der Fehlertoleranz verteilter Systeme. Die Grundidee ist immer, als
@@ -156,7 +156,7 @@ kontrollierten Test-Umgebungen ist für solche Systeme schon allein aufgrund der
 
 \section{Log-Analyse}
 Log Analyse ist ein leichtgewichtiger Black-Box Ansatz zur Fehleridentifikation und -Analyse, der sich für Systeme eignet, welche
-nicht modifiziert werden können \cite{debugging_distributed_systems_2016}. Es werden so viele Logs wie möglich aus den
+nicht modifiziert werden können \cite{challenges_and_options}. Es werden so viele Logs wie möglich aus den
 verschiedenen Teilen eines Systems aggregiert und gemeinsam analysiert. Aufgrund der großen Menge an Logs sind diese allein oft
 nicht direkt für einen Menschen verwendbar. Stattdessen werden Data-Mining-Techniken eingesetzt, um nützliche Information aus den
 aggregierten Logs zu extrahieren \cite{log_analysis_at_google}.
@@ -182,14 +182,44 @@ Profiling von Systemen und die Diagnose von Problemen im Ruhezustand des Systems
 Korrektheit, als auch der Performance von verteilten Systemen \cite{so_you_want_to_trace}.
 
 \section{Debugging}
-\subsection{Klassisches Debugging}
+Neben Werkzeugen wie Tracing, die ebenfalls zum Debugging von verteilten Systemen dienen gibt es eine Reihe weiterer Tools, die
+konkret diesem Zweck dienen, oft mit einem speziellen Fokus auf entweder eine bestimmte Art von Systemen oder eine bestimmte
+Klasse von Fehlern. Die Tools lassen sich in zwei grobe Kategorien einteilen: Visuelle Debugger und Klassische Debugger.
+
+\subsection{Interaktives Debugging}
+Die Tools in dieser Kategorie versuchen, die interaktive Debugging-Erfahrung von nicht-verteilten Systemen mit Debuggern wie GDB auf verteilte
+Systeme zu übertragen. Die Herausforderung dabei ist, dass klassische Debugger darauf ausgelegt sind, genau einen Prozess
+zu kontrollieren, in verteilten Systemen aber per Definition mehrere Prozesse, oft auf verschiedenen Rechnern, existieren.
+Zusätzlich zu Kontrollfluss und Zustandsänderungen in einzelnen Prozessen müssen durch die Verteiltheit des Systems ebenfalls
+Nachrichtenflüsse zwischen den Prozessen beobachtet werden. Achar et. al. \cite{gotcha_interactive_debugger} stellen heraus, dass
+interaktives Debugging im klassischen Sinne in verteilten Systemen nicht im generellen Fall möglich ist. Stattdessen muss ein
+System gewisse Einschränkungen im Bezug auf Zustandsänderungen und die Trennung zwischen lokalen und geteilten Zuständen
+einhalten. Mit GoTcha \cite{gotcha_interactive_debugger} stellen sie einen vollständigen interaktiven Debugger für Systeme mit dem
+Global Object Tracker (GoT) Programmiermodell vor. Konkret funktioniert GoTcha nur für Systeme, die eine GoT Implementierung in
+Python namens Spacetime verwenden. Damit ist GoTcha zwar für solche Systeme ein mächtiges Tool, in seiner Anwendbarkeit aber enorm
+eingeschränkt.
+
+Ein anderer Ansatz, der eine interaktive Debugging-Erfahrung erzielen kann, der auch in nicht-verteilten Systemen Anwendung findet
+\cite{normal_record_and_replay}, um besonders flüchtige Bugs zu reproduzieren, ist Record-and-Replay Debugging. Dieser Ansatz
+wurde erstmals bereits 1997 auch auf verteilte Systeme angewandt \cite{distributed_replay_debugging_1997}, damals im Modul für
+verteilte Applikationen des Compilers der Programmiersprache Ada95. Damit konnten Abläufe von verteilten Systemen aufgezeichnet
+werden, um dann zu Debugging Zwecken die Abläufe auf einzelne Knoten des Systems wiederzugeben.
+
+Ein etwas moderneres Beispiel für die gleiche Idee ist liblog \cite{distributed_replay_debugging_2006}, ein Record-and-Replay Debugger für
+C und C++ Applicationen, der in der Lage ist, Netzwerk Verkehr mit aufzuzeichnen. Der Mechanismus hinter liblog ist, alle
+Systemaufrufe, die eine Applikation macht, zu loggen, so dass diese später deterministisch wiedergegeben werden können.
+
+\subsection{Visuelles Debugging}
+Ein Problem des klassischen interaktiven Debugging Ansatzes ist, alle relevanten Informationen verständlich darzustellen. Das
+liegt daran, dass nicht nur die Zustände der einzelnen Knoten, sondern als zusätzliche Ebene auch die Kommunikation
+zwischen den Knoten relevant ist. Die Problematik wird unter anderem dadurch deutlich, dass liblog beispielsweise gleich mehrere
+GBD Instanzen als Frontend für Replays benötigt \cite{distributed_replay_debugging_2006}.
+
+Um das Problem zu lösen haben sich mit der Zeit eine Reihe von Debugging Tools für verteilte Systeme entwickelt, die sich darauf
+konzentrieren, Abläufe und Zustände im System zu visualisieren.
+\cite{debugAR_AR_debugger}
+\cite{ShiViz_visual_debugger}
 \cite{oddity_graphical_debugger}
-\cite{gotcha_interactive_debugger}
-\subsection{Record and Replay Debugging}
-\cite{distributed_replay_debugging_1997} % Ada95, record system, replay single node, first distributed rr
-\cite{distributed_replay_debugging_2006} % liblog, only c++
-% idea exists, seems very promising
-% different approaches with different advantages and drawbacks
 
 \section{Was fehlt noch?}
 % hier kommt future work of existing papers
@@ -527,9 +557,9 @@ services:
 
 \chapter{Evaluation}
 In diesem Kapitel werden anhand des beschriebenen Prototypen die folgenden Hypothesen untersucht:
-- Wie gut funktionieren Replays von Netwerk-Unterbrechungen über einen Proxy?
-- Wie gut funktioniert die chronologische Ordnung von Log Nachrichten relativ zu Requests?
-- Kann der verfolgte Ansatz hilfreich für einen menschlichen Debugging Prozess sein?
+% Wie gut funktionieren Replays von Netwerk-Unterbrechungen über einen Proxy?
+% Wie gut funktioniert die chronologische Ordnung von Log Nachrichten relativ zu Requests?
+% Kann der verfolgte Ansatz hilfreich für einen menschlichen Debugging Prozess sein?
 \section{Synthetisch}
 Ziel dieses Szenarios ist es, die Grenzen von ditm im Bezug auf die ersten beiden Fragen auszuloten.
 Dazu wird eine große Menge an eindeutig identifizierbarer Requests unter leicht unterschiedlichen Bedingungen gesendet.
@@ -588,6 +618,9 @@ eingeordnet wurden. Da das Matching der Request- und Log-Flüsse im Replay exact
 für die Evaluation des Log-Matchings keine Replays notwendig.
 
 \subsection{Erfolgreiches Debugging des SUT}
+% verschiebe ins ergebnis kapitel am ende oder so
+% vielleicht code beispiel einfügen oder so
+% mindestens absätze einfügen
 Ziel dieser Experimente ist, mit einem sehr kontrollierten SUT die Grenzen von ditm auf technischer Ebene zu finden.
 Schon bei einer ersten händischen Durchführung der ersten Experimente viel allerdings auf, dass dabei etwas nicht stimmen konnte.
 Nicht nur waren die Ergebnisse aus ditms Sicht sehr schlecht, nach genauerem Hinsehen fanden sich in den Aufzeichnungen auch
@@ -844,9 +877,7 @@ untersucht werden sollen.
 	\end{tabular}
 \end{table}
 
-\subsection{Ergebnisse}
-
-\chapter{Ergebnis}
+\chapter{Ergebnisse}
 % currently I expect to write here, that the proxy failure mechanism is too flawed
 % and that the interactive failure testing model is a solid idea that needs to be developed further
 % the interactive model is good at tightening the feedback loop
