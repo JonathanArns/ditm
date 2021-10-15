@@ -529,6 +529,9 @@ func (s *server) broadcastEntry() bool {
 		// Committed index is the largest index that has received majority ack for the current term.
 		s.committedIndex = successFromCurrentTerm[len(successFromCurrentTerm)-len(s.getCurrentPeers())/2]
 	}
+	if len(s.getCurrentPeers()) == 0 {
+		s.committedIndex = len(s.logs) - 1
+	}
 	return successCount >= len(s.getCurrentPeers())/2+1
 }
 
