@@ -216,7 +216,29 @@ zwischen den Knoten relevant ist. Die Problematik wird unter anderem dadurch deu
 GBD Instanzen als Frontend für Replays benötigt \cite{distributed_replay_debugging_2006}.
 
 Um das Problem zu lösen haben sich mit der Zeit eine Reihe von Debugging Tools für verteilte Systeme entwickelt, die sich darauf
-konzentrieren, Abläufe und Zustände im System zu visualisieren.
+konzentrieren, Abläufe und Zustände im System zu visualisieren. 
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{img/oddity_raft_state.pdf}
+    \caption{Visualisierung eines Systemzustands in Oddity \cite{oddity_graphical_debugger}}
+	\label{fig:oddity}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{img/shiviz_time_space.pdf}
+    \caption{Time-Space Diagramm in Shiviz \cite{ShiViz_visual_debugger}}
+	\label{fig:debugAR}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{img/debugAR_rendering.png}
+    \caption{Rendering einer 3D Visualisierung von Nachrichtenflüssen in debugAR \cite{debugAR_AR_debugger}}
+	\label{fig:debugAR}
+\end{figure}
+
 \cite{debugAR_AR_debugger}
 \cite{ShiViz_visual_debugger}
 \cite{oddity_graphical_debugger}
@@ -410,6 +432,7 @@ jedes Replay ein neuer Matcher initialisiert wird. Insgesamt wurden vier Impleme
 verschiedenen Algorithmen für Match erstellt, die im Folgenden dargestellt und später gegeneinander evaluiert werden.
 Alle vier Implementierungen verwenden eine Hashtabelle zur Umsetzung der Seen und MarkSeen Funktionalität und ignorieren
 bei jedem Aufruf von Match bereits markierte Requests, sowie Requests, die von außerhalt des SUT stammen.
+
 \subsubsection{Zählend}
 Mit Abstand der einfachste Request-Matcher ist der zählende Matcher. Dieser bestimmt Matches allein aufgrund der Position
 von Requests in den jeweiligen Streams. Es wird also immer der Request als Match bestimmt, welcher im Recording den Index i hat,
@@ -417,6 +440,7 @@ wobei i der zweite Parameter der Match Methode ist. Ist der entsprechende Reques
 wird kein Match zurück gegeben, was bei allen Matchern dazu führt, dass ditm den Request nicht manipuliert.
 Der Zählende Matcher ist nicht als ernsthafter Versuch gemeint, einen guten Matcher zu entwickeln. Vielmehr soll
 er als Vergleichsgrundlage für die anderen Matcher dienen.
+
 \subsubsection{Exact}
 Alle weiteren Matcher, der Exacte eingeschlossen, verwenden ein Punktesystem, in dem allen Requests des Recordings für verschiedene
 Eigenschaften Punkte zugewiesen werden und am Ende der Request mit der höchsten Punktzahl als Match zurück gegeben wird.
@@ -446,6 +470,7 @@ Dieser Matcher sollte sich in Situationen mit gemischten Request Reihenfolgen be
 einfache zählende Matcher, da er neben der Reihenfolge auch andere Eigenschaften der Requests betrachtet. Trotzdem ist es auch
 hier vorstellbar, dass der Matcher deutliche Probleme haben wird, sobald er auf eine Menge ähnlicher Requests trifft, die nur
 leicht gemischt sind.
+
 \subsubsection{Mix}
 Um dieses Problem noch weiter anzugehen, betrachtet der Mix Matcher nicht nur, ob die Position der Requests absolut gleich
 ist, sondern den relativen Abstand der Requests zueinander, und bewertet Requests mit geringerem Abstand besser. Alle
@@ -470,6 +495,7 @@ if len(req.Body) == len(r.Body) {
     score += 1 * faktor
 }
 \end{lstlisting}
+
 \subsubsection{Heuristisch}
 Der Heuristische Matcher unterscheidet sich vom Mix Matcher nur in zwei Stellen. Anstatt die Längen der URIs und Bodies
 absolut miteinander zu vergleichen, wird hier wie bei der Position die Differenz zwischen den beiden genommen und eine kleinere
@@ -497,6 +523,28 @@ Obwohl der heuristische Matcher komplexer ist, als der Mix Matcher und insgesamt
 berücksichtigen kann, ist nicht von vornherein zu sagen, ob das von Vorteil ist. Unter anderem wird auch diese Frage in
 der Evaluation von ditm empirisch angegangen. Es ist durchaus denkbar, dass es auch von der bestimmten Situation abhängt,
 welcher Matcher sich besser verhält.
+
+\subsubsection{Zeitbasiert}
+Der Zeitbasierte Matcher funktioniert grundlegend anders als die anderen Matcher und passt nicht direkt in das Design des Matcher
+Interfaces. Er wurde deutlich später als Reaktion auf die mangelhafte Performance der anderen Matcher in gewissen Situationen
+entwickelt und musste sich deshalb mit Workarounds der bereits existierenden internen API anpassen.
+
+Der Zeitbasierte Matcher ist entwickelt für Situationen, in denen selbst bei exact gleichen äußeren Bedingungen das SUT in
+Aufzeichnung und Replay unterschiedliche Requests sendet. Die Raft Implementierung, welche in Kapitel \ref{} beschrieben wird ist ein
+Beispiel für ein System, welches inherent Zufallskomponenten verwendet um zu bestimmen, welche Requests wann gesendet werden.
+Die Idee hier ist, Requests nicht ein genaues Match zuzuordnen, sondern stattdessen die BlockConfig zu ermitteln, mit welcher der
+Request aufgrund seiner Zeitlichen Position im Replay behandelt werden sollte. Sofern ausschließlich Konfigurationen ohne
+Zufallskomponente verwendet wurden, kann dies ein effektiver Weg sein, Replays zu erzeugen, die zwar nicht eins zu eins der
+Aufzeichnung entsprechen, aber trotzdem Bugs zuverlässig reproduzieren.
+
+Zur Umsetzung werden alle Änderungen an der BlockConfig mit Zeitstempel im Recording gespeichert. Anstelle eines gematchten
+Requests gibt der Matcher einen neuen Dummy Request zurück, der lediglich die Information enthält, wie der aktuelle Request
+behandelt werden soll. Auch die Funktionalität des Matchers, Requests zu identifizieren, die bereits im Replay aufgetaucht sind,
+wird über die im Replay vergangene Zeit implementiert, so dass Requests als bereits gesehen gelten, sobald der Zeitpunkt
+überschritten ist, an dem sie in der Aufzeichnung vorkamen. Eine Ausnahme hierbei sind die Requests von außerhalb des SUTs. Diese
+werden wie bei den anderen Matchern erst markiert, wenn sie tatsächlich gesendet wurden, da es wichtig ist, diese vollständig
+während des Replays wiederzugeben.
+
 \section{Nutzung}
 \subsection{Konfiguration}
 ditm wird am einfachsten über docker-compose konfiguriert, dort werden Umgebungsvariablen und Docker-Volumes für das SUT und für
