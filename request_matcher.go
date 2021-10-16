@@ -9,7 +9,7 @@ import (
 // If no match is found, nil is returned.
 // i is the index of r in its recording.
 type Matcher interface {
-	Match(r *Request, i int, rec []*Request) *Request
+	Match(r *Request, recording, replayingFrom Recording) *Request
 	Seen(r *Request) bool
 	MarkSeen(r *Request)
 }
@@ -27,7 +27,9 @@ func (m *countingMatcher) MarkSeen(r *Request) {
 	m.seen[r] = struct{}{}
 }
 
-func (m *countingMatcher) Match(r *Request, i int, rec []*Request) *Request {
+func (m *countingMatcher) Match(r *Request, recording, replayingFrom Recording) *Request {
+	i := len(recording.getStream(r.StreamIdentifier))
+	rec := replayingFrom.getStream(r.StreamIdentifier)
 	if i < len(rec) && !m.Seen(rec[i]) && !rec[i].FromOutside {
 		m.MarkSeen(rec[i])
 		return rec[i]
@@ -48,7 +50,9 @@ func (m *heuristicMatcher) MarkSeen(r *Request) {
 	m.seen[r] = struct{}{}
 }
 
-func (m *heuristicMatcher) Match(r *Request, i int, rec []*Request) *Request {
+func (m *heuristicMatcher) Match(r *Request, recording, replayingFrom Recording) *Request {
+	i := len(recording.getStream(r.StreamIdentifier))
+	rec := replayingFrom.getStream(r.StreamIdentifier)
 	highScore := -math.MaxFloat64
 	var bestMatch *Request
 	faktor := float64(len(rec))
@@ -87,7 +91,9 @@ func (m *exactMatcher) MarkSeen(r *Request) {
 	m.seen[r] = struct{}{}
 }
 
-func (m *exactMatcher) Match(r *Request, i int, rec []*Request) *Request {
+func (m *exactMatcher) Match(r *Request, recording, replayingFrom Recording) *Request {
+	i := len(recording.getStream(r.StreamIdentifier))
+	rec := replayingFrom.getStream(r.StreamIdentifier)
 	highScore := -math.MaxFloat64
 	var bestMatch *Request
 	for j, req := range rec {
@@ -131,7 +137,9 @@ func (m *mixMatcher) MarkSeen(r *Request) {
 	m.seen[r] = struct{}{}
 }
 
-func (m *mixMatcher) Match(r *Request, i int, rec []*Request) *Request {
+func (m *mixMatcher) Match(r *Request, recording, replayingFrom Recording) *Request {
+	i := len(recording.getStream(r.StreamIdentifier))
+	rec := replayingFrom.getStream(r.StreamIdentifier)
 	highScore := -math.MaxFloat64
 	var bestMatch *Request
 	faktor := float64(len(rec))
@@ -159,4 +167,40 @@ func (m *mixMatcher) Match(r *Request, i int, rec []*Request) *Request {
 		}
 	}
 	return bestMatch
+}
+
+type timingMatcher struct {
+	seen map[*Request]struct{}
+}
+
+func (m *timingMatcher) Seen(r *Request) bool {
+	_, ok := m.seen[r]
+	return ok
+}
+
+func (m *timingMatcher) MarkSeen(r *Request) {
+	m.seen[r] = struct{}{}
+}
+
+func (m *timingMatcher) Match(r *Request, recording, replayingFrom Recording) *Request {
+	timePassed := r.Timestamp.Sub(recording.StartTime)
+	for _, req := range replayingFrom.Requests {
+		if req.Timestamp.Sub(replayingFrom.StartTime) < timePassed {
+			if !m.Seen(req) && !req.FromOutside {
+				m.MarkSeen(req)
+			}
+		} else {
+			break
+		}
+	}
+	var blockConf BlockConfig
+	for _, conf := range replayingFrom.BlockConfigs {
+		if conf.Timestamp.Sub(replayingFrom.StartTime) < timePassed {
+			blockConf = conf
+		} else {
+			break
+		}
+	}
+	blockRequest, blockResponse := blockConf.Block(r, func(r *Request) (bool, bool) { return true, true })
+	return &Request{Blocked: blockRequest, BlockedResponse: blockResponse}
 }

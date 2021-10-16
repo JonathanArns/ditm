@@ -29,6 +29,7 @@ type TemplateData struct {
 	MatcherExact     bool
 	MatcherMix       bool
 	MatcherCounting  bool
+	MatcherTiming    bool
 }
 
 func (p *Proxy) NewTemplateData() TemplateData {
@@ -51,6 +52,7 @@ func (p *Proxy) NewTemplateData() TemplateData {
 		MatcherExact:     p.blockConfig.Matcher == "exact",
 		MatcherMix:       p.blockConfig.Matcher == "mix",
 		MatcherCounting:  p.blockConfig.Matcher == "counting",
+		MatcherTiming:    p.blockConfig.Matcher == "timing",
 	}
 }
 
@@ -74,7 +76,7 @@ func (p *Proxy) HomeHandler(w http.ResponseWriter, r *http.Request) {
 		p.isReplaying = false
 		log.Println("replay canceled")
 	}
-	p.recording = Recording{Requests: []*Request{}}
+	p.recording = Recording{Requests: []*Request{}, StartTime: time.Now()}
 	p.isInspecting = false
 
 	p.mu.Unlock()
@@ -118,6 +120,7 @@ func (p *Proxy) BlockConfigHandler(w http.ResponseWriter, r *http.Request) {
 	if p.isReplaying {
 		return
 	}
+	p.recording.BlockConfigs = append(p.recording.BlockConfigs, p.blockConfig)
 	if mode := r.FormValue("mode"); mode != "" {
 		p.blockConfig.previousMode = p.blockConfig.Mode
 		p.blockConfig.Mode = mode
@@ -146,8 +149,12 @@ func (p *Proxy) BlockConfigHandler(w http.ResponseWriter, r *http.Request) {
 		case "counting":
 			p.matcher = &countingMatcher{map[*Request]struct{}{}}
 			p.blockConfig.Matcher = matcher
+		case "timing":
+			p.matcher = &timingMatcher{map[*Request]struct{}{}}
+			p.blockConfig.Matcher = matcher
 		}
 	}
+	p.blockConfig.Timestamp = time.Now()
 	p.mu.Unlock()
 	t := template.New("main")
 	t.Parse(mainTemplate)
@@ -161,8 +168,11 @@ func (p *Proxy) StartRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
 	p.isRecording = true
 	p.isInspecting = false
-	p.recording = Recording{Requests: []*Request{}}
-	p.replayingFrom = Recording{Requests: []*Request{}}
+	p.recording = Recording{Requests: []*Request{}, StartTime: time.Now()}
+	p.replayingFrom = Recording{Requests: []*Request{}, StartTime: time.Now()}
+	blockConf := p.blockConfig
+	blockConf.Timestamp = time.Now()
+	p.recording.BlockConfigs = append(p.recording.BlockConfigs, blockConf)
 	p.mu.Unlock()
 	t := template.New("main")
 	t.Parse(mainTemplate)
@@ -175,7 +185,7 @@ func (p *Proxy) EndRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 	}
-	p.recording = Recording{Requests: []*Request{}}
+	p.recording = Recording{Requests: []*Request{}, StartTime: time.Now()}
 	p.isRecording = false
 	p.mu.Unlock()
 	t := template.New("main")
@@ -221,7 +231,7 @@ func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 	p.replayingFrom = *recording
-	p.recording = Recording{Requests: []*Request{}}
+	p.recording = Recording{Requests: []*Request{}, StartTime: time.Now()}
 	err = loadVolumes(p.recording.Volumes)
 	if err != nil {
 		log.Println(err)

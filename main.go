@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -53,9 +54,9 @@ func InitProxy() *Proxy {
 	proxy := &Proxy{
 		mu:            m,
 		hostNames:     map[string]string{},
-		recording:     Recording{Requests: []*Request{}},
-		replayingFrom: Recording{Requests: []*Request{}},
-		blockConfig:   BlockConfig{Percentage: 50, Mode: "none", Matcher: "heuristic"},
+		recording:     Recording{Requests: []*Request{}, StartTime: time.Now()},
+		replayingFrom: Recording{Requests: []*Request{}, StartTime: time.Now()},
+		blockConfig:   BlockConfig{Percentage: 50, Mode: "none", Matcher: "heuristic", Timestamp: time.Now()},
 		matcher:       &heuristicMatcher{map[*Request]struct{}{}},
 		endReplayC:    make(chan struct{}, 1),
 	}

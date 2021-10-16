@@ -14,25 +14,29 @@ import (
 	"time"
 )
 
-type Proxy struct {
-	mu            *sync.Mutex
-	hostNames     map[string]string
-	isRecording   bool
-	isReplaying   bool
-	isInspecting  bool
-	blockConfig   BlockConfig
-	recording     Recording
-	replayingFrom Recording
-	replayTimer   *time.Timer
-	lastSavedId   int
-	matcher       Matcher
-	endReplayC    chan struct{}
+type Request struct {
+	From             string      `json:"from"`
+	FromName         string      `json:"from_name"`
+	To               string      `json:"to"`
+	ToName           string      `json:"to_name"`
+	StreamIdentifier string      `json:"stream_identifier"`
+	Method           string      `json:"method"`
+	Timestamp        time.Time   `json:"timestamp"`
+	BodyLength       int         `json:"body_length"`
+	Blocked          bool        `json:"blocked"`
+	BlockedResponse  bool        `json:"blocked_response"`
+	FromOutside      bool        `json:"from_outside"`
+	Body             []byte      `json:"body"`
+	ResponseBody     []byte      `json:"response_body"`
+	Header           http.Header `json:"header"`
 }
 
 type Recording struct {
-	Requests []*Request `json:"requests"`
-	Logs     []LogEntry `json:"logs"`
-	Volumes  string     `json:"volumes"`
+	Requests     []*Request    `json:"requests"`
+	Logs         []LogEntry    `json:"logs"`
+	Volumes      string        `json:"volumes"`
+	BlockConfigs []BlockConfig `json:"block_configs"`
+	StartTime    time.Time     `json:"start_time"`
 }
 
 type LogEntry struct {
@@ -51,59 +55,74 @@ func (r *Recording) getStream(streamIdentifier string) []*Request {
 	return ret
 }
 
+type Proxy struct {
+	mu            *sync.Mutex
+	hostNames     map[string]string
+	isRecording   bool
+	isReplaying   bool
+	isInspecting  bool
+	blockConfig   BlockConfig
+	recording     Recording
+	replayingFrom Recording
+	replayTimer   *time.Timer
+	lastSavedId   int
+	matcher       Matcher
+	endReplayC    chan struct{}
+}
+
 type BlockConfig struct {
 	Mode         string     `json:"mode"`
 	Partitions   [][]string `json:"partitions"`
 	Percentage   int        `json:"percentage"`
 	Matcher      string     `json:"matcher"`
-	timesUsed    int
+	Timestamp    time.Time  `json:"timestamp"`
 	previousMode string
 }
 
-type Request struct {
-	From             string      `json:"from"`
-	FromName         string      `json:"from_name"`
-	To               string      `json:"to"`
-	ToName           string      `json:"to_name"`
-	StreamIdentifier string      `json:"stream_identifier"`
-	Method           string      `json:"method"`
-	Timestamp        time.Time   `json:"timestamp"`
-	BodyLength       int         `json:"body_length"`
-	Blocked          bool        `json:"blocked"`
-	BlockedResponse  bool        `json:"blocked_response"`
-	FromOutside      bool        `json:"from_outside"`
-	Body             []byte      `json:"body"`
-	ResponseBody     []byte      `json:"response_body"`
-	Header           http.Header `json:"header"`
+// returns true when the request is allowed by the current partitions
+func (b BlockConfig) checkPartitions(request *Request) bool {
+	for _, partition := range b.Partitions {
+		from := false
+		to := false
+		for _, node := range partition {
+			if node == request.FromName {
+				from = true
+			} else if node == request.ToName {
+				to = true
+			}
+		}
+		if from && to {
+			return true
+		}
+	}
+	return false
 }
 
-func (p *Proxy) replayBlock(request *Request) (bool, bool) {
-	recording := p.recording.getStream(request.StreamIdentifier)
-	replayingFrom := p.replayingFrom.getStream(request.StreamIdentifier)
-	bestMatch := p.matcher.Match(request, len(recording), replayingFrom)
-	if bestMatch != nil {
-		return bestMatch.Blocked, bestMatch.BlockedResponse
+func (b BlockConfig) Block(r *Request, replayBlock func(*Request) (bool, bool)) (request bool, response bool) {
+	if r.FromOutside {
+		return false, false
+	}
+	switch b.Mode {
+	case "none":
+		break
+	case "random":
+		request = rand.Float32() < float32(b.Percentage)/100
+		if !request {
+			response = rand.Float32() < float32(b.Percentage)/100
+		}
+		return request, response
+	case "partitions":
+		return !b.checkPartitions(r), false
+	case "replay":
+		return replayBlock(r)
 	}
 	return false, false
 }
 
-func (p *Proxy) Block(r *Request) (request bool, response bool) {
-	if r.FromOutside {
-		return false, false
-	}
-	switch p.blockConfig.Mode {
-	case "none":
-		break
-	case "random":
-		request = rand.Float32() < float32(p.blockConfig.Percentage)/100
-		if !request {
-			response = rand.Float32() < float32(p.blockConfig.Percentage)/100
-		}
-		return request, response
-	case "partitions":
-		return !p.checkPartitions(r), false
-	case "replay":
-		return p.replayBlock(r)
+func (p *Proxy) replayBlock(request *Request) (bool, bool) {
+	bestMatch := p.matcher.Match(request, p.recording, p.replayingFrom)
+	if bestMatch != nil {
+		return bestMatch.Blocked, bestMatch.BlockedResponse
 	}
 	return false, false
 }
@@ -141,7 +160,7 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	request.StreamIdentifier = request.FromName + " " + request.ToName
 
-	request.Blocked, request.BlockedResponse = p.Block(request)
+	request.Blocked, request.BlockedResponse = p.blockConfig.Block(request, p.replayBlock)
 	if !p.isInspecting {
 		p.record(request)
 	}
@@ -180,25 +199,6 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 			p.ResetReplayTimer()
 		}
 	}
-}
-
-// returns true when the request is allowed by the current partitions
-func (p *Proxy) checkPartitions(request *Request) bool {
-	for _, partition := range p.blockConfig.Partitions {
-		from := false
-		to := false
-		for _, node := range partition {
-			if node == request.FromName {
-				from = true
-			} else if node == request.ToName {
-				to = true
-			}
-		}
-		if from && to {
-			return true
-		}
-	}
-	return false
 }
 
 // appends a request to the current recording
