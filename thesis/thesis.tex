@@ -73,7 +73,7 @@
 
 \tableofcontents
 \setlength{\parindent}{0em}
-\setlength{\parskip}{0.5em}
+\setlength{\parskip}{0.6em}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Document beginning %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -216,7 +216,32 @@ zwischen den Knoten relevant ist. Die Problematik wird unter anderem dadurch deu
 GBD Instanzen als Frontend für Replays benötigt \cite{distributed_replay_debugging_2006}.
 
 Um das Problem zu lösen haben sich mit der Zeit eine Reihe von Debugging Tools für verteilte Systeme entwickelt, die sich darauf
-konzentrieren, Abläufe und Zustände im System zu visualisieren. 
+konzentrieren, Abläufe und Zustände auf Systemebene zu visualisieren. Ein gemeinsames Konzept der verschiedenen Lösungen ist die
+Verwendung von Zeit-Raum-Diagrammen zur visualisierung von Events und Nachrichtenflüssen zwischen den einzelnen Knoten. Ein
+Beispiel hierfür ist in Abbildung \ref{fig:shiviz} dargestellt, diese zeigt ein interaktives Zeit-Raum-Diagramm aus dem Tool
+ShiViz \cite{ShiViz_visual_debugger}, welches zusätzliche Detailinformationen zu Events anbietet.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{img/shiviz_time_space.pdf}
+    \caption{Interaktives Raum-Zeit-Diagramm in Shiviz \cite{ShiViz_visual_debugger}}
+	\label{fig:shiviz}
+\end{figure}
+
+Ein sehr mächtiger visueller Debugger ist Oddity \cite{oddity_graphical_debugger}. Das Tool bietet eine interaktive Debugging
+Erfahrung, die in vielen Aspekten normalen Debuggern ähnelt, allerdings nur auf Systemebene. Oddity erlaubt es, die Ausführung von
+einzelnen Knoten des SUT zu pausieren, sowie einzelne Nachrichten und Events zu kontrollieren, alles in einer graphischen
+Oberfläche, die den Zustand des Systems inklusive Events und Nachrichten darstellt. Ein Screenshot dieser Darstellung ist in
+Abbildung \ref{fig:oddity} zu sehen. Oddity erlaubt es außerdem den Systemzustand zu einem früheren Zustand zurück zu setzen und
+so mehrere Kontrollflüsse in einer Session zu debuggen. Zusätzlich zu der graphischen Oberfläche, die live den Systemzustand
+abbildet, kann Oddity auch Zeit-Raum-Diagramme für Abläufe des Systems generieren.
+
+Bei all diesen Vorzügen hat Oddity zwei große Einschränkungen. Einerseits funktioniert das Tool aktuell nur für Systeme, die als
+eine Sammlung von Event Handlern implementiert sind. Andererseits erfordert Oddity erheblichen Aufwand zur Einrichtung, da eine
+auf das konkrete SUT zugeschnittene Implementierung einer Oddity API erforderlich ist, die direkt mit dem SUT interagieren kann.
+Die erste Einschränkung ist nicht inherent und Woos et. al. \cite{oddity_graphical_debugger} schreiben, dass in Zukunft ohne Probleme weitere
+Programmiermodelle unterstützt werden können. Der Einrichtungsaufwand dagegen ist tiefer in der Architektur des Tools verankert und
+ist zur Umsetzung der vollen Funktionalität notwendig.
 
 \begin{figure}[H]
 	\centering
@@ -225,12 +250,12 @@ konzentrieren, Abläufe und Zustände im System zu visualisieren.
 	\label{fig:oddity}
 \end{figure}
 
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=\linewidth]{img/shiviz_time_space.pdf}
-    \caption{Time-Space Diagramm in Shiviz \cite{ShiViz_visual_debugger}}
-	\label{fig:debugAR}
-\end{figure}
+Neben Tools wie ShiViz und Oddity, welche mindestens in ihren jeweiligen akademischen Umfeldern erfolgreich eingesetzt werden
+\cite{ShiViz_usage_study, oddity_usage_in_education}, gibt es im Bereich der Visualisierung von verteilten Systemen auch Forschung
+zum Einsatz von Augmented Reality. Mit debugAR stellen Reipschläger et. al. \cite{debugAR_AR_debugger} einen Prototypen vor, der
+demonstriert, wie Augmented Reality verwendet werden könnte, um die vielen Dimensionen verteilter Systeme zu visualisieren.
+Abbildung \ref{fig:debugAR} zeigt ein Rendering von debugAR, dargestellt ist ein interaktives Zeit-Raum-Diagramm ähnlich der
+Oberfläche von ShiViz.
 
 \begin{figure}[H]
 	\centering
@@ -238,10 +263,6 @@ konzentrieren, Abläufe und Zustände im System zu visualisieren.
     \caption{Rendering einer 3D Visualisierung von Nachrichtenflüssen in debugAR \cite{debugAR_AR_debugger}}
 	\label{fig:debugAR}
 \end{figure}
-
-\cite{debugAR_AR_debugger}
-\cite{ShiViz_visual_debugger}
-\cite{oddity_graphical_debugger}
 
 \section{Was fehlt noch?}
 % hier kommt future work of existing papers
