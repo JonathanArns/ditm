@@ -1,0 +1,88 @@
+version: "3.9"
+
+services:
+  ditm:
+    image: ditm
+    container_name: raft-r-ditm
+    hostname: ditm
+    environment:
+      CONTAINER_HOST_NAMES: raft-r-1,raft-r-2,raft-r-3,raft-r-4,raft-r-5
+    volumes:
+      - ./volumes/volumes:/volumes
+      - ./volumes/recordings:/recordings
+      - ./volumes/snapshots:/snapshots
+    ports:
+      - "8000:80"
+      - "5000:5000"
+    depends_on:
+      - raft-r-1
+      - raft-r-2
+      - raft-r-3
+      - raft-r-4
+      - raft-r-5
+  
+  raft-r-1:
+    image: simple-raft-redis
+    container_name: raft-r-1
+    hostname: raft-r-1
+    environment: 
+      - HTTP_PROXY=ditm:5000
+      - RAFT_ID=1
+      - RAFT_FORCE_LEADER=true
+      - RAFT_PEERS={"2":"raft-r-2", "3":"raft-r-3", "5":"raft-r-5", "4":"raft-r-4"}
+    logging:
+      driver: jonathanarns/http-log-driver
+      options:
+        endpoint: http://localhost:8000/log
+
+  raft-r-2:
+    image: simple-raft-redis
+    container_name: raft-r-2
+    hostname: raft-r-2
+    environment: 
+      - HTTP_PROXY=ditm:5000
+      - RAFT_ID=2
+      - RAFT_PEERS={"1":"raft-r-1", "3":"raft-r-3", "5":"raft-r-5", "4":"raft-r-4"}
+    logging:
+      driver: jonathanarns/http-log-driver
+      options:
+        endpoint: http://localhost:8000/log
+
+  raft-r-3:
+    image: simple-raft-redis
+    container_name: raft-r-3
+    hostname: raft-r-3
+    environment: 
+      - HTTP_PROXY=ditm:5000
+      - RAFT_ID=3
+      - RAFT_PEERS={"1":"raft-r-1", "2":"raft-r-2", "5":"raft-r-5", "4":"raft-r-4"}
+    logging:
+      driver: jonathanarns/http-log-driver
+      options:
+        endpoint: http://localhost:8000/log
+
+  raft-r-4:
+    image: simple-raft-redis
+    container_name: raft-r-4
+    hostname: raft-r-4
+    environment: 
+      - HTTP_PROXY=ditm:5000
+      - RAFT_ID=4
+      - RAFT_PEERS={"1":"raft-r-1", "2":"raft-r-2", "3":"raft-r-3", "5":"raft-r-5"}
+    logging:
+      driver: jonathanarns/http-log-driver
+      options:
+        endpoint: http://localhost:8000/log
+
+  raft-r-5:
+    image: simple-raft-redis
+    container_name: raft-r-5
+    hostname: raft-r-5
+    environment: 
+      - HTTP_PROXY=ditm:5000
+      - RAFT_ID=5
+      - RAFT_PEERS={"1":"raft-r-1", "2":"raft-r-2", "3":"raft-r-3", "4":"raft-r-4"}
+    logging:
+      driver: jonathanarns/http-log-driver
+      options:
+        endpoint: http://localhost:8000/log
