@@ -6,7 +6,7 @@ services:
     container_name: st-ditm
     hostname: ditm
     environment:
-      CONTAINER_HOST_NAMES: tenant-management,atomic-engine,measures-microservice
+      CONTAINER_HOST_NAMES: tm,ae,ae2,mm
     volumes:
       - ./volumes/volumes:/volumes
       - ./volumes/recordings:/recordings
@@ -15,18 +15,19 @@ services:
       - "8000:80"
       - "5000:5000"
     depends_on:
-      - TM
-      - AE
-      - MM
+      - tm
+      - ae
+      - ae2
+      - mm
   
-  TM:
+  tm:
     image: tenant-management:ditm
-    container_name: TM
-    hostname: tenant-management
+    container_name: tm
+    hostname: tm
     ports:
       - "8080:8000"
     environment: 
-      - HTTP_PROXY=ditm:5000
+      - HTTP_PROXY=http://ditm:5000
       - ATOMIC_ENGINE_API_URL=atomic-engine
       - MEASURES_API_URL=measures-microservice
       # don't worry, all of these are not production secrets
@@ -37,45 +38,65 @@ services:
       - ENVIRONMENT=development
       - DJANGO_SETTINGS_MODULE=tenant_management.settings.development
     volumes:
-      - ./tm:/db
+      - ./volumes/volumes/tm:/db
     logging:
       driver: jonathanarns/http-log-driver
       options:
         endpoint: http://localhost:8000/log
 
-  AE:
+  ae:
     image: atomic-engine:ditm
-    container_name: AE
-    hostname: atomic-engine
+    container_name: ae
+    hostname: ae
     ports:
       - "8081:8000"
     environment: 
-      - HTTP_PROXY=ditm:5000
+      - HTTP_PROXY=http://ditm:5000
       - JWT_SIGNING_KEY=abcdefghijklmnopqrxtuvwxyz
       - DEBUG=True
       - ENVIRONMENT=development
       - DJANGO_SETTINGS_MODULE=atomic_engine.settings.development
     volumes:
-      - ./ae:/db
+      - ./volumes/volumes/ae:/db
     logging:
       driver: jonathanarns/http-log-driver
       options:
         endpoint: http://localhost:8000/log
 
-  MM:
-    image: measures-microservice:ditm
-    container_name: MM
-    hostname: measures-microservice
+  ae2:
+    image: atomic-engine2:ditm
+    container_name: ae2
+    hostname: ae2
     ports:
-      - "8082:8000"
+      - "8082:80"
     environment: 
-      - HTTP_PROXY=ditm:5000
+      - HTTP_PROXY=http://ditm:5000
+      - JWT_SIGNING_KEY=abcdefghijklmnopqrxtuvwxyz
+      - DEBUG=True
+      - ENVIRONMENT=development
+      - DJANGO_SETTINGS_MODULE=atomic_engine_2.settings.development
+      - TENANT_MANAGEMENT_DOMAIN=tm:8000
+    volumes:
+      - ./volumes/volumes/ae2:/db
+    logging:
+      driver: jonathanarns/http-log-driver
+      options:
+        endpoint: http://localhost:8000/log
+
+  mm:
+    image: measures-microservice:ditm
+    container_name: mm
+    hostname: mm
+    ports:
+      - "8083:8000"
+    environment: 
+      - HTTP_PROXY=http://ditm:5000
       - JWT_SIGNING_KEY=abcdefghijklmnopqrxtuvwxyz
       - DEBUG=True
       - ENVIRONMENT=development
       - DJANGO_SETTINGS_MODULE=measures_microservice.settings.development
     volumes:
-      - ./mm:/db
+      - ./volumes/volumes/mm:/db
     logging:
       driver: jonathanarns/http-log-driver
       options:
