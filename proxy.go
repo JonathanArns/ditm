@@ -148,6 +148,7 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 		Body:       body,
 		Method:     r.Method,
 		Timestamp:  time.Now(),
+		Header:     r.Header,
 	}
 
 	// perform reverse lookup
@@ -224,11 +225,14 @@ func (p *Proxy) nextOutsideRequest(alwaysSend bool) bool {
 		if !p.matcher.Seen(request) {
 			if request.FromOutside {
 				p.matcher.MarkSeen(request)
+				p.mu.Unlock()
 				r := *request // make a copy of request, to record it with new timestamp
 				r.Timestamp = time.Now()
+				resp, err := send(request)
+				r.ResponseBody, _ = io.ReadAll(resp.Body)
+				p.mu.Lock()
 				p.record(&r)
 				p.mu.Unlock()
-				_, err := send(request)
 				if err != nil {
 					log.Println(err)
 				}
@@ -245,17 +249,12 @@ func (p *Proxy) nextOutsideRequest(alwaysSend bool) bool {
 }
 
 func send(r *Request) (*http.Response, error) {
-	url, err := url.Parse(r.To)
+	request, err := http.NewRequest(r.Method, r.To, bytes.NewReader(r.Body))
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-	request := &http.Request{
-		Method: r.Method,
-		URL:    url,
-		Body:   io.NopCloser(bytes.NewReader(r.Body)),
-		Header: r.Header,
-	}
+	request.Header = r.Header
 	return http.DefaultClient.Do(request)
 }
 

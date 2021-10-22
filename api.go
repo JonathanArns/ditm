@@ -168,7 +168,11 @@ func (p *Proxy) StartRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
 	p.isRecording = true
 	p.isInspecting = false
-	p.recording = Recording{Requests: []*Request{}, StartTime: time.Now()}
+	i, err := writeVolumes()
+	if err != nil {
+		log.Println(err)
+	}
+	p.recording = Recording{Requests: []*Request{}, StartTime: time.Now(), Volumes: strconv.Itoa(i)}
 	p.replayingFrom = Recording{Requests: []*Request{}, StartTime: time.Now()}
 	blockConf := p.blockConfig
 	blockConf.Timestamp = time.Now()
@@ -232,7 +236,7 @@ func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	p.replayingFrom = *recording
 	p.recording = Recording{Requests: []*Request{}, StartTime: time.Now()}
-	err = loadVolumes(p.recording.Volumes)
+	err = loadVolumes(p.replayingFrom.Volumes)
 	if err != nil {
 		log.Println(err)
 	}
