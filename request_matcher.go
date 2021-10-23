@@ -1,7 +1,9 @@
 package main
 
 import (
+	"log"
 	"math"
+	"time"
 )
 
 // A Matcher returns a pointer to the Request from rec,
@@ -185,7 +187,7 @@ func (m *timingMatcher) MarkSeen(r *Request) {
 func (m *timingMatcher) Match(r *Request, recording, replayingFrom Recording) *Request {
 	timePassed := r.Timestamp.Sub(recording.StartTime)
 	for _, req := range replayingFrom.Requests {
-		if req.Timestamp.Sub(replayingFrom.StartTime) < timePassed {
+		if req.Timestamp.Sub(replayingFrom.StartTime) <= timePassed+20*time.Millisecond {
 			if !m.Seen(req) && !req.FromOutside {
 				m.MarkSeen(req)
 			}
@@ -195,12 +197,13 @@ func (m *timingMatcher) Match(r *Request, recording, replayingFrom Recording) *R
 	}
 	var blockConf BlockConfig
 	for _, conf := range replayingFrom.BlockConfigs {
-		if conf.Timestamp.Sub(replayingFrom.StartTime) < timePassed {
+		if conf.Timestamp.Sub(replayingFrom.StartTime) <= timePassed {
 			blockConf = conf
 		} else {
 			break
 		}
 	}
-	blockRequest, blockResponse := blockConf.Block(r, func(r *Request) (bool, bool) { return true, true })
+	log.Println(blockConf.Partitions)
+	blockRequest, blockResponse := blockConf.Block(r, func(r *Request) (bool, bool) { return false, false })
 	return &Request{Blocked: blockRequest, BlockedResponse: blockResponse}
 }

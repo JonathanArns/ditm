@@ -34,9 +34,8 @@ type TemplateData struct {
 
 func (p *Proxy) NewTemplateData() TemplateData {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	partitions, _ := json.Marshal(p.blockConfig.Partitions)
-	return TemplateData{
+	ret := TemplateData{
 		ModeDefault:      !p.isRecording && !p.isReplaying && !p.isInspecting,
 		ModeRecording:    p.isRecording,
 		ModeReplaying:    p.isReplaying,
@@ -54,6 +53,8 @@ func (p *Proxy) NewTemplateData() TemplateData {
 		MatcherCounting:  p.blockConfig.Matcher == "counting",
 		MatcherTiming:    p.blockConfig.Matcher == "timing",
 	}
+	p.mu.Unlock()
+	return ret
 }
 
 type TemplateEvent struct {
@@ -120,7 +121,6 @@ func (p *Proxy) BlockConfigHandler(w http.ResponseWriter, r *http.Request) {
 	if p.isReplaying {
 		return
 	}
-	p.recording.BlockConfigs = append(p.recording.BlockConfigs, p.blockConfig)
 	if mode := r.FormValue("mode"); mode != "" {
 		p.blockConfig.previousMode = p.blockConfig.Mode
 		p.blockConfig.Mode = mode
@@ -155,6 +155,7 @@ func (p *Proxy) BlockConfigHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	p.blockConfig.Timestamp = time.Now()
+	p.recording.BlockConfigs = append(p.recording.BlockConfigs, p.blockConfig)
 	p.mu.Unlock()
 	t := template.New("main")
 	t.Parse(mainTemplate)
@@ -251,6 +252,7 @@ func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
 	t := template.New("main")
 	t.Parse(mainTemplate)
 	t.Execute(w, p.NewTemplateData())
+	time.Sleep(100 * time.Millisecond)
 	p.nextOutsideRequest(true)
 }
 
@@ -294,6 +296,7 @@ func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 				err := t.Execute(w, event)
 				if err != nil {
 					log.Println(err)
+					p.mu.Unlock()
 					return
 				}
 				writtenLogs += 1
@@ -304,6 +307,7 @@ func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 				err := t.Execute(w, event)
 				if err != nil {
 					log.Println(err)
+					p.mu.Unlock()
 					return
 				}
 				writtenRequests += 1

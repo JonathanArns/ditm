@@ -131,6 +131,7 @@ func (p *Proxy) replayBlock(request *Request) (bool, bool) {
 // The handler records requests and decides wether or not to block them,
 // before either proxying the request or calling panig() to close the connection.
 func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
+	log.Println("lock handler")
 	p.mu.Lock()
 	var buf bytes.Buffer
 	tee := io.TeeReader(r.Body, &buf)
@@ -165,6 +166,7 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	if !p.isInspecting {
 		p.record(request)
 	}
+	log.Println("unlock handler")
 	p.mu.Unlock()
 	if request.Blocked {
 		panic("We want to block this request")
@@ -186,8 +188,10 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		r.Body = io.NopCloser(&buf)
+		log.Println("lock response handler")
 		p.mu.Lock()
 		request.ResponseBody = body
+		log.Println("unlock response handler")
 		p.mu.Unlock()
 		if request.BlockedResponse {
 			panic("We want to block this response")
@@ -212,7 +216,7 @@ func (p *Proxy) ResetReplayTimer() {
 	if p.replayTimer == nil {
 		return
 	}
-	p.replayTimer.Reset(time.Duration(1500) * time.Millisecond)
+	p.replayTimer.Reset(time.Duration(4000) * time.Millisecond)
 }
 
 // Checks if the next unseen request in the recording is an
@@ -220,45 +224,54 @@ func (p *Proxy) ResetReplayTimer() {
 // If alwaysSend is true, the next unseen request is always sent,
 // even if there are unseen requests from inside are before it.
 func (p *Proxy) nextOutsideRequest(alwaysSend bool) bool {
+	log.Println("lock nextOutsideRequest")
 	p.mu.Lock()
+	unseenFlag := false
 	for _, request := range p.replayingFrom.Requests {
 		if !p.matcher.Seen(request) {
 			if request.FromOutside {
 				p.matcher.MarkSeen(request)
-				p.mu.Unlock()
 				r := *request // make a copy of request, to record it with new timestamp
 				r.Timestamp = time.Now()
-				resp, err := send(request)
-				r.ResponseBody, _ = io.ReadAll(resp.Body)
-				p.mu.Lock()
 				p.record(&r)
-				p.mu.Unlock()
-				if err != nil {
-					log.Println(err)
+				go send(&r)
+				if unseenFlag {
+					log.Println("unlock nextOutsideRequest1")
+					p.mu.Unlock()
+					return true
 				}
-				return true
 			} else if !alwaysSend {
+				log.Println("unlock nextOutsideRequest2")
 				p.mu.Unlock()
 				return true // exit because we need to see some other requests first
 			}
+			unseenFlag = true
 		}
 	}
+	log.Println("unlock nextOutsideRequest3")
 	p.mu.Unlock()
 	p.endReplayC <- struct{}{}
 	return false
 }
 
-func send(r *Request) (*http.Response, error) {
+func send(r *Request) {
 	request, err := http.NewRequest(r.Method, r.To, bytes.NewReader(r.Body))
 	if err != nil {
 		log.Println(err)
-		return nil, err
+		return
 	}
 	request.Header = r.Header
-	return http.DefaultClient.Do(request)
+	resp, err := http.DefaultClient.Do(request)
+	if err == nil {
+		r.ResponseBody, _ = io.ReadAll(resp.Body)
+	} else {
+		r.ResponseBody = []byte{}
+		log.Println(err)
+	}
 }
 
 func (p *Proxy) EndReplay() {
+	log.Println("lock EndReplay")
 	p.mu.Lock()
 	select {
 	case <-p.endReplayC:
@@ -267,16 +280,23 @@ func (p *Proxy) EndReplay() {
 		for _, r := range p.replayingFrom.Requests {
 			if !p.matcher.Seen(r) {
 				p.ResetReplayTimer()
+				log.Println("unlock EndReplay1")
 				p.mu.Unlock()
 				p.nextOutsideRequest(true)
 				return
 			}
 		}
 	}
+	log.Println("unlock EndReplay2")
+	p.mu.Unlock()
+	time.Sleep(time.Millisecond * 100)
+	log.Println("lock EndReplay2")
+	p.mu.Lock()
 	p.writeRecording()
 	p.isReplaying = false
 	p.blockConfig.Mode = p.blockConfig.previousMode
 	p.replayTimer = nil
+	log.Println("unlock EndReplay3")
 	p.mu.Unlock()
 	log.Println("replay finished")
 }
