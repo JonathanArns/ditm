@@ -27,8 +27,8 @@ const (
 	// A big enough buffer size to avoid blocking on sending the RPC.
 	defaultBufferSize            = 1000
 	rpcTimeout                   = time.Duration(100) * time.Millisecond
-	heartbeatTimeout             = time.Duration(200) * time.Millisecond
-	electionTimeout              = time.Duration(100) * time.Millisecond
+	heartbeatTimeout             = time.Duration(1000) * time.Millisecond
+	electionTimeout              = time.Duration(500) * time.Millisecond
 	minElectionTimeoutMultiplier = 4
 	maxElectionTimeoutMultiplier = 10
 )

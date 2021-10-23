@@ -1,6 +1,6 @@
 build:
 	CGO_ENABLED=0 go build
-	docker build -t simple-raft-elastic .
+	docker build -t simple-raft-e .
 build-ditm:
 	cd ../..; make
 run3:
