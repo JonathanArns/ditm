@@ -107,14 +107,16 @@ Nachfolgend werden die genannten Methoden und jeweils wichtige Tools weiter erl�
 \cite{challenges_and_options}
 
 \section{Failure Testing}
-Failure Testing ist eine breiter Ansatz zum Testen der Fehlertoleranz verteilter Systeme. Die Grundidee ist immer, als
-Client mit dem System zu interagieren und zeitgleich die Umgebung des Systems zu manipulieren, beispielsweise mit
-Netzwerk-Unterbrechungen. Failure Tests werden als automatisierte Integrationstests über eine Programmierschnittstelle definiert
-und beinhalten den Aufbau und Abbau des Systems, eine Reihe definierter Interaktionen mit dem System und in der Regel zufällige
-Fehler-Injektionen in die Systemumgebung. Zusätzlich wird oft nach Tests die Einhaltung von Invarianten des Systems anhand eines
-Modells geprüft, um in zufallsgetriebenen Tests automatisch Bugs identifizieren zu können.
+Failure Testing ist ein Ansatz zum Testen der Fehlertoleranz verteilter Systeme. Die Grundidee ist immer, als Client mit dem
+System zu interagieren und zeitgleich die Umgebung des Systems zu manipulieren, beispielsweise mit Netzwerk-Unterbrechungen.
+Failure Tests werden als automatisierte Integrationstests über eine Programmierschnittstelle definiert und beinhalten den Aufbau
+und Abbau des Systems, eine Reihe definierter Interaktionen mit dem System und zufällige oder deterministische Fehler-Injektionen
+in die Systemumgebung. Zusätzlich wird oft nach Tests die Einhaltung von Invarianten des Systems anhand eines Modells geprüft, um
+in zufallsgetriebenen Tests automatisch Bugs identifizieren zu können. 
 
-\cite{why_is_random_testing_effective}
+Majumdar et. al. \cite{why_is_random_testing_effective} zeigen, dass zufallsgetriebenes Failure-Testing effektiv für
+Partition-Toleranz Bugs ist, obwohl die Menge an potentiell fehlerhaften Abläufen in realen Systemen gewaltig ist.
+
 \cite{failify_masters_thesis}
 \subsection{Jepsen}
 Jepsen ist ein Failure-Testing-Framework in der Sprache Clojure, welches speziell auf das Verhalten von verteilten Systemen bei
@@ -919,10 +921,11 @@ Auszahlung nicht idempotent sind. Um den Bug zu reproduzieren, muss ein Ein- ode
 werden und die Response auf den Request zwischen Bankserver und Gateway geblockt werden.
 
 \subsubsection{Raft}
-Das zweite System ist eine vollständige Implementierung des Raft Konsens Algorithmus in der Form eines Append-Logs. Es handelt
-sich um ein Hobby-Projekt, welches nicht in der Realität verwendet wird. Dennoch bietet die Implementierung alle nötige
-Funktionalität, um daran Bugs aus realen verteilen Systemen, die ähnliche Algorithmen verwenden, nachstellen zu können. Dazu
-zählen Systeme wie MongoDB und VoltDB. Die Bugs, welche hier nachgestellt werden, wurden Ursprünglich mit Hilfe von Jepsen entdeckt.
+Das zweite System ist eine Implementierung des Raft Konsens Algorithmus in der Form eines Append-Logs. Es handelt sich um ein
+Hobby-Projekt, welches ausschließlich im Kontext dieser Arbeit verwendet wird. Dennoch ist die Implementierung vollständig und
+bietet damit alle nötige Funktionalität, um daran Bugs aus realen verteilen Systemen, die ähnliche Algorithmen verwenden,
+nachstellen zu können. Dazu zählen Systeme wie MongoDB, Redis und VoltDB. Die Bugs, welche hier nachgestellt werden, wurden Ursprünglich
+mit Hilfe von Jepsen entdeckt.
 
 \subsubsection{Startup}
 Das dritte und letzte System ist das Produktionssystem eines jungen Startups. Konkret handelt es sich um eine SaaS-Lösung für
@@ -933,23 +936,41 @@ Die anderen Services sind von dem fehlenden Service nicht abhängig und können 
 funktionieren.
 
 \subsection{Bekannte Bugs}
-In Tabelle \ref{tab:known_bugs} sind alle bekannten Bugs in den jeweiligen Systemen beschrieben, die hier mit Hilfe von ditm
-untersucht werden sollen.
-\begin{table}[H]
-	\centering
-	\caption{Bekannte Bugs in den jeweiligen Systemen}
-	\label{tab:known_bugs}
-	\begin{tabular}{|l|l|}
-		\hline
-		System & Beschreibung    \\ \hline
-		Bank   & Beschreibung... \\ \hline
-	\end{tabular}
-\end{table}
+Hier sind die bekannten Bugs in den jeweiligen Systemen beschrieben, die hier mit Hilfe von ditm untersucht werden sollen.
+
+\subsubsection{B1: Doppelte Buchung}
+% ergebnis: funktioniert nur mit heuristic, weil blockconfig optionen im prototypen fehlen
+
+\subsubsection{B2: Dirty Reads in MongoDB}
+% ergebnis: funktioniert nur mit timing
+
+\subsubsection{B3: Endless Election Loop in MongoDB and Elasticsearch}
+% ergebnis: funktioniert mit beiden bei 3 knoten (heuristic replay end unzuverlässig), bei mehr nur mit timing
+
+\subsubsection{B4: Split-Brain in Redis-Raft}
+% ergebnis: funktioniert nur mit timing
+Wenn ein Leader-basiertes System wie Raft mehr als einen Leader-Knoten gleichzeitig hat, wird dies als Split-Brain Situation
+bezeichnet. Um diese Situationen zu vermeiden hat Raft verschiedene Sicherheitsmaßnahmen, wie dass jeder Knoten pro Term nur für
+einen Leader stimmen darf. Die Maßnahme, dessen Fehlen diesen konkreten Bug ermöglicht, ist, dass das Entfernen eines Knotens aus
+dem Cluster eine Mehrheitsentscheidung aller Knoten ist. Der Leader sollte also nicht in der Lage sein, einen Knoten zu entfernen,
+ohne eine Bestätigung der Aktion von mindestens der Hälfte des Clusters zu erhalten.
+
+Fehlt diese Einschränkung, ermöglicht das, eine Split-Brain Situation zu erzeugen, indem der Leader durch eine
+Netzwerk-Unterbrechung vom Rest des Clusters getrennt wird und dann auf einmal angewiesen wird, alle anderen Knoten aus dem
+Cluster zu entfernen. Das führt dazu, dass der alte Leader effektiv zu einen ein-Knoten Cluster wird, während die anderen Knoten
+einen neuen Leader wählen und gemeinsam weiter als Cluster funktionieren. Das passiert, weil die anderen Knoten durch die
+Netzwerk-Unterbrechung nie von ihrer Entfernung informiert werden und diese auch nicht bestätigen.
+
+\subsubsection{B5: Unereichbare Daten}
+% token login funktioniert in replays nicht, workaround: token lifetime wurde für Experimente auf 100 Tage gesetzt
+% ergebnis: funktioniert mit beiden matchern
 
 \chapter{Ergebnisse}
-% currently I expect to write here, that the proxy failure mechanism is too flawed
-% and that the interactive failure testing model is a solid idea that needs to be developed further
+\section{Request- und Log-Matching}
+\section{Debugging}
+\section{Diskussion}
 % the interactive model is good at tightening the feedback loop
+
 \chapter{Future Work}
 % hier kommt future work, die ich als experte sehe, auch im kontext meiner arbeit
 
