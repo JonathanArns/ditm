@@ -72,7 +72,7 @@
 \maketitle
 
 \tableofcontents
-\setlength{\parindent}{0em}
+% \setlength{\parindent}{0em}
 \setlength{\parskip}{0.6em}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Document beginning %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -96,7 +96,7 @@ moderner Cloud Anwendungen. Verteilte Microservice-basierte Systeme laufen heute
 in Docker oder ähnlichen Technologien.
 \section{Proxy}
 
-\chapter{State of the Art}
+\chapter{Stand der Technik}
 Im Umgang mit Fehlern in verteilten Systemen werden eine Reihe verschiedener Ansätze mit unterschiedlichen Zielen verfolgt.
 Failure Testing und Chaos Engineering sind zwei ähnliche Methoden, die sich darauf verlassen, Fehler mit Hilfe von Tests zu
 finden, mit dem Unterschied, dass Failure Testing in einer Test-Umgebung und Chaos Engineering in der Produktions-Umgebung
@@ -109,52 +109,55 @@ Nachfolgend werden die genannten Methoden und jeweils wichtige Tools weiter erl�
 \section{Failure Testing}
 Failure Testing ist ein Ansatz zum Testen der Fehlertoleranz verteilter Systeme. Die Grundidee ist immer, als Client mit dem
 System zu interagieren und zeitgleich die Umgebung des Systems zu manipulieren, beispielsweise mit Netzwerk-Unterbrechungen.
-Failure Tests werden als automatisierte Integrationstests über eine Programmierschnittstelle definiert und beinhalten den Aufbau
+Failure Tests werden als automatisierte Integrationstests über eine Programmierschnittstelle definiert und umfassen in der Regel den Aufbau
 und Abbau des Systems, eine Reihe definierter Interaktionen mit dem System und zufällige oder deterministische Fehler-Injektionen
 in die Systemumgebung. Zusätzlich wird oft nach Tests die Einhaltung von Invarianten des Systems anhand eines Modells geprüft, um
-in zufallsgetriebenen Tests automatisch Bugs identifizieren zu können. 
+in zufallsgetriebenen Tests automatisch Bugs identifizieren zu können. \cite{failify_masters_thesis}
 
 Majumdar et. al. \cite{why_is_random_testing_effective} zeigen, dass zufallsgetriebenes Failure-Testing effektiv für
-Partition-Toleranz Bugs ist, obwohl die Menge an potentiell fehlerhaften Abläufen in realen Systemen gewaltig ist.
-
-\cite{failify_masters_thesis}
-\subsection{Jepsen}
-Jepsen ist ein Failure-Testing-Framework in der Sprache Clojure, welches speziell auf das Verhalten von verteilten Systemen bei
-Netwerk-Unterbrechungen u.Ä. ausgerichtet ist. Jepsen hat sich auf dem Gebiet zu einem Industriestandart für das Testen von
-verteilte Datenbanken entwickelt \cite{abstracting_the_geniuses} und wird für Projekte wie MongoDB, etcd, VoltDB, Hazelcast,
-Elasticsearch und CockroachDB verwendet und hat in jedem dieser Systeme bereits reale Bugs aufgedeckt \cite{jepsen_analyses}.
+Partition-Toleranz Bugs ist, obwohl die Menge an potentiell fehlerhaften Abläufen in realen Systemen gewaltig ist. Diese
+Effektivität zeigt sich auch in der Realität an Tools wie Jepsen. Jepsen ist ein Failure-Testing-Framework in der Sprache
+Clojure, welches speziell auf das Verhalten von verteilten Systemen bei Netwerk-Unterbrechungen u.Ä. ausgerichtet ist. Jepsen hat
+sich auf dem Gebiet zu einem Industriestandart für das Testen von verteilte Datenbanken entwickelt \cite{abstracting_the_geniuses}
+und wird für Projekte wie MongoDB, etcd, VoltDB, Hazelcast, Elasticsearch und CockroachDB verwendet und hat in jedem dieser
+Systeme bereits reale Bugs aufgedeckt \cite{jepsen_analyses}.
 
 Bei Jepsen-Tests werden auf einem Kontrollknoten eine Reihe von Client Prozessen ausgeführt, die Requests an das SUT senden.
-Gleichzeitig werden mit Hilfe von sog. Nemesis Prozessen verschiedene Fehler in das System eingeführt. Zur Erzeugung von
-Netzwerk-Unterbrechungen verwendet Jepsen die Linux Netwerk Tools wie iptables. Neben Netzwerk-Unterbrechungen ist Jepsen in
-der Lage, verschiedene andere Fehler zu erzeugen, wie beispielsweise Verzerrungen zwischen den Systemuhren der einzelnen Knoten.
-Am Ende eines Tests wird verifiziert, ob alle durchgeführten Operationen unter den Regeln des SUT linearisierbar sind. Sind sie das
-nicht, hat Jepsen einen Bug gefunden, vorrausgesetzt die Regeln des SUT sind korrekt modelliert.
+Gleichzeitig werden mit Hilfe von sog. Nemesis Prozessen zufallsbasiert verschiedene Fehler in das System eingeführt. Zur
+Erzeugung von Netzwerk-Unterbrechungen verwendet Jepsen die in Linux integrierten Netwerk-Tools auf den jeweiligen Knoten des SUT.
+Neben Netzwerk-Unterbrechungen ist Jepsen in der Lage, verschiedene andere Fehler zu erzeugen, wie beispielsweise Unterschiede
+zwischen den Systemuhren der einzelnen Knoten.  Am Ende eines Tests wird verifiziert, ob alle durchgeführten Operationen unter den
+Regeln des SUT linearisierbar sind. Sind sie das nicht, hat Jepsen einen Bug gefunden. \cite{jepsen_github}
+
+Failure-Testing eignet sich vor allem gut für Komponenten mit hohen Anforderungen an Fehlertoleranz und Korrektheit, wie verteilte
+Datenbanken, Message-Broker und verteilte Dateisysteme. Failure-Testing ist heute der effektivste Ansatz, um Bugs in solchen
+Systemen zu finden \cite{abstracting_the_geniuses} und der hohe Aufwand Failure-Tests einzurichten, lohnt sich hier besonders, da
+diese Systeme in der Regel eine große Menge von Nutzern haben, die sich auf deren Zuverlässigkeit verlassen.
 
 \section{Chaos Engineering}
 Chaos Engineering verfolgt das Ziel, die Resilienz und Verfügbarkeit von großen, heterogenen verteilten Systemen in Produktion zu
 verbessern. Dazu werden direkt in der Produktions-Umgebung Experimente mit Fehlern wie Abstürzen von Virtuellen Maschinen und
 Netwerk-Unterbrechungen durchgeführt, um Schwachstellen zu identifizieren und zu verifizieren, dass das System im Ernstfall mit
-derartigen Fehlern umgehen kann. Der Ablauf eines Experiments wird dabei in vier Schritten definiert.
+derartigen Fehlern umgehen kann. Basiri et. al. \cite{chaos_engineering}, die Chaos Engineering, wie es bei Netflix eingesetzt
+wird, vorstellen, definieren den Ablauf eines Experiments dabei in vier Schritten.
 \begin{enumerate}
     \item Definiere den Ruhezustand des Systems anhand vorhandener Ausgaben Systems.
     \item Erwarte, dass der Ruhezustand sowohl in der Kontrollgruppe, als auch in der Versuchsgruppe bestehen bleibt.
     \item Injiziere Ereignisse wie Server-Abstürze und Netzwerk-Unterbrechungen in der Versuchsgruppe von Services.
     \item Versuche die Hypothese anhand der Unterschiede zwischen Kontroll- und Versuchsgruppe zu widerlegen.
 \end{enumerate}
-Bekannt gemacht wurde die Methode mit dem bei Netflix entwickelten Chaos Monkey. Dieser ist ein Service, der automatisiert während
-der normalen Arbeiteszeiten Fehler im Produktionssystem erzeugt. Die injizierten Fehlern sind dabei Abstürze von internen
-Services, Abstürze von virtuellen Maschinen und Netzwerk-Unterbrechungen und Netzwerk-Latenz für einzelne Nachrichten. Netflix
-stellt heraus, dass als Folge dessen Entwickler ihre Services resilient gegen dearartige Fehler bauen und die Verfügbarkeit des
-Systems sich dadurch deutlich verbessert. Zusätzlich zu automatisierten Tools wie dem Chaos Monkey wird beim Chaos Engineering
-auf manuelle Experimente gesetzt, die Teilweise sehr große Störungen wie Netzwerk-Unterbrechungen zu großen Teilen des Systems in
-Form von ganzen AWS Regionen umfassen. Erweisen sich manuelle Experimente als effektiv, werden diese wiederum nach und nach
-automatisiert.
+Bekannt gemacht wurde die Methode durch Netflix \cite{abstracting_the_geniuses}, unter anderem mit dem dort entwickelten Chaos
+Monkey. Dieser ist ein Service, der automatisiert während der normalen Arbeiteszeiten Fehler im Produktionssystem erzeugt. Die
+injizierten Fehlern sind dabei Abstürze von internen Services, Abstürze von virtuellen Maschinen und Netzwerk-Unterbrechungen und
+Netzwerk-Latenz für einzelne Nachrichten. Netflix stellt heraus, dass als Folge dessen Entwickler ihre Services resilient gegen
+dearartige Fehler bauen und die Verfügbarkeit des Systems sich dadurch deutlich verbessert. Zusätzlich zu automatisierten Tools
+wie dem Chaos Monkey wird beim Chaos Engineering auf manuelle Experimente gesetzt, die Teilweise sehr große Störungen wie
+Netzwerk-Unterbrechungen zu großen Teilen des Systems in Form von ganzen AWS Regionen umfassen. Erweisen sich manuelle Experimente
+als effektiv, werden diese wiederum nach und nach automatisiert. \cite{chaos_engineering}
 
-Chaos Engineering eignet sich besonders gut für sehr große, heterogene Systeme, wie die großer Organisationen wie Netflix. Dort hat
-sich die Methode aus der Not heraus entwickelt und als Best Practice und fester Teil der Engineering Kultur etabliert. Failure Testing in
-kontrollierten Test-Umgebungen ist für solche Systeme schon allein aufgrund der komplexen Deployments ungeeignet.
-\cite{chaos_engineering}
+Chaos Engineering eignet sich besonders gut für sehr große, heterogene Systeme bei großen Organisationen wie Netflix, die in der
+Lage sind, spezialisierte Chaos Engineers einzustellen oder auszubilden. Dort hat sich die Methode aus der Not heraus als Best
+Practice und fester Teil der Engineering Kultur etabliert. \cite{abstracting_the_geniuses}
 
 \section{Log-Analyse}
 Log Analyse ist ein leichtgewichtiger Black-Box Ansatz zur Fehleridentifikation und -Analyse, der sich für Systeme eignet, welche
@@ -267,12 +270,39 @@ Oberfläche von ShiViz.
 \end{figure}
 
 \section{Was fehlt noch?}
-% hier kommt future work of existing papers
+Fehlertoleranz und Debugging in verteilten Systemen sind aktuelle Forschungsfelder, die sich schnell weiterentwickeln und
+dementsprechend noch viele Möglichkeiten für Innovationen bieten. Die folgenden sind derzeit offene Probleme, die weiteren
+Entwicklungen bedürfen.
 
-% Generellere Chaos Engineering Tools, die Frage ist, inwiefern interne Tools notwendig sind \cite{chaos_engineering}
+\subsection{Failure-Testing und Chaos-Engineering}
+Alvaro und Tymon \cite{abstracting_the_geniuses} stellen als großen aktuellen Mangel heraus, dass sowohl Failure-Testing, als auch
+Chaos Engineering in der Anwendung so komplex sind, dass die Techniken ausschließlich den Entwicklern zur Verfügung stehen, die
+sich voll darauf spezialisieren. Sie schlagen unter Anderem eine weitgehende Automatisierung von Failure-Testing in der Zukunft
+vor. Ein weiteres Feld in dem Sie großes Potential zur Verbesserung sehen, sind Systeme, die die Erklärbarkeit von verteilten
+Systemen verbessern und somit Entwicklern helfen, mittels Failure-Testing o. Ä. entdeckte Bugs besser nachvollziehen zu können.
 
-% leicht verwendbare chaos failure testing
-% zuverlässige reproduktion von bugs
+Außerdem Fehlt der Industrie ein Failure-Testing Framework, welches es ermöglicht, effektiv Bugs aufzudecken diese Bugs mit
+deterministischen Testfällen zu reproduzieren. Jepsen beispielsweise agiert ausschließlich zufallsbasiert und kann Bugs oft nicht
+zuverlässig reproduzieren. Es ist außerdem wichtig, dass ein solches Framework cross-Plattform und Programmiersprachen-agnostisch
+ist, um weitreichend einsetzbar zu sein. Heute verwenden einige große Projekte sogar noch eigens entwickelte Testing-Frameworks,
+die sich auf ein konkretes System beschränken und durch den getrennten Entwicklungsaufwand nicht mit dem Funktionsumfang von Tools
+wie Jepsen mithalten können. \cite{failify_masters_thesis}
+
+Ebenfalls im Bezug auf allemeineres Tooling stellen Basiri et. al. \cite{chaos_engineering} die Fragen, ob sich allgemeineres
+Tooling für Chaos-Engineering entwickeln lässt, da auch hier Organisationen ursprünglich vorwiegend eigene, interne Tools
+entwickelt haben.
+
+\subsection{Debugging}
+Im Bereich des Debuggings von verteilten Systemen stellen sich ebenfalls noch eine ganze Reihe von Herausforderungen für die
+Zukunft. Unter Anderem die Frage danach, wie unterschiedliche Aspekte von verteilten Systemen am besten visualisiert werden können
+\cite{oddity_graphical_debugger}.
+% TODO: add one or two things here, then state of the art should pretty much be done
+
+Liu et. al. \cite{d3s_predicate_checker} stellen im Kontext Ihres Prädikat-Checkers D3S insbesondere offline-Replay zum Debugging in
+Kombination mit D3S zur Bug Identifikation als Teil Ihrer Zukunftsvision heraus. In der Praxis haben sich seitdem Failure-Testing
+und Chaos-Engineering gegenüber Prädikat-Checkern zur Bug Identifikation durchgesetzt. Nichts desto trotz könnte sich ein
+Programmiersprachen-agnostischer Replay-Debugger, welcher durch Failure-Testing gefundene Bugs deterministisch wiedergeben kann,
+als sehr hilfreich erweisen und ist eine Entwicklung, die es noch zu machen gilt.
 
 \chapter{Systembeschreibung}
 Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
