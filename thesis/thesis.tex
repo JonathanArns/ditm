@@ -293,16 +293,16 @@ Tooling für Chaos-Engineering entwickeln lässt, da auch hier Organisationen ur
 entwickelt haben.
 
 \subsection{Debugging}
-Im Bereich des Debuggings von verteilten Systemen stellen sich ebenfalls noch eine ganze Reihe von Herausforderungen für die
-Zukunft. Unter Anderem die Frage danach, wie unterschiedliche Aspekte von verteilten Systemen am besten visualisiert werden können
-\cite{oddity_graphical_debugger}.
-% TODO: add one or two things here, then state of the art should pretty much be done
+Im Bereich des Debuggings von verteilten Systemen stellen sich ebenfalls noch eine Reihe von Herausforderungen für die Zukunft.
+Unter Anderem die Frage danach, wie unterschiedliche Aspekte von verteilten Systemen am besten visualisiert werden können
+\cite{oddity_graphical_debugger}. Auch ist noch offen, wie interaktive Debugger mit sehr großen Systemen skalieren können, sowohl
+im Sinne der Visualisierung, als auch der Performance \cite{gotcha_interactive_debugger}. 
 
-Liu et. al. \cite{d3s_predicate_checker} stellen im Kontext Ihres Prädikat-Checkers D3S insbesondere offline-Replay zum Debugging in
-Kombination mit D3S zur Bug Identifikation als Teil Ihrer Zukunftsvision heraus. In der Praxis haben sich seitdem Failure-Testing
-und Chaos-Engineering gegenüber Prädikat-Checkern zur Bug Identifikation durchgesetzt. Nichts desto trotz könnte sich ein
-Programmiersprachen-agnostischer Replay-Debugger, welcher durch Failure-Testing gefundene Bugs deterministisch wiedergeben kann,
-als sehr hilfreich erweisen und ist eine Entwicklung, die es noch zu machen gilt.
+Im Bereich der Replay-Debugger stellen Liu et. al. \cite{d3s_predicate_checker} im Kontext Ihres Prädikat-Checkers D3S
+insbesondere offline-Replay als Teil Ihrer Zukunftsvision heraus, um mit D3S identifizierte Bugs einfach zu debuggen. In der
+Praxis haben sich seitdem Failure-Testing und Chaos-Engineering gegenüber Prädikat-Checkern zur Bug-Identifikation durchgesetzt.
+Nichts desto trotz könnte sich ein Programmiersprachen-agnostischer Replay-Debugger, welcher durch Failure-Testing gefundene Bugs
+deterministisch wiedergeben kann, als sehr hilfreich erweisen und ist eine Entwicklung, die es noch zu machen gilt.
 
 \chapter{Systembeschreibung}
 Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
@@ -744,8 +744,138 @@ Es handelt sich zwar nicht zusätzlich um einen neuen Bug in der Go Standartbibl
 Verhalten der Bibliothek gefunden und es konnten sogar die genauen Unterschiede im Verhalten festgestellt werden, die sich dann auch
 mit dem vorgesehenen Verhalten decken.
 
-\subsection{Ergebnisse}
-\subsubsection{Log-Matching}
+\section{Debugging}
+Im Folgenden sollen die tatsächlichen Debugging Möglichkeiten von ditm möglichst empirisch evaluiert werden. Eine empirische
+Evaluation eines Debuggers ist grundsätzlich sehr schwierig, da es beim Debugging vor allem darum geht, Entwicklern beim
+Verständnis eines komplexen Problems zu helfen, welches sie noch nie zuvor gesehen haben. Es bräuchte also im Optimalfall eine
+große Menge relevanter, bekannter Bugs und Entwickler, denen diese Bugs vollständig unbekannt sind, um zu evaluieren, wie effektiv
+ein Debugger tatsächlich ist.
+
+Eine solche Studie würde den Rahmen dieser Arbeit bei weitem sprengen. Stattdessen wird hier evaluiert, ob ditm tatächlich in der
+Lage ist, Bugs zu finden und deterministisch in Replays reproduzieren. Das ist die Funktionalität, die im Kern dieser Arbeit steht
+und die essenziell für das angedachten Debugging-Konzept von ditm ist.
+
+Dazu werden Systeme mit bekannten Bugs verwendet, die durch Netzwerk-Unterbrechungen ausgelöst werden. Die Bugs sollen mit Hilfe
+von ditm erst in einer Aufzeichnung nachweislich erzeugt werden und dann wiederholbar in Replays wiedergegeben werden.
+
+\subsection{Systeme}
+Es werden insgesamt drei verschiedene Systeme verwendet, in denen jeweils mindestens ein Bug im Zusammenhang mit
+Netzwerk-Unterbrechungen bekannt ist.
+
+\subsubsection{Bank}
+Das erste System ist eine kleine Bank Simulation mit einem zentralen Server, der Kontodaten transaktionell verwaltet und einem API
+Gateway, welches die Funktionalitäten des Systems kapselt. Es werden insgesamt vier Operationen unterstützt, das Anlegen eines
+Kontos, das Abfragen eines Kontostands und das Ein- und Auszahlen von Geld auf einem Konto. 
+
+\subsubsection{Raft}
+Das zweite System ist eine Implementierung des Raft Konsens Algorithmus in der Form eines Append-Logs. Es handelt sich um ein
+Hobby-Projekt, welches ausschließlich im Kontext dieser Arbeit verwendet wird. Dennoch ist die Implementierung vollständig und
+bietet damit alle nötige Funktionalität, um daran Bugs aus realen verteilen Systemen, die ähnliche Algorithmen verwenden,
+nachstellen zu können. Dazu zählen Systeme wie MongoDB, Redis und VoltDB. Die Bugs, welche hier nachgestellt werden, stammen
+ursprünglich aus MongoDB und Redis.
+
+\subsubsection{Startup}
+Das dritte und letzte System ist das Produktionssystem eines jungen Startups. Konkret handelt es sich um eine SaaS-Lösung für
+das Sustainability Reporting von Mittelständischen Unternehmen. Das System setzt auf eine Service-orientierte Architektur mit
+vier Services, von denen einer zusätzlich die Rolle eines API Gateways einnimmt. Im Kontext von ditm kann einer der vier Services
+nicht verwendet werden, da dieser von AWS Services wie S3 abhängig ist, es wird hier also ein Cluster aus drei Knoten verwendet.
+Die anderen Services sind von dem fehlenden Service nicht abhängig und können auch in dieser kleineren Konstellation problemlos
+funktionieren.
+
+\subsection{Bekannte Bugs}
+Hier sind die bekannten Bugs in den jeweiligen Systemen beschrieben, die hier mit Hilfe von ditm untersucht werden sollen.
+
+\subsubsection{B1: Doppelte Buchung}
+% ergebnis: funktioniert nur mit heuristic, weil blockconfig optionen im prototypen fehlen
+Das Banksystem wurde speziell für dieses Szenario entwickelt und enthält einen Bug, welcher dazu führt, dass Ein- und Auszahlungen
+doppelt auf einem Konto verbucht werden können. Konkret tritt dieses Problem auf, weil das API Gateway automatisch Retries für
+fehlgeschlagene Operationen sendet und die Ein- und Auszahlung nicht idempotent sind. Um den Bug zu reproduzieren, muss ein Ein-
+oder Auszahlungsrequest an das API Gateway gesendet werden und die Response auf den Request zwischen Bankserver und Gateway
+von einer Netzwerk-Unterbrechung geblockt werden.
+
+\subsubsection{B2: Dirty Reads in MongoDB}
+% ergebnis: funktioniert nur mit timing
+Ein Dirty Read ist eine Lese-Operation, die Daten aus Schreiboperationen enthält, die später zurück gerollt werden. Dirty Reads
+sind problematisch, weil sie falsche Daten liefern. Eine Schreiboperation, die zurückgerollt wird, ist im Endeffekt niemals
+passiert, sie sollte also auch niemals gelesen werden können. \cite{jepsen_mongo_analysis}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\linewidth]{img/dirty_read.png}
+	\caption{Visualisierung eines Dirty Reads. Ist `w` eine Schreiboperation, die später zurückgerollt wird, dann ist `r` ein
+    Dirty Read. \cite{jepsen_mongo_analysis}}
+	\label{fig:dirty_read}
+\end{figure}
+
+Jepsen hat in MongoDB Version 2.6.7 einen Bug entdeckt, der im Fall gewisser Netzwerk-Unterbrechungen für eine kurze Zeit Dirty
+Reads zulässt. Wenn der Leader-Knoten von der Mehrheit des Clusters getrennt wird, tritt dieser nach einem Timeout selbst zurück
+und nimmt keine Schreiboperationen mehr entgegen. Wird allerdings vor diesem Timeout ein Wert über diesen Leader geschrieben, kann
+dieser von dort auch gelesen werden, bevor er später zurückgerollt wird. Das liegt daran, dass in MongoDB damals neue
+Schreiboperationen unter allen Konsistenzeinstellungen sofort vom Leader lesbar waren, noch bevor sie an eine Mehrheit des
+Clusters repliziert wurden. \cite{jepsen_mongo_analysis}
+
+Dieser Bug wird hier originalgetreu mittels der beschriebenen Raft Implementierung simuliert.
+
+\subsubsection{B3: Election-Endlosschleife in MongoDB}
+% ergebnis: funktioniert mit beiden bei 3 knoten (heuristic replay end unzuverlässig), bei mehr nur mit timing
+Für die meisten Bugs bei Netzwerk-Unterbrechungen müssen Teile eines verteilten Systems vollständig voneinander getrennt sein. Es
+gibt allerdings auch Bugs, die sich nur bei einer teilweisen Zertrennung eines Systems manifestieren. Ein Beispiel, welches
+Alquraan et. al. \cite{analysis_of_network_partition_failures} nennen, ist ein Bug in MongoDB, welcher zu einer Schleife führt, in
+der endlos neue Leader gewählt werden. MongoDB verwendet einen Verwaltungsknoten, um unentschiedene Elections zu entscheiden.
+Tritt in einem Cluster mit zwei Replica-Knoten und einem Verwaltungsknoten eine Netzwerk-Unterbrechung wie in Abbildung
+\ref{fig:partial_partition} auf, führt das dazu, dass Knoten A und B sich abwechselnd zum Leader wählen lassen, da sie jeweils nie
+den Leader erreichen können, der Verwaltungsknoten aber immer an beiden Elections teilnehmen kann und den alten Leader dann über
+den neuen Leader informiert. Dieser Bug manifestiert sich vollständig ohne Interaktionen durch einen Client von außen und
+der Effekt verschwindet wieder, sobald die Netzwerk-Unterbrechung geheilt ist.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.6\linewidth]{img/ditm-Partitions.pdf}
+    \caption{Visualisierung einer Netzwerk-Unterbrechung (rot), die in MongoDB eine Election-Endlosschleife auslösen konnte}
+	\label{fig:partial_partition}
+\end{figure}
+
+Im Gegensatz zu MongoDB verwendet Raft keinen Verwaltungsknoten. Der beschriebene Bug kann dennoch realitätsnah in einem
+Raft-Cluster nachgestellt werden, da in Raft jeder Knoten die Rolle einnehmen kann, die in MongoDB der Verwaltungsknoten für diesen
+Bug spielt. Dazu müssen in Raft zwei Sicherheitsmechanismen ausgeschaltet werden: 
+\begin{itemize}
+    \item dass Knoten nur für einen Leader gleichzeitig stimmen dürfen und
+    \item dass Knoten nur Leader akzeptieren,  die in  wie sie selbst haben.
+\end{itemize}
+
+\subsubsection{B4: Split-Brain in Redis-Raft}
+% ergebnis: funktioniert nur mit timing
+Wenn ein Leader-basiertes System wie Raft mehr als einen Leader-Knoten gleichzeitig hat, wird dies als Split-Brain Situation
+bezeichnet. Um diese Situationen zu vermeiden hat Raft verschiedene Sicherheitsmaßnahmen, wie dass jeder Knoten pro Term nur für
+einen Leader stimmen darf. Die Maßnahme, dessen Fehlen diesen konkreten Bug ermöglicht, ist, dass das Entfernen eines Knotens aus
+dem Cluster eine Mehrheitsentscheidung aller Knoten ist. Der Leader sollte also nicht in der Lage sein, einen Knoten zu entfernen,
+ohne eine Bestätigung der Aktion von mindestens der Hälfte des Clusters zu erhalten.
+
+Fehlt diese Einschränkung, ermöglicht das, eine Split-Brain Situation zu erzeugen, indem der Leader durch eine
+Netzwerk-Unterbrechung vom Rest des Clusters getrennt wird und dann auf einmal angewiesen wird, alle anderen Knoten aus dem
+Cluster zu entfernen. Das führt dazu, dass der alte Leader effektiv zu einen ein-Knoten Cluster wird, während die anderen Knoten
+einen neuen Leader wählen und gemeinsam weiter als Cluster funktionieren. Das passiert, weil die anderen Knoten durch die
+Netzwerk-Unterbrechung nie von ihrer Entfernung informiert werden und diese auch nicht bestätigen.
+
+\subsubsection{B5: Unereichbare Daten}
+% token login funktioniert in replays nicht, workaround: token lifetime wurde für Experimente auf 100 Tage gesetzt
+% ergebnis: funktioniert mit beiden matchern
+Das Startup-System verwendet ein eigenes, hierarchie-basiertes Authorisierungssystem. Dieses erlaubt es, Lese- und
+Update-Operationen in jedem Service lokal zu authorisieren, für das Anlegen neuer Daten ist aber ein Request an den zentralen
+Usermanagement-Service notwendig. Eine frühe Version dieses Authorisierungssystems hatte einen Bug, der dazu führte, dass neu
+geschrieben Daten für Nutzer unzugänglich würden, sollte der Usermanagement-Service während der Schreiboperation unerreichbar
+sein. Das lag daran, dass die Daten in diesem Fall einfach ohne die zur Authorisierung notwendige ID geschrieben wurden, die vom
+Usermanagement-Service kommen sollte.
+
+In neueren Versionen des Systems schlagen stattdessen Schreiboperationen in diesem Fall ganz fehl, um inkonsistente Datenstände zu
+verhindern. Der Bug wurde hier in eine aktuelle Version des Systems wieder eingebaut, anstatt die alte Version des Systems zu
+verwenden, da dies einfacher war, als kompatible alte Versionen aller Teile des Systems zu finden und zu konfigurieren.
+
+\chapter{Ergebnisse}
+Im Folgenden werden die Ergebnisse der einzelnen Experimente dargestellt und interpretiert. Im Anschluss folgt eine
+zusammenfassende Diskussion der Evaluationsergebnisse.
+
+\section{Log-Matching}
 Die Ergebnisse für das Log-Matching sind in Tabelle \ref{tab:logs} zusammengefasst.
 Es ist anzumerken, dass die Anzahl der Fehler und auch der maximale Fehler bei den asynchronen Experimenten Schätzwerte sind, da durch
 die asynchrone Natur der Experimente bei manchen Logs nicht eindeutig zu sagen ist, ob sie an richtiger Stelle stehen oder nicht.
@@ -775,7 +905,7 @@ ein Buffer nicht schnell genug abgearbeitet wird und sich die Log-Nachrichten so
 selbst, welcher die Logs sammelt, den Flaschenhals bildet, sondern bereits der Docker Daemon oder noch wahrscheinlicher der verwendete HTTP-Log-Driver,
 da die Zeitstempel, welche zur Sortierung der Tabelle von Reqeusts und Logs verwendet werden, in diesem Teil des Systems generiert werden.
 
-\subsubsection{Request-Matching}
+\section{Request-Matching}
 Die Ergebnisse der Experimente zur Evaluation den Request-Matchings sind gruppiert nach Art der Requests, so dass pro Tabelle
 der Einfluss von Zufall in der Reihenfolge der Requests auf das Matching erkennbar wird. Die vom beschriebenen Bug im SUT
 betroffenen Experimente sind in den Tabellen \ref{tab:get} und \ref{tab:get_ts} dargestellt und daran erkennbar, dass die Anzahl
@@ -930,73 +1060,6 @@ mit Schwierigkeiten umgehen kann, sofern diese nicht zu gehäuft auftreten. Leic
 Reihenfolge sind kein Problem, genauso wie schwierig identifizierbare Reqests, die in größtenteils korrekter Reihenfolge
 auftreten. Erst wenn beides zusammen kommt, funktioniert ditms Matching nicht mehr.
 
-\section{Debugging}
-Im Folgenden sollen die tatsächlichen Debugging Möglichkeiten von ditm möglichst empirisch evaluiert werden. Dazu werden Systeme mit
-bekannten Bugs verwendet, mit dem Ziel zu zeigen, dass ditm dabei helfen kann, eben jene Bugs zu identifizieren, nachzuvollziehen
-und durch Replays einfach deterministisch zu reproduzieren.
-
-\subsection{Szenarien}
-Es werden insgesamt drei verschiedene Systeme verwendet, in denen jeweils mindestens ein Bug im Zusammenhang mit
-Netzwerk-Unterbrechungen bekannt ist.
-
-\subsubsection{Bank}
-Das erste System ist eine kleine Bank Simulation mit einem zentralen Server, der Kontodaten transaktionell verwaltet und einem API
-Gateway, welches die Funktionalitäten des Systems kapselt. Es werden insgesamt vier Operationen unterstützt, das Anlegen eines
-Kontos, das Abfragen eines Kontostands und das Ein- und Auszahlen von Geld auf einem Konto. Das System wurde speziell für dieses
-Szenario entwickelt und enthält einen Bug, welcher dazu führt, dass Ein- und Auszahlungen doppelt auf einem Konto verbucht werden
-können.
-
-Konkret tritt dieses Problem auf, weil das API Gateway automatisch Retries für fehlgeschlagene Operationen sendet und die Ein- und
-Auszahlung nicht idempotent sind. Um den Bug zu reproduzieren, muss ein Ein- oder Auszahlungsrequest an das API Gateway gesendet
-werden und die Response auf den Request zwischen Bankserver und Gateway geblockt werden.
-
-\subsubsection{Raft}
-Das zweite System ist eine Implementierung des Raft Konsens Algorithmus in der Form eines Append-Logs. Es handelt sich um ein
-Hobby-Projekt, welches ausschließlich im Kontext dieser Arbeit verwendet wird. Dennoch ist die Implementierung vollständig und
-bietet damit alle nötige Funktionalität, um daran Bugs aus realen verteilen Systemen, die ähnliche Algorithmen verwenden,
-nachstellen zu können. Dazu zählen Systeme wie MongoDB, Redis und VoltDB. Die Bugs, welche hier nachgestellt werden, wurden Ursprünglich
-mit Hilfe von Jepsen entdeckt.
-
-\subsubsection{Startup}
-Das dritte und letzte System ist das Produktionssystem eines jungen Startups. Konkret handelt es sich um eine SaaS-Lösung für
-das Sustainability Reporting von Mittelständischen Unternehmen. Das System setzt auf eine Service-orientierte Architektur mit
-vier Services, von denen einer zusätzlich die Rolle eines API Gateways einnimmt. Im Kontext von ditm kann einer der vier Services
-nicht verwendet werden, da dieser von AWS Services wie S3 abhängig ist, es wird hier also ein Cluster aus drei Knoten verwendet.
-Die anderen Services sind von dem fehlenden Service nicht abhängig und können auch in dieser kleineren Konstellation problemlos
-funktionieren.
-
-\subsection{Bekannte Bugs}
-Hier sind die bekannten Bugs in den jeweiligen Systemen beschrieben, die hier mit Hilfe von ditm untersucht werden sollen.
-
-\subsubsection{B1: Doppelte Buchung}
-% ergebnis: funktioniert nur mit heuristic, weil blockconfig optionen im prototypen fehlen
-
-\subsubsection{B2: Dirty Reads in MongoDB}
-% ergebnis: funktioniert nur mit timing
-
-\subsubsection{B3: Endless Election Loop in MongoDB and Elasticsearch}
-% ergebnis: funktioniert mit beiden bei 3 knoten (heuristic replay end unzuverlässig), bei mehr nur mit timing
-
-\subsubsection{B4: Split-Brain in Redis-Raft}
-% ergebnis: funktioniert nur mit timing
-Wenn ein Leader-basiertes System wie Raft mehr als einen Leader-Knoten gleichzeitig hat, wird dies als Split-Brain Situation
-bezeichnet. Um diese Situationen zu vermeiden hat Raft verschiedene Sicherheitsmaßnahmen, wie dass jeder Knoten pro Term nur für
-einen Leader stimmen darf. Die Maßnahme, dessen Fehlen diesen konkreten Bug ermöglicht, ist, dass das Entfernen eines Knotens aus
-dem Cluster eine Mehrheitsentscheidung aller Knoten ist. Der Leader sollte also nicht in der Lage sein, einen Knoten zu entfernen,
-ohne eine Bestätigung der Aktion von mindestens der Hälfte des Clusters zu erhalten.
-
-Fehlt diese Einschränkung, ermöglicht das, eine Split-Brain Situation zu erzeugen, indem der Leader durch eine
-Netzwerk-Unterbrechung vom Rest des Clusters getrennt wird und dann auf einmal angewiesen wird, alle anderen Knoten aus dem
-Cluster zu entfernen. Das führt dazu, dass der alte Leader effektiv zu einen ein-Knoten Cluster wird, während die anderen Knoten
-einen neuen Leader wählen und gemeinsam weiter als Cluster funktionieren. Das passiert, weil die anderen Knoten durch die
-Netzwerk-Unterbrechung nie von ihrer Entfernung informiert werden und diese auch nicht bestätigen.
-
-\subsubsection{B5: Unereichbare Daten}
-% token login funktioniert in replays nicht, workaround: token lifetime wurde für Experimente auf 100 Tage gesetzt
-% ergebnis: funktioniert mit beiden matchern
-
-\chapter{Ergebnisse}
-\section{Request- und Log-Matching}
 \section{Debugging}
 \section{Diskussion}
 % the interactive model is good at tightening the feedback loop
