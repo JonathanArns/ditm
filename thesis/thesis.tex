@@ -141,10 +141,10 @@ Netwerk-Unterbrechungen durchgeführt, um Schwachstellen zu identifizieren und z
 derartigen Fehlern umgehen kann. Basiri et. al. \cite{chaos_engineering}, die Chaos Engineering, wie es bei Netflix eingesetzt
 wird, vorstellen, definieren den Ablauf eines Experiments dabei in vier Schritten.
 \begin{enumerate}
-    \item Definiere den Ruhezustand des Systems anhand vorhandener Ausgaben Systems.
-    \item Erwarte, dass der Ruhezustand sowohl in der Kontrollgruppe, als auch in der Versuchsgruppe bestehen bleibt.
-    \item Injiziere Ereignisse wie Server-Abstürze und Netzwerk-Unterbrechungen in der Versuchsgruppe von Services.
-    \item Versuche die Hypothese anhand der Unterschiede zwischen Kontroll- und Versuchsgruppe zu widerlegen.
+	\item Definiere den Ruhezustand des Systems anhand vorhandener Ausgaben Systems.
+	\item Erwarte, dass der Ruhezustand sowohl in der Kontrollgruppe, als auch in der Versuchsgruppe bestehen bleibt.
+	\item Injiziere Ereignisse wie Server-Abstürze und Netzwerk-Unterbrechungen in der Versuchsgruppe von Services.
+	\item Versuche die Hypothese anhand der Unterschiede zwischen Kontroll- und Versuchsgruppe zu widerlegen.
 \end{enumerate}
 Bekannt gemacht wurde die Methode durch Netflix \cite{abstracting_the_geniuses}, unter anderem mit dem dort entwickelten Chaos
 Monkey. Dieser ist ein Service, der automatisiert während der normalen Arbeiteszeiten Fehler im Produktionssystem erzeugt. Die
@@ -229,7 +229,7 @@ ShiViz \cite{ShiViz_visual_debugger}, welches zusätzliche Detailinformationen z
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{img/shiviz_time_space.pdf}
-    \caption{Interaktives Raum-Zeit-Diagramm in Shiviz \cite{ShiViz_visual_debugger}}
+	\caption{Interaktives Raum-Zeit-Diagramm in Shiviz \cite{ShiViz_visual_debugger}}
 	\label{fig:shiviz}
 \end{figure}
 
@@ -251,7 +251,7 @@ ist zur Umsetzung der vollen Funktionalität notwendig.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{img/oddity_raft_state.pdf}
-    \caption{Visualisierung eines Systemzustands in Oddity \cite{oddity_graphical_debugger}}
+	\caption{Visualisierung eines Systemzustands in Oddity \cite{oddity_graphical_debugger}}
 	\label{fig:oddity}
 \end{figure}
 
@@ -265,7 +265,7 @@ Oberfläche von ShiViz.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{img/debugAR_rendering.png}
-    \caption{Rendering einer 3D Visualisierung von Nachrichtenflüssen in debugAR \cite{debugAR_AR_debugger}}
+	\caption{Rendering einer 3D Visualisierung von Nachrichtenflüssen in debugAR \cite{debugAR_AR_debugger}}
 	\label{fig:debugAR}
 \end{figure}
 
@@ -296,7 +296,7 @@ entwickelt haben.
 Im Bereich des Debuggings von verteilten Systemen stellen sich ebenfalls noch eine Reihe von Herausforderungen für die Zukunft.
 Unter Anderem die Frage danach, wie unterschiedliche Aspekte von verteilten Systemen am besten visualisiert werden können
 \cite{oddity_graphical_debugger}. Auch ist noch offen, wie interaktive Debugger mit sehr großen Systemen skalieren können, sowohl
-im Sinne der Visualisierung, als auch der Performance \cite{gotcha_interactive_debugger}. 
+im Sinne der Visualisierung, als auch der Performance \cite{gotcha_interactive_debugger}.
 
 Im Bereich der Replay-Debugger stellen Liu et. al. \cite{d3s_predicate_checker} im Kontext Ihres Prädikat-Checkers D3S
 insbesondere offline-Replay als Teil Ihrer Zukunftsvision heraus, um mit D3S identifizierte Bugs einfach zu debuggen. In der
@@ -718,32 +718,6 @@ die maximale Entfernung einer Log Nachricht von ihrer korrekten Position und die
 eingeordnet wurden. Da das Matching der Request- und Log-Flüsse im Replay exact gleich funktioniert, wie in der Aufzeichnung, sind
 für die Evaluation des Log-Matchings keine Replays notwendig.
 
-\subsection{Erfolgreiches Debugging des SUT}
-% verschiebe ins ergebnis kapitel am ende oder so
-% vielleicht code beispiel einfügen oder so
-% mindestens absätze einfügen
-Ziel dieser Experimente ist, mit einem sehr kontrollierten SUT die Grenzen von ditm auf technischer Ebene zu finden.
-Schon bei einer ersten händischen Durchführung der ersten Experimente viel allerdings auf, dass dabei etwas nicht stimmen konnte.
-Nicht nur waren die Ergebnisse aus ditms Sicht sehr schlecht, nach genauerem Hinsehen fanden sich in den Aufzeichnungen auch
-teilweise deutlich mehr Requests, als für das jeweilige Experiment vorgesehen, was wiederum die schlechten Ergebnisse erklärt.
-Die erste Intuition war, den Fehler in ditm zu suchen, immerhin handelte es sich um ein komplexes und wenig getestetes System.
-Erst nachdem sich die Fehlersuche hier als früchtelos erwies, viel der Blick auf das augenscheinlich sehr einfache SUT.
-Hier erwies sich ditm tatsächlich als sehr geeignetes Debugging Werkzeug für das vorhandene Problem. Mit Hilfe der chronologischen
-Darstellung von Requests und Logs konnte festgestellt werden, dass der verwendete HTTP Client unter ganz bestimmten Bedingungen
-Retries für gescheiterte Requests sendet. Dazu zählt, dass der Request idempotent sein muss, POST Requests werden also niemals
-wiederholt. Dass der Client Retries für idempotente Requests sendet, ist auch tief in der Dokumentation zu finden \cite{go_transport_docs},
-das erklärt allerdings noch nicht vollständig das beobachtete Verhalten, da nicht alle gescheiterten idempotenten Requests wiederholt werden.
-Mit Hilfe von ditm konnte festgestellt werden, dass der Client die Requests außerdem nur dann erneut versucht, wenn direkt zuvor
-ein erfolgreicher Reqeust kam. Dieses Verhalten, dass Retries nur passieren, wenn die Verbindung bereits erfolgreich verwendet wurde,
-ist nicht in der offiziellen Dokumentation dokumentiert \cite{go_transport_docs}, entspricht aber dem gewollten Verhalten, welches in
-einer Commit Nachricht in Googles Versionskontroll-System dokumentiert ist \cite{go_retry_commit}. Die mangelnde Dokumentation
-wurde im Rahmen dieser Arbeit auf Golangs Issue Tracker festgehalten und kann somit in Zukunft verbessert werden.
-Für ditm ist dies insofern ein großer Erfolg, dass dieser Bug im SUT der erste zuvor unbekannte Bug ist, den ditm gefunden hat.
-Es handelt sich zwar nicht zusätzlich um einen neuen Bug in der Go Standartbibliothek, aber trotzdem wurde auch hier ein
-ähnlicher mentaler Schritt vollzogen. Es wurde mit Hilfe von ditm eine Diskrepanz zwischen dem erwarteten und dem tatsächlichen
-Verhalten der Bibliothek gefunden und es konnten sogar die genauen Unterschiede im Verhalten festgestellt werden, die sich dann auch
-mit dem vorgesehenen Verhalten decken.
-
 \section{Debugging}
 Im Folgenden sollen die tatsächlichen Debugging Möglichkeiten von ditm möglichst empirisch evaluiert werden. Eine empirische
 Evaluation eines Debuggers ist grundsätzlich sehr schwierig, da es beim Debugging vor allem darum geht, Entwicklern beim
@@ -765,7 +739,7 @@ Netzwerk-Unterbrechungen bekannt ist.
 \subsubsection{Bank}
 Das erste System ist eine kleine Bank Simulation mit einem zentralen Server, der Kontodaten transaktionell verwaltet und einem API
 Gateway, welches die Funktionalitäten des Systems kapselt. Es werden insgesamt vier Operationen unterstützt, das Anlegen eines
-Kontos, das Abfragen eines Kontostands und das Ein- und Auszahlen von Geld auf einem Konto. 
+Kontos, das Abfragen eines Kontostands und das Ein- und Auszahlen von Geld auf einem Konto.
 
 \subsubsection{Raft}
 Das zweite System ist eine Implementierung des Raft Konsens Algorithmus in der Form eines Append-Logs. Es handelt sich um ein
@@ -803,7 +777,7 @@ passiert, sie sollte also auch niemals gelesen werden können. \cite{jepsen_mong
 	\centering
 	\includegraphics[width=0.7\linewidth]{img/dirty_read.png}
 	\caption{Visualisierung eines Dirty Reads. Ist `w` eine Schreiboperation, die später zurückgerollt wird, dann ist `r` ein
-    Dirty Read. \cite{jepsen_mongo_analysis}}
+		Dirty Read. \cite{jepsen_mongo_analysis}}
 	\label{fig:dirty_read}
 \end{figure}
 
@@ -831,16 +805,16 @@ der Effekt verschwindet wieder, sobald die Netzwerk-Unterbrechung geheilt ist.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=0.6\linewidth]{img/ditm-Partitions.pdf}
-    \caption{Visualisierung einer Netzwerk-Unterbrechung (rot), die in MongoDB eine Election-Endlosschleife auslösen konnte}
+	\caption{Visualisierung einer Netzwerk-Unterbrechung (rot), die in MongoDB eine Election-Endlosschleife auslösen konnte}
 	\label{fig:partial_partition}
 \end{figure}
 
 Im Gegensatz zu MongoDB verwendet Raft keinen Verwaltungsknoten. Der beschriebene Bug kann dennoch realitätsnah in einem
 Raft-Cluster nachgestellt werden, da in Raft jeder Knoten die Rolle einnehmen kann, die in MongoDB der Verwaltungsknoten für diesen
-Bug spielt. Dazu müssen in Raft zwei Sicherheitsmechanismen ausgeschaltet werden: 
+Bug spielt. Dazu müssen in Raft zwei Sicherheitsmechanismen ausgeschaltet werden:
 \begin{itemize}
-    \item dass Knoten nur für einen Leader gleichzeitig stimmen dürfen und
-    \item dass Knoten nur Leader akzeptieren,  die in  wie sie selbst haben.
+	\item dass Knoten nur für einen Leader gleichzeitig stimmen dürfen und
+	\item dass Knoten nur Leader akzeptieren,  die in  wie sie selbst haben.
 \end{itemize}
 
 \subsubsection{B4: Split-Brain in Redis-Raft}
@@ -1061,6 +1035,82 @@ Reihenfolge sind kein Problem, genauso wie schwierig identifizierbare Reqests, d
 auftreten. Erst wenn beides zusammen kommt, funktioniert ditms Matching nicht mehr.
 
 \section{Debugging}
+Alle der beschriebenen Bugs lassen sich mit Hilfe von ditm in Recordings und in Replays reproduzieren. Da insbesondere für die
+Reproduktion der Bugs in Raft teilweise eine Reihe von Schritten notwendig ist, wurden hierfür Python Skripts geschrieben, die
+ditm effektiv als Failure-Testing Tool verwenden und so ein Recording mit dem jeweiligen Bug erstellen. Tabelle \ref{tab:debug}
+gibt einen Überblick darüber, welche Bugs anhand dieser Recordings mit welchem Matching-Mechanismus zuverlässig reproduzierbar
+sind.
+
+\begin{table}[H]
+	\centering
+	\caption{Überblick darüber, mit welchen Matchern welche Bugs zuverlässig in Replays reproduzierbar sind. *Nur in einem Cluster mit
+		drei Knoten.}
+	\label{tab:debug}
+	\begin{tabular}{|l|l|l|}
+		\hline
+		Bug                                    & Heuristisch & Zeitlich \\ \hline
+		B1: Doppelte Buchung                   & ja          & nein     \\ \hline
+		B2: Dirty Reads in MongoDB             & nein        & ja       \\ \hline
+		B3: Election Endlosschleife in MongoDB & ja*         & ja       \\ \hline
+		B4: Split-Brain in Redis-Raft          & nein        & ja       \\ \hline
+		B5: Unnerreichbare Daten               & ja          & ja       \\ \hline
+	\end{tabular}
+\end{table}
+
+Die doppelte Buchung ist nur deshalb nicht mit den zeitbasierten Matcher reproduzierbar, weil der Prototyp ditm nicht die
+notwendigen Optionen anbietet, um den Bug ohne zufallsgetriebene Netzwerk-Unterbrechungen zu erzeugen.
+
+Ditm war mit dem ursprünglich konzipierten Request-Matching-Mechanismus nicht in der Lage, die Bugs, welche in Raft nachgestellt
+wurden, deterministisch zu reproduzieren. Das liegt daran, dass Raft und ähnliche Systeme die grundlegende Annahme dieses Ansatzes
+verletzen, dass das SUT unter gleichen Umständen auch die gleichen Nachrichten zwischen den gleichen Knoten versendet. Die
+Ausnahme, dass Bug 3 in einem Cluster von drei Knoten mit dem heutristischen Matcher reproduzierbar ist, kommt allein daher, dass
+es in der Konfiguration immer alle Knoten an dem Bug beteiligt sein müssen und somit immer die gleichen Nachrichten gesendet
+werden.  Wird das gleiche Experiment in einem Cluster mit fünf Knoten durchgeführt, ist der Bug nur noch mit dem zeitbasierten
+Matcher reproduzierbar.
+
+Der zeitbasierte Matcher wurde als Reaktion auf die Ergebnisse dieser Versuche entwickelt. Der Nachteil dieses neuen
+Mechanismus ist, dass dieser in der aktuellen Form nicht für Recordings funktioniert, die zufallsbasierte Netzwerk-Unterbrechungen
+verwenden.
+
+Eine wichtige Beobachtung bei Bug 5 ist, dass ditm grundsätzlich keine Token-basierte Authentifizierung während Replays unterstützt, da hierfür
+Daten aus einer Response in den folgenden Requests mitgesendet werden müssen. Ditm hingegen sendet im Replay den exact gleichen
+Request, wie im Recording und ignoriert einen neu generierten Token. Als Workaround wurde hier die Lebensdauer der Access-Token
+des SUT auf mehrere Monate gesetzt, um ditm zu erlauben, diese während eines Replays wiederzuverwenden. Mit dieser Einstellung
+hatte ditm keine Probleme, den Bug deterministisch zu reproduzieren.
+
+\section{Erfahrungsbericht zum Debugging mit ditm}
+% vielleicht code beispiel einfügen oder so
+% mindestens absätze einfügen
+Während der Entwicklung der Experimente zum Request-Matching trat ein relativ komplexer Bug in dem absichtlich einfach
+gehaltenen SUT auf, welcher mit Hilfe von ditm identifiziert, untersucht und behoben werden konnte.
+
+Schon bei einer ersten händischen Durchführung der ersten Experimente viel auf, dass etwas nicht stimmen konnte.
+Nicht nur waren die Ergebnisse aus ditms Sicht unerwartet negativ, nach genauerem Hinsehen fanden sich in den Aufzeichnungen auch
+teilweise deutlich mehr Requests, als für das jeweilige Experiment vorgesehen, was wiederum die schlechten Ergebnisse erklärte.
+Die erste Intuition war, den Fehler in ditm zu suchen, immerhin handelte es sich um ein komplexes und wenig getestetes System.
+
+Erst nachdem sich die Fehlersuche in ditm als früchtelos erwies, viel der Blick auf das augenscheinlich sehr einfache SUT.  Hier
+erwies sich ditm tatsächlich als sehr geeignetes Debugging Werkzeug für das vorhandene Problem. Mit Hilfe der chronologischen
+Darstellung von Requests und Logs konnte festgestellt werden, dass der verwendete HTTP Client unter sehr bestimmten Bedingungen
+Retries für gescheiterte Requests sendet. Zu diesen Bedingungen zählt, dass der Request idempotent sein muss, POST Requests werden
+also niemals wiederholt. Dass der Client Retries für idempotente Requests sendet, ist auch in der Dokumentation zu finden
+\cite{go_transport_docs}. Das mit ditm beobachtete Verhalten ist damit allerdings noch nicht erklärt, da ein gescheiterter Request
+nur dann wiederholt wird, wenn er
+\begin{itemize}
+    \item idempotent ist und
+    \item auf einen erfolgreichen Request an das gleiche Ziel folgt.
+\end{itemize}
+Dieses Verhalten, dass Retries nur passieren, wenn die Verbindung bereits erfolgreich verwendet wurde,
+ist nicht in der offiziellen Dokumentation dokumentiert \cite{go_transport_docs}, entspricht aber dem gewollten Verhalten, welches in
+einer Commit-Nachricht in Googles Versionskontroll-System dokumentiert ist \cite{go_retry_commit}. Die mangelnde Dokumentation
+wurde im Rahmen dieser Arbeit auf Golangs Issue-Tracker festgehalten und kann somit in Zukunft verbessert werden.
+
+Für ditm ist dies insofern ein großer Erfolg, dass dieser Bug im SUT der erste zuvor unbekannte Bug ist, der mit ditm gefunden
+wurde. Es handelt sich zwar nicht zusätzlich um einen neuen Bug in der Standartbibliothek von Go, aber trotzdem wurde auch hier
+ein ähnlicher mentaler Schritt wie beim Debugging vollzogen. Es wurde mit Hilfe von ditm eine Diskrepanz zwischen dem erwarteten
+und dem tatsächlichen Verhalten der Bibliothek gefunden und es konnten sogar die genauen Unterschiede im Verhalten korrekt
+festgestellt werden.
+
 \section{Diskussion}
 % the interactive model is good at tightening the feedback loop
 
