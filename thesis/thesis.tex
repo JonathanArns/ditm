@@ -52,6 +52,11 @@
             linkcolor=black,
             filecolor=black,
             citecolor=black,]{hyperref}
+\usepackage{fancyhdr}
+% \pagestyle{fancy}
+% \fancyhf{}
+% \rhead{\thechapter}
+% \cfoot{\thepage}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -303,6 +308,8 @@ insbesondere offline-Replay als Teil Ihrer Zukunftsvision heraus, um mit D3S ide
 Praxis haben sich seitdem Failure-Testing und Chaos-Engineering gegenüber Prädikat-Checkern zur Bug-Identifikation durchgesetzt.
 Nichts desto trotz könnte sich ein Programmiersprachen-agnostischer Replay-Debugger, welcher durch Failure-Testing gefundene Bugs
 deterministisch wiedergeben kann, als sehr hilfreich erweisen und ist eine Entwicklung, die es noch zu machen gilt.
+
+
 
 \chapter{Systembeschreibung}
 Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
@@ -657,68 +664,82 @@ services:
 \subsection{Bedienung}
 
 \chapter{Evaluation}
-In diesem Kapitel werden anhand des beschriebenen Prototypen die folgenden Hypothesen untersucht:
-% Wie gut funktionieren Replays von Netwerk-Unterbrechungen über einen Proxy?
-% Wie gut funktioniert die chronologische Ordnung von Log Nachrichten relativ zu Requests?
-% Kann der verfolgte Ansatz hilfreich für einen menschlichen Debugging Prozess sein?
-\section{Synthetisch}
-Ziel dieses Szenarios ist es, die Grenzen von ditm im Bezug auf die ersten beiden Fragen auszuloten.
-Dazu wird eine große Menge an eindeutig identifizierbarer Requests unter leicht unterschiedlichen Bedingungen gesendet.
-Da sich ditm beim Log-Matching auf Zeitstempel verlässt und diese für die Logs von Docker kommen, ist die Erwartung,
-dass das Log-Matching in allen Situationen akzeptabel funktioniert. Für das Reqeust Matching ist die Erwartungshaltung, dass
-der ...Mix Matcher am besten funktioniert, dicht gefolgt vom ... heuristic Matcher.
-\subsection{Versuchsaufbau}
-Das Test System ist ein einfacher HTTP Server mit zwei Endpunkten. Einer davon löst
-eine große Menge an Requests aus, der andere verarbeitet diese. Es wird für den Versuch ein Cluster aus zwei identischen
-Knoten verwendet, wovon einer die Rolle eines API Gateways einnimmt, über das von außen der Versuch ausgelöst wird,
-und der andere die eines dahinter verborgenen Services. Da ditm den Request-Fluss zwischen zwei Knoten des SUT immer einzeln
-betrachtet, genügen zwei Knoten aus, um die Grenzen des Request-Matchings abzustecken.
-Die Requests, die der Gateway Knoten versendet, sind anhand eines Query Parameters eindeutig identifizierbar.
-Der Endpunkt versendet die Requests in einer Schleife und bietet neben der Anzahl zu versendener Reqeusts verschiedene
-andere Konfigurationsmöglichkeiten, um den Strom von Requests zu verändern.
-Die Requests können in vollständig fester oder in unterschiedlich stark gemischter Reihenfolge erfolgen. Dabei ist konfigurierbar,
-wie weit jeder Request maximal von seiner eigentlichen Position im Fluss entfernt sein darf. Eine maximale Entfernung
-von 0 entspricht immer einem vollständig geordneten Fluss, für jeden anderen Wert wird der Fluss für jede Ausführung neu
-zufällig gemischt, so dass ditm die Requests während eines Replays also in anderer Reihenfolge erhält, als während der
-Aufzeichnung. In folgendem Beispiel sind mögliche Anordnungen von Requests dargestellt, in Klammern steht jeweils die
-entsprechende maximale Entfernung.
+Dieses Kapitel beschreibt die Versuche, mit denen die folgenden Fragen über den zuvor beschriebenen Prototypen ditm beantwortet
+werden sollen.
+\begin{itemize}
+    \item Wie gut funktionieren Replays von Netwerk-Unterbrechungen über einen Proxy?
+    \item Wie gut funktioniert ditms Log-Matching, bzw. die chronologische Ordnung von Log Nachrichten relativ zu Requests?
+    \item Lassen sich durch Netzwerk-Unterbrechungen ausgelöste Bugs deterministisch mit ditms Replay-Mechanismus reproduzieren?
+\end{itemize}
+\section{Request-Matching}
+Ziel dieses Versuchs ist es, die Grenzen von ditm im Bezug auf die erste Frage auszuloten.
+Der Versuch wurde konzipiert und durchgeführt, bevor der zeitbasierte Matcher entwickelt wurde. Der zeitbasierte Matcher ist
+in seinem Ansatz Grundlegend anders als die anderen Matcher, für die dieser Versuchsaufbau entwickelt wurde. Er ist für die
+zufallsbasierten Netzwerk-Unterbrechungen, die für diese Experimente verwendet werden vollkommen ungeeignet, dementsprechend
+wurden die Experimente nicht mit dem neuen Matcher wiederholt. Stattdessen wird dieser nur mit den Versuchen in
+\ref{chap:debugging_exp} evaluiert.
+% Dazu wird eine große Menge an eindeutig identifizierbarer Requests unter leicht unterschiedlichen Bedingungen gesendet.
+% Da sich ditm beim Log-Matching auf Zeitstempel verlässt und diese für die Logs von Docker kommen, ist die Erwartung,
+% dass das Log-Matching in allen Situationen akzeptabel funktioniert. Für das Reqeust Matching ist die Erwartungshaltung, dass
+% der ...Mix und der heuristic Matcher am besten funktionieren.
+Das Test System ist ein einfacher HTTP Server mit zwei Endpunkten. Einer davon löst eine große Menge an Requests aus, der andere
+verarbeitet diese. Es wird für den Versuch ein Cluster aus zwei identischen Knoten verwendet, wovon einer die Rolle eines API
+Gateways einnimmt, über das von außen der Versuch ausgelöst wird, und der andere die eines dahinter verborgenen Services. Da ditm
+den Nachrichtenfluss zwischen zwei Knoten des SUT immer einzeln betrachtet, genügen zwei Knoten aus, um die Grenzen des
+Request-Matchings abzustecken.
+
+Die Requests, die der Gateway Knoten versendet, sind anhand eines Query Parameters eindeutig identifizierbar. Das System versendet
+diese in einer Schleife und bietet neben der Anzahl zu versendener Reqeusts verschiedene andere Konfigurationsmöglichkeiten, die
+den Strom von Requests beeinflussen. Die Requests können in vollständig fester oder in unterschiedlich stark gemischter
+Reihenfolge erfolgen. Wie stark eine Request-Reihenfolge gemischt ist, wird dabei darüber definiert, um wie viele Stellen ein
+Request beim Mischen maximal von seiner ursprünglichen Position verschoben werden kann. Sei dies der Mischungsgrad, dann
+entspricht ein Mischungsgrad von 0 immer einem vollständig geordneten Nachrichten-Fluss. Für jeden anderen Wert wird der Fluss vor
+jeder Ausführung neu zufällig gemischt, so dass ditm die Requests während eines Replays also in anderer Reihenfolge erhält, als
+während der Aufzeichnung. Die folgenden Reihenfolgen stellen beispielhaft dar, wie ein Fluss von zehn Requests bei
+unterschiedlichen Mischungsgraden angeordnet werden könnte.
 \begin{verbatim}
 (0): 0 1 2 3 4 5 6 7 8 9
 (1): 1 0 2 4 3 6 5 7 9 8
 (2): 0 3 2 1 5 6 4 9 7 8
 (3): 4 2 1 0 7 3 9 5 6 8
 \end{verbatim}
-Requests können außerdem optional asynchron erfolgen, was ebenfalls dazu führt dass sie in stark gemischter Reihenfolge und nahezu gleichzeitig
-gesendet werden.
-Zusätzlich besteht Möglichkeit, entweder einfache GET Requests zu senden, die selben GET Requests mit einem Zeitstempel
-als zusätzlichem Parameter oder POST Requests mit einem Zeitstempel und einem zusätzlichen Füller im Body. Der Füller hat eine von
-drei Längen, somit dient der Request-Body als weiteres Merkmal für ditm, um Requests identifizierbar zu machen. Die Zeitstempel dienen
-genau genau umgekehrt dazu, Reqeusts schwieriger identifizierbar zu machen, indem ditm durch die Zeitstempel die Query Parameter,
-bzw. die Bodies der Requests nicht mehr einfach direkt miteinander vergleichen kann, um Reqeusts zu identifizieren.
-Zu letzt gibt es die Möglichkeit, für den verwendeten HTTP Client (Go net/http) die Wiederverwendung von TCP Verbingungen mit Keep-Alive
+Requests können außerdem optional asynchron erfolgen, was ebenfalls dazu führt dass sie in stark gemischter Reihenfolge und nahezu
+gleichzeitig gesendet werden. Zusätzlich besteht Möglichkeit, entweder einfache GET Requests zu senden, die selben GET Requests
+mit einem Zeitstempel als zusätzlichem Parameter oder POST Requests mit einem Zeitstempel und einem zusätzlichen Füller im
+Request-Body. Der Füller hat eine von drei festen Längen, somit dient die Länge des Request-Bodys als weiteres Merkmal für ditm,
+um Requests identifizierbar zu machen. Die Zeitstempel dienen genau umgekehrt dazu, Reqeusts schwieriger identifizierbar zu
+machen, indem ditm durch die Zeitstempel die Query Parameter, bzw. die Bodies der Requests nicht mehr einfach direkt miteinander
+vergleichen kann, um Reqeusts zu identifizieren.
+
+Zuletzt gibt es die Möglichkeit, für den verwendeten HTTP Client (Go net/http) die Wiederverwendung von TCP Verbingungen mit Keep-Alive
 zu deaktivieren. Dies ist notwendig, da der Client sonst in bestimmten Situationen Retries sendet, was durch diese Einstellung
-verhindert werden kann.
+verhindert werden kann, mehr dazu in Kapitel \ref{chap:debugging_go}.
 
 Für die Evaluation werden einfache GET Requests, GET Requests mit Zeitstempel, GET Reqeusts ohne Keep-Alive, GET Requests mit
-Zeitstempel und ohne Keep-Alive und POST Requests verwendet. Für jede Art von Reqeust werden Experimente mit fünf unterschiedlichen
-Konfigurationen zur Reihenfolge der Requests durchgeführt. Diese sind asynchron, synchron mit fester Reihenfolge und synchron mit gemischter
-Reihenfolge mit maximalen Entfernungen von 1, 2 und 3. Zusätzlich wird jedes Experiment einmal mit 10 Requests und einmal mit 100 Requests
-durchgeführt.
+Zeitstempel und ohne Keep-Alive und POST Requests verwendet. Für jede Art von Reqeust werden Experimente mit fünf
+unterschiedlichen Konfigurationen zur Reihenfolge der Requests durchgeführt. Diese sind asynchron, synchron mit fester Reihenfolge
+und synchron mit gemischter Reihenfolge mit Mischungsgraden von 1, 2 und 3. Zusätzlich wird jedes Experiment einmal mit 10
+Requests und einmal mit 100 Requests durchgeführt.
 
 In jedem Experiment werden 10 voneinander unabhängige Aufzeichnungen erstellt. Von jeder Aufzeichnung wird dann mit jedem der vier
-Request-Matcher ein Replay durchgeführt. Für jedes Replay wird anhand von dazu bestimmten Log Ausgaben des Test Systems bestimmt,
-wie viele Requests ditm falsch behandelt hat. Aus diesem Wert wird dann pro Request-Matcher über die 10 erzeugten Replays der Durchschnitt
-und der Median der falsch behandelten Requests berechnet. Diese Werte bilden das Ergebnis des jeweiligen Experiments.
-Alle Experimente zum Request-Matching werden vollständig automatisiert durchgeführt und ausgewertet. % (Das Python Script hierfür ist im Repo)
+Request-Matcher ein Replay durchgeführt. Für jedes Replay wird anhand von dazu bestimmten Log Ausgaben des SUT bestimmt, wie viele
+Requests ditm falsch behandelt hat. Aus diesem Wert wird dann pro Request-Matcher über die 10 erzeugten Replays der Durchschnitt
+und der Median der Anzahl der falsch behandelten Requests berechnet. Diese Werte bilden das Ergebnis des jeweiligen Experiments.
+Alle Experimente zum Request-Matching werden vollständig automatisiert durchgeführt und ausgewertet.
+% (Das Python Script hierfür ist im Repo)
 
-Da die chronologische Darstellung von Logs zwischen den Requests leider nicht so leicht automatisch auswertbar ist, werden hierfür
-zusätzliche Experimente von Hand durchgeführt und ausgewertet. Es werden insgesamt vier Experimente durchgeführt, bei denen eine
-Aufzeichnung mit jeweils 10 und 100 Requests einmal synchron und einmal asynchron erstellt wird. Das Ergebnis hierbei ist jeweils
-die maximale Entfernung einer Log Nachricht von ihrer korrekten Position und die Gesamtzahl an Nachrichten, die an falscher Stelle
-eingeordnet wurden. Da das Matching der Request- und Log-Flüsse im Replay exact gleich funktioniert, wie in der Aufzeichnung, sind
-für die Evaluation des Log-Matchings keine Replays notwendig.
+\section{Log-Matching}
+Für die Evaluation des Log-Matchings wird das gleiche SUT verwendet wie für die Experimente zum Request-Matching.
+Da die chronologische Darstellung von Logs zwischen den Requests leider nicht so einfach automatisch auswertbar ist, werden
+hierfür zusätzliche Experimente von Hand durchgeführt und ausgewertet. Es werden insgesamt vier Experimente durchgeführt, bei
+denen eine Aufzeichnung mit jeweils 10 und 100 Requests einmal synchron und einmal asynchron erstellt wird. Das Ergebnis sind
+hierbei jeweils zwei Werte: die maximale Entfernung einer Log Nachricht von ihrer korrekten Position, also der größte vorgekommene
+Fehler und die Gesamtzahl an Nachrichten, die an falscher Stelle eingeordnet wurden, also die Anzahl vorgekommener Fehlern. Da das
+Log-Matching im Replay exact gleich funktioniert, wie in der Aufzeichnung, sind für die Evaluation des Log-Matchings keine Replays
+notwendig.
 
 \section{Debugging}
+\label{chap:debugging_exp}
 Im Folgenden sollen die tatsächlichen Debugging Möglichkeiten von ditm möglichst empirisch evaluiert werden. Eine empirische
 Evaluation eines Debuggers ist grundsätzlich sehr schwierig, da es beim Debugging vor allem darum geht, Entwicklern beim
 Verständnis eines komplexen Problems zu helfen, welches sie noch nie zuvor gesehen haben. Es bräuchte also im Optimalfall eine
@@ -749,12 +770,11 @@ nachstellen zu können. Dazu zählen Systeme wie MongoDB, Redis und VoltDB. Die 
 ursprünglich aus MongoDB und Redis.
 
 \subsubsection{Startup}
-Das dritte und letzte System ist das Produktionssystem eines jungen Startups. Konkret handelt es sich um eine SaaS-Lösung für
-das Sustainability Reporting von Mittelständischen Unternehmen. Das System setzt auf eine Service-orientierte Architektur mit
-vier Services, von denen einer zusätzlich die Rolle eines API Gateways einnimmt. Im Kontext von ditm kann einer der vier Services
-nicht verwendet werden, da dieser von AWS Services wie S3 abhängig ist, es wird hier also ein Cluster aus drei Knoten verwendet.
-Die anderen Services sind von dem fehlenden Service nicht abhängig und können auch in dieser kleineren Konstellation problemlos
-funktionieren.
+Das dritte und letzte System ist das Produktionssystem eines jungen Startups. Konkret handelt es sich um eine SaaS-Lösung für das
+Sustainability Reporting von Mittelständischen Unternehmen. Das System setzt auf eine verteilte, Service-orientierte Architektur
+und besteht aus derzeit 5 Services. Im Kontext von ditm kann einer der fünf Services nicht verwendet werden, da dieser von AWS
+Diensten wie S3 abhängig ist, es wird hier also ein Cluster aus vier Knoten verwendet. Die anderen Services sind von dem
+fehlenden Service nicht abhängig und können auch in dieser kleineren Konstellation problemlos funktionieren.
 
 \subsection{Bekannte Bugs}
 Hier sind die bekannten Bugs in den jeweiligen Systemen beschrieben, die hier mit Hilfe von ditm untersucht werden sollen.
@@ -848,36 +868,6 @@ verwenden, da dies einfacher war, als kompatible alte Versionen aller Teile des 
 \chapter{Ergebnisse}
 Im Folgenden werden die Ergebnisse der einzelnen Experimente dargestellt und interpretiert. Im Anschluss folgt eine
 zusammenfassende Diskussion der Evaluationsergebnisse.
-
-\section{Log-Matching}
-Die Ergebnisse für das Log-Matching sind in Tabelle \ref{tab:logs} zusammengefasst.
-Es ist anzumerken, dass die Anzahl der Fehler und auch der maximale Fehler bei den asynchronen Experimenten Schätzwerte sind, da durch
-die asynchrone Natur der Experimente bei manchen Logs nicht eindeutig zu sagen ist, ob sie an richtiger Stelle stehen oder nicht.
-Trotzdem zeigen die Werte demonstativ, dass das Log-Matching bei hoch asynchronen Prozessen mit vielen schnellen Logs
-und Reqeusts an seine Grenzen kommen kann und dann effektiv unbrauchbar wird. Ganz im Gegenteil dazu stehen die Ergebnisse der
-synchronen Experimente. Zwar gibt es auch hier durchaus Fehler, diese sind aber selten genug und vor allem klein genug, dass das Log-Matching
-hier erheblich zur Effektivität von ditm als Debugging Werkzeug beitragen kann, wie sich auch schon im vorangegangenen Kapitel in
-der Praxis gezeigt hat.
-\begin{table}[H]
-	\centering
-	\caption{Ergebnisse der Log-Matching Experimente}
-	\label{tab:logs}
-	\begin{tabular}{|l|l|l|l|l|}
-		\hline
-		Anzahl Requests & Anzahl Logs & async & maximaler Fehler & Anzahl Fehler \\ \hline
-		10              & 18          & nein  & 1                & 1             \\ \hline
-		100             & 178         & nein  & 1                & 8             \\ \hline
-		10              & 19          & ja    & 15               & 17            \\ \hline
-		100             & 165         & ja    & 121              & 162           \\ \hline
-	\end{tabular}
-\end{table}
-
-Eine weitere interessante Beobachtung ist, dass in dem längeren der beiden synchronen Experimenten die Fehler vorwiegend eng zusammen in Clustern
-von zwei bis drei Fehlern direkt hintereinander auftreten. Bei den asynchronen Experimenten stehen sogar fast alle Logs ganz am Ende der Aufzeichnung
-und fast alle Requests gemischt mit nur sehr wenigen Logs am Anfang. Beides deutet darauf hin, dass irgendwo in der Logging Pipeline möglicherweise
-ein Buffer nicht schnell genug abgearbeitet wird und sich die Log-Nachrichten so anstauen können. Es ist außerdem naheliegend, dass nicht der ditm Proxy
-selbst, welcher die Logs sammelt, den Flaschenhals bildet, sondern bereits der Docker Daemon oder noch wahrscheinlicher der verwendete HTTP-Log-Driver,
-da die Zeitstempel, welche zur Sortierung der Tabelle von Reqeusts und Logs verwendet werden, in diesem Teil des Systems generiert werden.
 
 \section{Request-Matching}
 Die Ergebnisse der Experimente zur Evaluation den Request-Matchings sind gruppiert nach Art der Requests, so dass pro Tabelle
@@ -1034,6 +1024,36 @@ mit Schwierigkeiten umgehen kann, sofern diese nicht zu gehäuft auftreten. Leic
 Reihenfolge sind kein Problem, genauso wie schwierig identifizierbare Reqests, die in größtenteils korrekter Reihenfolge
 auftreten. Erst wenn beides zusammen kommt, funktioniert ditms Matching nicht mehr.
 
+\section{Log-Matching}
+Die Ergebnisse für das Log-Matching sind in Tabelle \ref{tab:logs} zusammengefasst.
+Es ist anzumerken, dass die Anzahl der Fehler und auch der maximale Fehler bei den asynchronen Experimenten Schätzwerte sind, da durch
+die asynchrone Natur der Experimente bei manchen Logs nicht eindeutig zu sagen ist, ob sie an richtiger Stelle stehen oder nicht.
+Trotzdem zeigen die Werte demonstativ, dass das Log-Matching bei hoch asynchronen Prozessen mit vielen schnellen Logs
+und Reqeusts an seine Grenzen kommen kann und dann effektiv unbrauchbar wird. Ganz im Gegenteil dazu stehen die Ergebnisse der
+synchronen Experimente. Zwar gibt es auch hier durchaus Fehler, diese sind aber selten genug und vor allem klein genug, dass das Log-Matching
+hier erheblich zur Effektivität von ditm als Debugging Werkzeug beitragen kann, wie sich auch schon im vorangegangenen Kapitel in
+der Praxis gezeigt hat.
+\begin{table}[H]
+	\centering
+	\caption{Ergebnisse der Log-Matching Experimente}
+	\label{tab:logs}
+	\begin{tabular}{|l|l|l|l|l|}
+		\hline
+		Anzahl Requests & Anzahl Logs & async & maximaler Fehler & Anzahl Fehler \\ \hline
+		10              & 18          & nein  & 1                & 1             \\ \hline
+		100             & 178         & nein  & 1                & 8             \\ \hline
+		10              & 19          & ja    & 15               & 17            \\ \hline
+		100             & 165         & ja    & 121              & 162           \\ \hline
+	\end{tabular}
+\end{table}
+
+Eine weitere interessante Beobachtung ist, dass in dem längeren der beiden synchronen Experimenten die Fehler vorwiegend eng zusammen in Clustern
+von zwei bis drei Fehlern direkt hintereinander auftreten. Bei den asynchronen Experimenten stehen sogar fast alle Logs ganz am Ende der Aufzeichnung
+und fast alle Requests gemischt mit nur sehr wenigen Logs am Anfang. Beides deutet darauf hin, dass irgendwo in der Logging Pipeline möglicherweise
+ein Buffer nicht schnell genug abgearbeitet wird und sich die Log-Nachrichten so anstauen können. Es ist außerdem naheliegend, dass nicht der ditm Proxy
+selbst, welcher die Logs sammelt, den Flaschenhals bildet, sondern bereits der Docker Daemon oder noch wahrscheinlicher der verwendete HTTP-Log-Driver,
+da die Zeitstempel, welche zur Sortierung der Tabelle von Reqeusts und Logs verwendet werden, in diesem Teil des Systems generiert werden.
+
 \section{Debugging}
 Alle der beschriebenen Bugs lassen sich mit Hilfe von ditm in Recordings und in Replays reproduzieren. Da insbesondere für die
 Reproduktion der Bugs in Raft teilweise eine Reihe von Schritten notwendig ist, wurden hierfür Python Skripts geschrieben, die
@@ -1078,7 +1098,8 @@ Request, wie im Recording und ignoriert einen neu generierten Token. Als Workaro
 des SUT auf mehrere Monate gesetzt, um ditm zu erlauben, diese während eines Replays wiederzuverwenden. Mit dieser Einstellung
 hatte ditm keine Probleme, den Bug deterministisch zu reproduzieren.
 
-\section{Erfahrungsbericht zum Debugging mit ditm}
+\section{Erfahrungsbericht zu ditm als Debugger}
+\label{chap:debugging_go}
 % vielleicht code beispiel einfügen oder so
 % mindestens absätze einfügen
 Während der Entwicklung der Experimente zum Request-Matching trat ein relativ komplexer Bug in dem absichtlich einfach
