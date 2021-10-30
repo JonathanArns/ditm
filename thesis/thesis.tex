@@ -84,12 +84,25 @@
 
 \begin{abstract}
 	Das ist das abstract, das werde ich wohl am Ende schreiben.
+    % Problem
+    % Idea
+    % Benefit
+    % Approach
 \end{abstract}
 
 
 \chapter{Einleitung}
 \cite{analysis_of_network_partition_failures}
+% Background
+% Problem
+% Idea
+% Benefit
+% Approach
+% Overview
+
 \chapter{Grundlagen}
+% kontext verteilter systeme, die heute sich auf virtualisierung, dev opc,  cloud native verlassen
+
 \section{Verteilte Systeme}
 \subsection{Partition Tolerance}
 \subsection{CAP}
@@ -1132,10 +1145,72 @@ ein ähnlicher mentaler Schritt wie beim Debugging vollzogen. Es wurde mit Hilfe
 und dem tatsächlichen Verhalten der Bibliothek gefunden und es konnten sogar die genauen Unterschiede im Verhalten korrekt
 festgestellt werden.
 
-\section{Diskussion}
+\chapter{Diskussion}
+\label{chap:discussion}
 % the interactive model is good at tightening the feedback loop
+In dieser Arbeit wurde ein neuartiger Replay-Mechanismus zum Debugging von verteilten Systemen mit Fokus auf
+Netzwerk-Unterbrechungen entwickelt und empirisch evaluiert. Die Kernidee dabei war, einen Proxy zu entwickeln, der den gesamten
+Nachrichten-Verkehr des verteilten Systems kontrolliert, aufzeichnet und anhand dieser Aufzeichnungen Replays von Situationen
+wiedergeben kann. Für diese Wiedergabe wurden zwei verschiedene Ansätze entwickelt und evaluiert, einerseits das Konzept, Nachrichten
+in Aufnahme und Wiedergabe zueinander zu matchen und andererseits das Konzept, Netzwerk-Unterbrechungen anhand des zeitlichen
+Ablaufs einer Situation wiederzugeben.
 
-\chapter{Future Work}
+Obwohl die Versuche zeigen, dass Request-Matching zumindest an HTTP Requests möglich ist, hat sich dieser Mechanismus nicht als
+effektiv für die Reproduktion vieler realer Bugs erwiesen. Das liegt daran, dass sich Request-Matching auf die Annahme verlässt,
+dass ein verteiltes System unter gleichen äußeren Bedingungen auch immer die gleichen Nachrichten intern versendet. Das trifft auf
+Systeme wie verteilte Datenbanken wie MongoDB, die Raft o.Ä. verwenden, nicht zu. Stattdessen konnte empirisch gezeigt werden,
+dass in diesen Systemen der deutlich einfachere zeitbasierte Mechanismus effektiv ist. Insgesamt ist dieser Ansatz zwar weniger genau
+in der Lage, zwischen einzelnen Nachrichten zu differenzieren, für die Reproduktion der meisten Bugs genügen aber auch laut Alquraan et. al.
+\cite{analysis_of_network_partition_failures} einfache Netzwerk-Unterbrechungen, auf die der Ansatz spezialisiert ist.
+
+Die Ergebnisse der Untersuchung zeigen, dass es möglich ist, mit Hilfe eines Proxys durch Netzwerk-Unterbrechungen
+ausgelöste Bugs deterministisch in Replays zu reproduzieren, ohne das SUT zu instrumentieren oder anderweitig zu verändern.
+Im Gegensatz zu existierenden Replay-Debuggern für verteilten Systeme ist dieser Ansatz agnostisch gegenüber der Technologie des
+SUT und damit prinzipiell deutlich breiter einsetzbar, als bisherige Lösungen.
+
+Für sich allein hat ein Tool wie ditm allerdings trotzdem keinen großen Wert, da der Aufwand, einen komplexen Bug erstmals in
+einer Aufzeichnung zu erzeugen und zu identifizieren deutlich zu aufwändig ist. Ein interaktives Tool wie ditm ist grundsätzlich
+nicht gut dazu geeignet, neue Bugs zu finden, da der potentielle Suchraum in realen Systemen zu groß ist, als dass ein Mensch
+diesen händisch durchsuchen könnte. Vielmehr ist der Wert von ditm, aufgezeichnete Bugs schnell und zuverlässig lokal zu
+reproduzieren. Dadurch erhalten Entwickler, die komplexe Bugs in verteilten Systemen untersuchen schnelles Feedback zu
+Veränderungen, das es ihnen erlaubt, Hypothesen schnell zu überprüfen und somit effizienter zu arbeiten.
+
+\section{Beschränkungen}
+Eine große Beschränkung für die Ergebnisse dieser Arbeit ist, dass der entwickelte Prototyp ausschließlich für Systeme
+funktioniert, die HTTP-basiert kommunizieren. Das ist insofern einschränkend, dass viele Systeme wie verteilte Datenbanken in der
+Regel eigene, TCP-basierte Protokolle verwenden. Insbesondere der zeitbasierte Replay-Mechanismus sollte sich allerdings
+problemlos auch in einem Ethernet- oder TCP-Proxy anwenden lassen, da der Inhalt oder Protokoll-speziefische Metadaten der
+Nachrichten nicht betrachtet werden.
+
+Es ist weiterhin zu beachten, dass diese Arbeit nicht empirisch untersucht, ob Replay-Debugging auf kognitiver Ebene eine
+effektive Methode zum Debugging von verteilten Systemen ist. Hierzu können mit den durchgeführten Experimenten lediglich
+anekdotische Aussagen getroffen werden. Es ist allerdings anzunehmen, dass ein Replay-Debugger abhängig von der Oberfläche und der
+verwendeten Visualisierung sehr effektiv sein kann.
+
+\section{Ausblick}
+Die Vision, die durch die Ergebnisse dieser Arbeit unterstützt wird, einen Replay-Debugger wie ditm mit einem Failure-Testing Tool
+wie Jepsen zu kombinieren, so dass Jepsen für jeden identifizierten Bug ein Recording erstellt, welches dann debuggt werden kann.
+Eine große Herausforderung dabei ist, Jepsen dazu zu bringen, Aufzeichnungen zu erstellen, anhand derer ein deterministisches
+Replay möglich ist. Es ist möglich, dass für die Symbiose der beiden Techniken ein neues Failure-Testing Tool notwendig ist,
+welches die Anforderungen des Replay-Debuggings von vorn herein mit einbezieht.
+
+Um ein Tool wie ditm in der Realität einsetzen zu können, wäre außerdem eine neue Implementierung des Konzept notwendig, die
+andere Netzwerk-Protokolle als HTTP unterstützt, vorzugsweise mindestens TCP. Eine mögliche, sehr nutzerfreundliche Variante wäre
+über einen Docker-Network-Driver. Eine entsprechende Implementierung wurde im Rahmen dieser Arbeit bereits angefangen, aber für
+einen Prototypen als zu aufwändig befunden. Aus technischer Sicht spricht allerdings nichts gegen das Prinzip und die grundlegende
+Proxy-Funktionalität konnte in dem angefangenen Projekt bereits demonstriert werden.
+
+Des Weiteren gibt es viele Möglichkeiten, das Interaktionsmodell und die GUI von ditm zu erweitern. Für eine reale Verwendung
+erscheint mindestens eine Visualisierung von Abläufen als Zeit-Raum-Diagramm wie in Oddity \cite{oddity_graphical_debugger} oder
+ShiViz \cite{ShiViz_visual_debugger} sinnvoll.
+
+Zwei weitere Features, die ein Tool wie ditm zu einem erheblich mächtigeren Debugger machen könnten, sind ein Diff-Tool und ein
+Editor für Recordings. Das Diff-Tool sollte sowohl Unterschiede zwischen verschiedenen Replays der gleichen Aufzeichnung, sowie
+zwischen Aufzeichnung und Replay identifizieren können, um schnell den Effekt von Änderungen im Code des SUT beim Debugging
+feststellen zu können. Ein Editor für Recordings, der es erlaubt, Netzwerk-Unterbrechungen zu verändern, zu entfernen und
+hinzuzufügen, wäre ein weiteres Werkzeug für Entwickler, um schnell Hypothesen zu überprüfen, für die sonst die jeweilige
+Situation komplett händisch neu reproduziert werden müsste.
+
 % hier kommt future work, die ich als experte sehe, auch im kontext meiner arbeit
 
 % keep and extend the idea of an interactive, graphical tool / debugger,
@@ -1149,6 +1224,10 @@ festgestellt werden.
 % vielleicht EBPF basiertes system, das wie proxy einzelne Requests blocken kann, aber auf jedem Knoten einzeln agiert?
 
 \chapter{Fazit}
+Im Rahmen dieser Arbeit wurde 
+
+Diese Arbeit trägt dem Stand der Technik einen einfachen Replay-Mechanismus für verteilte Systeme bei, der in Kombination mit
+der nächsten Generation von Failure-Testing Tools das Debugging verteilter Systemen zugänglicher machen kann.
 
 \printbibliography
 
