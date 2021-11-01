@@ -6,6 +6,7 @@
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{multirow}
+\usepackage{longtable}
 \usepackage{float}
 \usepackage{listings}
 \usepackage{listings-golang}
@@ -84,26 +85,67 @@
 
 \begin{abstract}
 	Das ist das abstract, das werde ich wohl am Ende schreiben.
-    % Problem
-    % Idea
-    % Benefit
-    % Approach
+	% Problem
+	% Idea
+	% Benefit
+	% Approach
 \end{abstract}
 
 
 \chapter{Einleitung}
-\cite{analysis_of_network_partition_failures}
 % Background
+% Verteilte Systeme sind heute überall. Das ist eine vergleichsweise neue Entwicklung.
+
 % Problem
+Verteile Systeme bringen Herausforderungen und potentielle Fehler mit sich, die in alleinstehenden Prozessen meist nicht auftreten. 
+Eine davon ist, dass in verteilten Systemen oft nur ein Teil des Systems fehlschlägt, während der Rest weiter läuft. Ein wichtiges
+Ziel ist es, verteilte Systeme zu entwickeln, die sich von diesen Fehlern selbstständig erholen und weiter funktionieren können.
+\cite{distributed_systems_book}
+
+Eine häufige Annahme, die in diesem Kontext problematisch ist, ist dass Netzwerke fehlerfrei sind
+\cite{brief_introduction_to_distributed_systems}. In der Realität sorgen Netzwerk-Unterbrechungen und andere Fehler dafür, dass
+die Kommunikation innerhalb verteilter Systeme grundsätzlich unzuverlässig ist \cite{distributed_systems_book,
+distributed_systems_concepts_and_design}. Verteilte Systeme müssen also auch in der Gegenwart von Netzwerk-Unterbrechungen die
+Integrität des jeweiligen System und seiner Daten garantieren. Obwohl das Problem an sich bereits intensiv erforscht ist, führen
+Netzwerk-Unterbrechungen weiterhin zu schwerwiegenden Fehlern in vielen wichtigen Produktionssystemen
+\cite{analysis_of_network_partition_failures}. Dazu trägt unter Anderem ein Mangel an Test- und Debugging-Tools für diesen Zweck
+bei \cite{failify_paper,simple_testing_can_prevent}, der eine Folge der rasanten Entwicklung moderner Cloud-Infrastruktur ist
+\cite{why_does_cloud_stop_computing}.
+
+Zwar gibt es bereits Tools, welche effektiv darin sind, neue Bugs zu finden, diese sind aber nicht in der Lage, gefundene Bugs
+deterministisch zu reproduzieren \cite{failify_paper}. Das ist sowohl für das Erstellen von Testfällen, als auch beim Debugging
+ein Problem.
+
 % Idea
+Record-and-Replay ist ein Debugging-Ansatz, welcher es ermöglicht, selbst komplexe Bugs deterministisch zu reproduzieren.
+Existierende Replay-Debugger für verteilte Systeme sind allerdings wenig ausgereift und beschränken sich auf Systeme in bestimmten
+Programmiersprachen \cite{distributed_replay_debugging_1997,distributed_replay_debugging_2006}. Diese Arbeit stellt ein Konzept
+und einen Prototyp für einen auf Netzwerk-Unterbrechungen spezialisieren Replay-Debugger vor, welcher
+Programmiersprachen-agnostisch Bugs in verteilten Systemen reproduzieren kann.
+
 % Benefit
+
 % Approach
+Der verfolge Ansatz für ein solches Tool ist eine Testumgebung, welche einen Proxy verwendet, um Netzwerk-Unterbrechungen zu
+erzeugen. Dieser Proxy zeichnet zusätzlich den gesamten Netzwerk-Verkehr des Systems inklusive Metadaten auf, um die erzeugten
+Netzwerk-Unterbrechungen später korrekt wiedergeben zu können. Eine graphische Oberfläche bündelt den Netzwerk-Verkehr und die
+Log-Ausgaben des System under Test (SUT), um dem Nutzer einen bei der Identifikation von Bugs zu helfen.
+
 % Overview
+Im nächsten Kapitel werden zunächst die technischen Grundlagen über verteilte Systeme, Netzwerk-Unterbrechungen und relevante
+Technologien erläutert. Im Anschluss folgt eine Darstellung des aktuellen Stands der Technik, sowie offener Forschungsfragen und
+noch fehlender Entwicklungen im Forschungsgebiet. Kapitel \ref{chap:system} knüpft daran an, indem im Detail die verfolgte Idee
+und der daraus entwickelte Prototyp ditm beschrieben wird.
+
+Für die empirische Evaluation des Prototypen werden erst alle entworfenen Experimente berschrieben, bevor in Kapitel
+\ref{chap:results} die Ergebnisse zusammengefasst werden. Im Anschluss werden alle Ergebnisse und deren Einschränkungen
+diskutiert. Basierend auf den Gesamtergebnissen der Arbeit werden Empfehlungen sowohl für eine Weiterentwicklung den Konzepts als
+auch für weitere Forschung im Allgemeinen gegeben.
 
 \chapter{Grundlagen}
-% kontext verteilter systeme, die heute sich auf virtualisierung, dev opc,  cloud native verlassen
 
 \section{Verteilte Systeme}
+% kontext der Arbeit sind verteilte systeme, die heute sich auf virtualisierung, dev ops, cloud native verlassen
 \subsection{Partition Tolerance}
 \subsection{CAP}
 \subsection{Linearisierbarkeit}
@@ -210,17 +252,17 @@ konkret diesem Zweck dienen, oft mit einem speziellen Fokus auf entweder eine be
 Klasse von Fehlern. Die Tools lassen sich in zwei grobe Kategorien einteilen: Visuelle Debugger und Klassische Debugger.
 
 \subsection{Interaktives Debugging}
-Die Tools in dieser Kategorie versuchen, die interaktive Debugging-Erfahrung von nicht-verteilten Systemen mit Debuggern wie GDB auf verteilte
-Systeme zu übertragen. Die Herausforderung dabei ist, dass klassische Debugger darauf ausgelegt sind, genau einen Prozess
-zu kontrollieren, in verteilten Systemen aber per Definition mehrere Prozesse, oft auf verschiedenen Rechnern, existieren.
+Die Tools in dieser Kategorie versuchen, die interaktive Debugging-Erfahrung von nicht-verteilten Systemen mit Debuggern wie GDB
+auf verteilte Systeme zu übertragen. Die Herausforderung dabei ist, dass klassische Debugger darauf ausgelegt sind, genau einen
+Prozess zu kontrollieren, in verteilten Systemen aber per Definition mehrere Prozesse, oft auf verschiedenen Rechnern, existieren.
 Zusätzlich zu Kontrollfluss und Zustandsänderungen in einzelnen Prozessen müssen durch die Verteiltheit des Systems ebenfalls
 Nachrichtenflüsse zwischen den Prozessen beobachtet werden. Achar et. al. \cite{gotcha_interactive_debugger} stellen heraus, dass
 interaktives Debugging im klassischen Sinne in verteilten Systemen nicht im generellen Fall möglich ist. Stattdessen muss ein
 System gewisse Einschränkungen im Bezug auf Zustandsänderungen und die Trennung zwischen lokalen und geteilten Zuständen
 einhalten. Mit GoTcha \cite{gotcha_interactive_debugger} stellen sie einen vollständigen interaktiven Debugger für Systeme mit dem
 Global Object Tracker (GoT) Programmiermodell vor. Konkret funktioniert GoTcha nur für Systeme, die eine GoT Implementierung in
-Python namens Spacetime verwenden. Damit ist GoTcha zwar für solche Systeme ein mächtiges Tool, in seiner Anwendbarkeit aber enorm
-eingeschränkt.
+Python namens Spacetime\footnote{\url{https://github.com/Mondego/spacetime}} verwenden. Damit ist GoTcha zwar für solche Systeme
+ein mächtiges Tool, in seiner Anwendbarkeit aber enorm eingeschränkt.
 
 Ein anderer Ansatz, der eine interaktive Debugging-Erfahrung erzielen kann, der auch in nicht-verteilten Systemen Anwendung findet
 \cite{normal_record_and_replay}, um besonders flüchtige Bugs zu reproduzieren, ist Record-and-Replay Debugging. Dieser Ansatz
@@ -325,6 +367,7 @@ deterministisch wiedergeben kann, als sehr hilfreich erweisen und ist eine Entwi
 
 
 \chapter{Systembeschreibung}
+\label{chap:system}
 Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
 \section{Idee}
 Die grundlegende Idee dieser Arbeit ist ein Tool, welches die Ideen des Failure Testings mit denen des Record and Replay
@@ -352,52 +395,48 @@ ablaufen, falls im Recording ein Mensch mit dem SUT interagiert hat, dessen Akti
 werden.
 
 \section{Anforderungen}
-ditm ist ein Prototyp, der primär dem Zweck dient, die zuvor beschriebene Idee zu verfizieren.
-Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstützten Netwerk-Protokolle auf HTTP beschränkt sind.
+Debugger in the middle (ditm) ist ein Prototyp, der primär dem Zweck dient, die zuvor beschriebene Idee zu verfizieren.
+Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstützten Netwerk-Protokolle auf HTTP beschränkt sind,
+um den Entwicklungsaufwand zu beschränken.
+
 \subsection{Funktionale Anforderungen}
-\begin{table}[H]
-	\centering
-	\caption{Funktionale Anforderungen}
-	\label{tab:fa}
-	\begin{tabular}{|l|l|p{7cm}|}
-		\hline
-		ID   & Anforderung                   & Beschreibung                                                                                                                                                                                                          \\ \hline
-		FA1  & Netzwerk Unterbrechungen      & Das System soll kontrolliert Netzwerk-Unterbrechungen zwischen Knoten des zu testenden Systems erzeugen können.                                                                                                       \\ \hline
-		FA2  & Aufzeichnung                  & Das System soll den gesamten Netzwerkverkehr des zu testenden Systems aufzeichnen können. Insbesondere sollen auch erzeugte Netzwerk-Unterbrechungen aufgezeichnet werden.                                            \\ \hline
-		FA3  & Replay                        & Das System soll anhand einer durch das System erstellten Aufzeichnung die Situation in der Aufzeichnung am laufenden Testsystem wiederherstellen und vor allem inklusive Netzwerk-Unterbrechungen wiedergeben können. \\ \hline
-		FA4  & Zufällige Unterbrechungen     & Das System soll Netwerk-Unterbrechungen zufällig erzeugen können.                                                                                                                                                     \\ \hline
-		FA5  & Kontrollierte Unterbrechungen & Das System soll dem Nutzer die Möglichkeit geben, Netwerk-Unterbrechungen konkret zu steuern.                                                                                                                         \\ \hline
-		FA6  & Log Aggregation               & Das System soll zusätzlich zum Netzwerkverkehr auch die Log ausgaben des zu testenden Systems aufzeichnen und aggregieren können.                                                                                     \\ \hline
-		FA7  & Log Matching                  & Das System soll die aufgezeichneten Nachrichten und Logs in chronologischer Reihenfolge gemeinsam anzeigen können.                                                                                                    \\ \hline
-		FA8  & Volume Snapshots              & Das System soll für zustandsbehaftete Systeme Snapshots der Docker Volumes erstellen und zu einem späteren Zeitpunk wiederherstellen können.                                                                          \\ \hline
-		FA9  & Nachrichten von außen         & Das System soll dem Nutzer Schnittstelle bieten, über die Nachrichten reproduzierbar von außen in das zu testende System gesendet werden können, um Prozesse im zu testenden System anzustoßen.                       \\ \hline
-		FA10 & Responses Blocken             & Das System soll in der Lage sein, nicht nur Requests auf dem Hinweg zum Server zu blockieren, sondern optional auch erst die Antwort auf dem Rückweg.                                                                 \\ \hline
-	\end{tabular}
-\end{table}
+Tabelle \ref{tab:fa} beschreibt die funktionalen Anforderungen an das System ditm.
+\begin{longtable}[H]{|p{\dimexpr 0.17\linewidth - 6\tabcolsep}|p{0.3\linewidth}|p{0.53\linewidth}|}
+	\caption{Funktionale Anforderungen\label{tab:fa}}                                                                                                                                                                                                            \\
+	\hline
+	ID   & Anforderung                   & Beschreibung                                                                                                                                                                                                          \\ \hline
+	FA1  & Netzwerk Unterbrechungen      & Das System soll kontrolliert Netzwerk-Unterbrechungen zwischen Knoten des zu testenden Systems erzeugen können.                                                                                                       \\ \hline
+	FA2  & Aufzeichnung                  & Das System soll den gesamten Netzwerkverkehr des zu testenden Systems aufzeichnen können. Insbesondere sollen auch erzeugte Netzwerk-Unterbrechungen aufgezeichnet werden.                                            \\ \hline
+	FA3  & Replay                        & Das System soll anhand einer durch das System erstellten Aufzeichnung die Situation in der Aufzeichnung am laufenden Testsystem wiederherstellen und vor allem inklusive Netzwerk-Unterbrechungen wiedergeben können. \\ \hline
+	FA4  & Zufällige Unterbrechungen     & Das System soll Netwerk-Unterbrechungen zufällig erzeugen können.                                                                                                                                                     \\ \hline
+	FA5  & Kontrollierte Unterbrechungen & Das System soll dem Nutzer die Möglichkeit geben, Netwerk-Unterbrechungen konkret zu steuern.                                                                                                                         \\ \hline
+	FA6  & Log Aggregation               & Das System soll zusätzlich zum Netzwerkverkehr auch die Log ausgaben des zu testenden Systems aufzeichnen und aggregieren können.                                                                                     \\ \hline
+	FA7  & Log Matching                  & Das System soll die aufgezeichneten Nachrichten und Logs in chronologischer Reihenfolge gemeinsam anzeigen können.                                                                                                    \\ \hline
+	FA8  & Volume Snapshots              & Das System soll für zustandsbehaftete Systeme Snapshots der Docker Volumes erstellen und zu einem späteren Zeitpunk wiederherstellen können.                                                                          \\ \hline
+	FA9  & Nachrichten von außen         & Das System soll dem Nutzer Schnittstelle bieten, über die Nachrichten reproduzierbar von außen in das zu testende System gesendet werden können, um Prozesse im zu testenden System anzustoßen.                       \\ \hline
+	FA10 & Responses Blocken             & Das System soll in der Lage sein, nicht nur Requests auf dem Hinweg zum Server zu blockieren, sondern optional auch erst die Antwort auf dem Rückweg.                                                                 \\ \hline
+\end{longtable}
 
 \subsection{Nicht-Funktionale Anforderungen}
-\begin{table}[H]
-	\centering
-	\caption{Nicht-Funktionale Anforderungen}
-	\label{tab:nfa}
-	\begin{tabular}{|l|l|p{7cm}|}
-		\hline
-		ID   & Anforderung              & Beschreibung                                                                                                                                                                                                  \\ \hline
-		NFA1 & Portabilität             & Das System soll vollständig in Docker lauffähig sein und mittlels docker-compose konfigurierbar sein.                                                                                                         \\ \hline
-		NFA2 & Proxy Architektur        & Umsetzung des Konzepts, einen Proxy zur erzeugung etc von Partitionen zu verwenden                                                                                                                            \\ \hline
-		NFA3 & HTTP                     & Das System soll mit HTTP als Netzwerkprotokoll Arbeiten und grundlegend alle verteilten Systeme, die ausschließlich über HTTP kommunizieren und die Umgebungsvariable HTTP\_PROXY respektieren, unterstützen. \\ \hline
-		NFA4 & Deterministische Replays & In der Wiedergabe einer Aufzeichnung sollen immer genau die Teile des Netzwerkverkehrs geblockt werden, die auch in der Aufzeichnung vom System geblockt wurden. Nicht mehr, nicht weniger und keine anderen. \\ \hline
-		NFA5 & Usability                & Das System soll einfach über eine graphische Oberfläche bedienbar sein.                                                                                                                                       \\ \hline
-		NFA6 & Echtzeit                 & Requests und Logs einer laufenden Aufzeichnung sollen in Echtzeicht angezeigt werden.                                                                                                                         \\ \hline
-		NFA7 & Default Test System      & Das zu testenden System sollte für den Test nicht angepasst werden müssen.                                                                                                                                    \\ \hline
-	\end{tabular}
-\end{table}
+Tabelle \ref{tab:nfa} beschreibt die nicht-funktionalen Anforderungen an das System ditm.
+\begin{longtable}[H]{|p{\dimexpr 0.17\linewidth - 6\tabcolsep}|p{0.3\linewidth}|p{0.53\linewidth}|}
+	\caption{Nicht-Funktionale Anforderungen\label{tab:nfa}}                                                                                                                                                                                        \\
+	\hline
+	ID   & Anforderung              & Beschreibung                                                                                                                                                                                                  \\ \hline
+	NFA1 & Portabilität             & Das System soll vollständig in Docker lauffähig sein und mittlels docker-compose konfigurierbar sein.                                                                                                         \\ \hline
+	NFA2 & Proxy Architektur        & Umsetzung des Konzepts, einen Proxy zur erzeugung etc von Partitionen zu verwenden                                                                                                                            \\ \hline
+	NFA3 & HTTP                     & Das System soll mit HTTP als Netzwerkprotokoll Arbeiten und grundlegend alle verteilten Systeme, die ausschließlich über HTTP kommunizieren und die Umgebungsvariable HTTP\_PROXY respektieren, unterstützen. \\ \hline
+	NFA4 & Deterministische Replays & In der Wiedergabe einer Aufzeichnung sollen immer genau die Teile des Netzwerkverkehrs geblockt werden, die auch in der Aufzeichnung vom System geblockt wurden. Nicht mehr, nicht weniger und keine anderen. \\ \hline
+	NFA5 & Usability                & Das System soll einfach über eine graphische Oberfläche bedienbar sein.                                                                                                                                       \\ \hline
+	NFA6 & Echtzeit                 & Requests und Logs einer laufenden Aufzeichnung sollen in Echtzeicht angezeigt werden.                                                                                                                         \\ \hline
+	NFA7 & SUT Default Settings     & Das zu testenden System sollte für den Test nicht angepasst werden müssen.                                                                                                                                    \\ \hline
+\end{longtable}
 
 \section{Architektur}
 Das Herzstück des Systems ist entsprechend der Idee ein eigens entwickelter HTTP Proxy, welcher den Netzwerk-Verkehr in einem
 verteilten System aufzeichnen und Nachrichten wahlweise nicht weiter leiten kann. Dieser Proxy läuft in einem Docker Container
 direkt neben dem SUT und ist auch Teil des gleichen Docker Netzwerks wie das SUT. Außer dem Proxy hat ditm eine weitere eigens
-entwickelte Komponente, ein Docker-Log-Driver-Plugin, welches Container-Logs an den Proxy sendet. Die Datenflüsse zwischen
+entwickelte Komponente, ein Log-Driver-Plugin für Docker, welches Container-Logs an den Proxy sendet. Die Datenflüsse zwischen
 Komponenten des Systems sind in Abbildung \ref{fig:dataflow} im Kontext eines SUT mit zwei Knoten dargestellt.
 \begin{figure}[H]
 	\centering
@@ -407,17 +446,19 @@ Komponenten des Systems sind in Abbildung \ref{fig:dataflow} im Kontext eines SU
 \end{figure}
 
 \subsection{Datenmodell}
-Das Datenmodell von ditm ist einfach gehalten. Das Top Level Datenobjekt ist das Recording, dieses enthält zwei chronologisch
-geordnete Listen, eine mit den Log Nachrichten des SUT und eine mit den aufgezeichneten Requests. Beide Listen enthalten
-die jeweiligen Objekte für alle Knoten des SUT, ohne diese weiter voneinander zu trennen. Sollte eine gefilterte Liste
-benötigt werden, die nur Objekte für bestimmte Knoten enthält, wird diese dynamisch erzeugt. Recordings enthalten außerdem
-eine Referenz auf einen Volume Snapshot, sofern für das Recording einer existiert.
+Das Datenmodell von ditm ist einfach gehalten. Das Top Level Datenobjekt ist das Recording, dieses enthält drei chronologisch
+geordnete Listen, eine mit den Log Nachrichten des SUT, eine mit den aufgezeichneten Requests und eine mit BlockConfigs, die die
+konfigurierten Netzwerk-Unterbrechungen enthalten. Alle Listen enthalten die jeweiligen Objekte für alle Knoten des SUT, ohne
+diese weiter voneinander zu trennen. Sollte eine gefilterte Liste benötigt werden, die nur Objekte für bestimmte Knoten enthält,
+wird diese dynamisch erzeugt. Recordings enthalten außerdem eine Referenz auf einen Volume Snapshot, sofern für das Recording
+einer existiert.
+
 Die eigentlichen Request Datenobjekte enthalten neben dem Request Body eine Menge Metadaten, die teilweise vom Request selbst
 stammen und teilweise durch ditm erzeugt wurden, beispielsweise ob der Request geblockt wurde oder nicht.
 Log Nachrichten umfassen neben der eigentlichen Nachricht ebenfalls wichtige Metadaten, wie den Namen des Containers, der die
 Nachricht geloggt hat. In Abbildung \ref{fig:class} ist das beschriebene Datenmodell in einem Klassendiagramm dargestellt. Die
 Implementierungen des Matcher-Interfaces fehlen im Klassendiagramm, da sich hier keine Unterschiede zwischen den einzelnen
-Implementierungen zeigen würden und diese gesondert in Kapitel ... behandelt werden. Die Methoden der Klasse Proxy wurden
+Implementierungen zeigen würden und diese gesondert in Kapitel \ref{chap:matcher} behandelt werden. Die Methoden der Klasse Proxy wurden
 ebenfalls aus Platzgründen weg gelassen und da diese hier konkret von geringerem Interesse sind. Ein Proxy nimmt im Prototypen die
 Rolle eines Gottobjekts ein, dieses Design-Pattern wurde für den Prototypen solideren Patterns vorgezogen, um die Entwicklung
 einfach zu halten und Erweiterungen, bzw. Änderungen des Datenmodells währenddessen zu erleichtern.
@@ -441,7 +482,7 @@ Der Grund dafür ist, dass fast alle für ditm relevanten Metadaten bereits aus 
 könnten die Länge der Response und die Response Header möglicherweise ebenfalls von Interesse sein, der Kompromiss wird
 hier aber in Kauf genommen, da das die Implementierung erheblich vereinfacht und auch so genügend Metadaten vorliegen,
 um verschiedene Algorithmen zur Entscheidung, ob ein Reqeust im Replay geblockt werden soll, zu evaluieren.
-Die verschiedenen Ansätze, die diese Arbeit betrachtet, werden in Kapitel ... behandelt.
+Die verschiedenen Ansätze, die diese Arbeit betrachtet, werden in Kapitel \ref{chap:matcher} behandelt.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{img/ditm-Activity.pdf}
@@ -476,6 +517,7 @@ gesendet und dort dargestellt.
 Das Frontend selbst ist eine einfache, serverseitig gerenderte, HTML Seite mit dem notwendigen JavaScript Code,
 um SSEs zu empfangen und zu verarbeiten. Die Seite ist mittels Bootstrap gestyled und in Tabs aufgeteilt.
 \subsection{Request Matcher}
+\label{chap:matcher}
 Die Logik zur Entscheidung, ob ein Request, bzw. eine Response, während eines Replays geblockt werden soll,
 ist ein Kernstück des Proxys, welches es ermöglicht, Aufzeichnungen zuverlässig wiederzugeben.
 Das Problem lässt sich darauf herunterbrechen, genau den Request im ursprünglichen Recording zu identifizieren,
@@ -680,9 +722,9 @@ services:
 Dieses Kapitel beschreibt die Versuche, mit denen die folgenden Fragen über den zuvor beschriebenen Prototypen ditm beantwortet
 werden sollen.
 \begin{itemize}
-    \item Wie gut funktionieren Replays von Netwerk-Unterbrechungen über einen Proxy?
-    \item Wie gut funktioniert ditms Log-Matching, bzw. die chronologische Ordnung von Log Nachrichten relativ zu Requests?
-    \item Lassen sich durch Netzwerk-Unterbrechungen ausgelöste Bugs deterministisch mit ditms Replay-Mechanismus reproduzieren?
+	\item Wie gut funktionieren Replays von Netwerk-Unterbrechungen über einen Proxy?
+	\item Wie gut funktioniert ditms Log-Matching, bzw. die chronologische Ordnung von Log Nachrichten relativ zu Requests?
+	\item Lassen sich durch Netzwerk-Unterbrechungen ausgelöste Bugs deterministisch mit ditms Replay-Mechanismus reproduzieren?
 \end{itemize}
 \section{Request-Matching}
 Ziel dieses Versuchs ist es, die Grenzen von ditm im Bezug auf die erste Frage auszuloten.
@@ -879,6 +921,7 @@ verhindern. Der Bug wurde hier in eine aktuelle Version des Systems wieder einge
 verwenden, da dies einfacher war, als kompatible alte Versionen aller Teile des Systems zu finden und zu konfigurieren.
 
 \chapter{Ergebnisse}
+\label{chap:results}
 Im Folgenden werden die Ergebnisse der einzelnen Experimente dargestellt und interpretiert. Im Anschluss folgt eine
 zusammenfassende Diskussion der Evaluationsergebnisse.
 
@@ -1131,8 +1174,8 @@ also niemals wiederholt. Dass der Client Retries für idempotente Requests sende
 \cite{go_transport_docs}. Das mit ditm beobachtete Verhalten ist damit allerdings noch nicht erklärt, da ein gescheiterter Request
 nur dann wiederholt wird, wenn er
 \begin{itemize}
-    \item idempotent ist und
-    \item auf einen erfolgreichen Request an das gleiche Ziel folgt.
+	\item idempotent ist und
+	\item auf einen erfolgreichen Request an das gleiche Ziel folgt.
 \end{itemize}
 Dieses Verhalten, dass Retries nur passieren, wenn die Verbindung bereits erfolgreich verwendet wurde,
 ist nicht in der offiziellen Dokumentation dokumentiert \cite{go_transport_docs}, entspricht aber dem gewollten Verhalten, welches in
@@ -1224,7 +1267,7 @@ Situation komplett händisch neu reproduziert werden müsste.
 % vielleicht EBPF basiertes system, das wie proxy einzelne Requests blocken kann, aber auf jedem Knoten einzeln agiert?
 
 \chapter{Fazit}
-Im Rahmen dieser Arbeit wurde 
+Im Rahmen dieser Arbeit wurde
 
 Diese Arbeit trägt dem Stand der Technik einen einfachen Replay-Mechanismus für verteilte Systeme bei, der in Kombination mit
 der nächsten Generation von Failure-Testing Tools das Debugging verteilter Systemen zugänglicher machen kann.
