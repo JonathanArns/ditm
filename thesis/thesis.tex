@@ -95,26 +95,30 @@
 \chapter{Einleitung}
 % Background
 % Verteilte Systeme sind heute überall. Das ist eine vergleichsweise neue Entwicklung.
+Verteilte Systeme sind heute kritisch für viele Anwendungsfälle in der Informatik von Social Media über Streaming-Anbieter bis hin
+zu Machine-Learning.
 
 % Problem
-Verteile Systeme bringen Herausforderungen und potentielle Fehler mit sich, die in alleinstehenden Prozessen meist nicht auftreten. 
-Eine davon ist, dass in verteilten Systemen oft nur ein Teil des Systems fehlschlägt, während der Rest weiter läuft. Ein wichtiges
-Ziel ist es, verteilte Systeme zu entwickeln, die sich von diesen Fehlern selbstständig erholen und weiter funktionieren können.
-\cite{distributed_systems_book}
+Verteile Systeme bringen Herausforderungen und potentielle Fehler mit sich, die in alleinstehenden Prozessen meist nicht
+auftreten. Eine davon ist, dass in verteilten Systemen oft einzelne Komponenten des Systems fehlschlagen, anstelle des ganzen
+Systems. Um die Verfügbarkeit und Korrektheit von Systemen zu garantieren, ist es wichtig, verteilte Systeme zu entwickeln, die
+sich von diesen Fehlern selbstständig erholen und weiter funktionieren können. \cite{distributed_systems_book}
 
-Eine häufige Annahme, die in diesem Kontext problematisch ist, ist dass Netzwerke fehlerfrei sind
-\cite{brief_introduction_to_distributed_systems}. In der Realität sorgen Netzwerk-Unterbrechungen und andere Fehler dafür, dass
-die Kommunikation innerhalb verteilter Systeme grundsätzlich unzuverlässig ist \cite{distributed_systems_book,
-distributed_systems_concepts_and_design}. Verteilte Systeme müssen also auch in der Gegenwart von Netzwerk-Unterbrechungen die
+Eine häufige Annahme, die in diesem Kontext problematisch ist, ist dass das Netzwerk, welches zur Kommunikation verwendet wird,
+fehlerfrei ist \cite{brief_introduction_to_distributed_systems}. In der Realität sorgen Netzwerk-Unterbrechungen und andere Fehler
+dafür, dass die Kommunikation innerhalb verteilter Systeme grundsätzlich unzuverlässig ist \cite{distributed_systems_book,
+	distributed_systems_concepts_and_design}. Verteilte Systeme müssen also auch in der Gegenwart von Netzwerk-Unterbrechungen die
 Integrität des jeweiligen System und seiner Daten garantieren. Obwohl das Problem an sich bereits intensiv erforscht ist, führen
 Netzwerk-Unterbrechungen weiterhin zu schwerwiegenden Fehlern in vielen wichtigen Produktionssystemen
 \cite{analysis_of_network_partition_failures}. Dazu trägt unter Anderem ein Mangel an Test- und Debugging-Tools für diesen Zweck
 bei \cite{failify_paper,simple_testing_can_prevent}, der eine Folge der rasanten Entwicklung moderner Cloud-Infrastruktur ist
 \cite{why_does_cloud_stop_computing}.
-
-Zwar gibt es bereits Tools, welche effektiv darin sind, neue Bugs zu finden, diese sind aber nicht in der Lage, gefundene Bugs
-deterministisch zu reproduzieren \cite{failify_paper}. Das ist sowohl für das Erstellen von Testfällen, als auch beim Debugging
+Zwar gibt es bereits Tools, die effektiv darin sind, neue Bugs zu finden, diese sind aber nicht in der Lage, gefundene Bugs
+deterministisch zu reproduzieren \cite{failify_paper}. Das ist sowohl für das Erstellen von Regressionstests, als auch beim Debugging
 ein Problem.
+
+% Forschungsfrage: Können durch Netzwerk-Unterbrechungen ausgelöste Bugs in einer Testumgebung für verteilte Systeme erzeugt,
+% aufgezeichnet und deterministisch wiedergegeben werden? - unabhängig von technologie des systems
 
 % Idea
 Record-and-Replay ist ein Debugging-Ansatz, welcher es ermöglicht, selbst komplexe Bugs deterministisch zu reproduzieren.
@@ -132,39 +136,45 @@ Netzwerk-Unterbrechungen später korrekt wiedergeben zu können. Eine graphische
 Log-Ausgaben des System under Test (SUT), um dem Nutzer einen bei der Identifikation von Bugs zu helfen.
 
 % Overview
-Im nächsten Kapitel werden zunächst die technischen Grundlagen über verteilte Systeme, Netzwerk-Unterbrechungen und relevante
+Zu Anfang der Arbeit werden zunächst die technischen Grundlagen über verteilte Systeme, Netzwerk-Unterbrechungen und relevante
 Technologien erläutert. Im Anschluss folgt eine Darstellung des aktuellen Stands der Technik, sowie offener Forschungsfragen und
 noch fehlender Entwicklungen im Forschungsgebiet. Kapitel \ref{chap:system} knüpft daran an, indem im Detail die verfolgte Idee
 und der daraus entwickelte Prototyp ditm beschrieben wird.
 
 Für die empirische Evaluation des Prototypen werden erst alle entworfenen Experimente berschrieben, bevor in Kapitel
 \ref{chap:results} die Ergebnisse zusammengefasst werden. Im Anschluss werden alle Ergebnisse und deren Einschränkungen
-diskutiert. Basierend auf den Gesamtergebnissen der Arbeit werden Empfehlungen sowohl für eine Weiterentwicklung den Konzepts als
-auch für weitere Forschung im Allgemeinen gegeben.
+diskutiert. Basierend auf den Gesamtergebnissen der Arbeit werden Empfehlungen sowohl für eine Weiterentwicklung den Konzepts
+gegeben.
+% als auch für weitere Forschung im Allgemeinen gegeben.
 
 \chapter{Grundlagen}
 
 \section{Verteilte Systeme}
 % kontext der Arbeit sind verteilte systeme, die heute sich auf virtualisierung, dev ops, cloud native verlassen
-\subsection{Partition Tolerance}
+
+% We define a distributed system as one in which hardware or software components
+% located at networked computers communicate and coordinate their actions only by
+% passing messages. This simple definition covers the entire range of systems in which
+% networked computers can usefully be deployed. \cite{distributed_systems_concepts_and_design}
+
+\section{Netzwerk-Unterbrechungen}
 \subsection{CAP}
 \subsection{Linearisierbarkeit}
 \subsection{Verteilter Consens}
 \section{Docker}
-Docker als leichtgewichtige Alternative zu virtuellen Maschinen ist inzwischen weitgehen bekannt und bildet das Rückrad vieler
-moderner Cloud Anwendungen. Verteilte Microservice-basierte Systeme laufen heute fast ausschließlich in Containern und damit oft
-in Docker oder ähnlichen Technologien.
+% Docker als leichtgewichtige Alternative zu virtuellen Maschinen ist inzwischen weitgehen bekannt und bildet das Rückrad vieler
+% moderner Cloud Anwendungen. Verteilte Microservice-basierte Systeme laufen heute fast ausschließlich in Containern und damit oft
+% in Docker oder ähnlichen Technologien.
 \section{Proxy}
 
 \chapter{Stand der Technik}
 Im Umgang mit Fehlern in verteilten Systemen werden eine Reihe verschiedener Ansätze mit unterschiedlichen Zielen verfolgt.
 Failure Testing und Chaos Engineering sind zwei ähnliche Methoden, die sich darauf verlassen, Fehler mit Hilfe von Tests zu
-finden, mit dem Unterschied, dass Failure Testing in einer Test-Umgebung und Chaos Engineering in der Produktions-Umgebung
-stattfinden. Daneben gibt es Log-Analyse und Tracing Systeme, die vor allem dazu dienen, aufgetretene Fehler nachzuvollziehen. Zu
-diesem Zweck gibt es ebenfalls eine Handvoll weiterer, oft experimenteller Debugging Tools. Diese reichen von Tools, die einem
-normalen Debugger ähneln, bis hin zu Tools, die sich vor allem auf die Visualisierung von Systemen und Abläufen konzentrieren.
-Nachfolgend werden die genannten Methoden und jeweils wichtige Tools weiter erläutert.
-\cite{challenges_and_options}
+finden, mit dem Unterschied, dass Failure Testing in einer Testumgebung und Chaos Engineering in der Produktions-Umgebung
+eingesetzt werden. Daneben gibt es Log-Analyse und Tracing Systeme, die vor allem dazu dienen, aufgetretene Fehler
+nachzuvollziehen. Zu diesem Zweck gibt es ebenfalls eine Handvoll weiterer, oft experimenteller Debugging-Tools. Diese reichen von
+Tools, die einem normalen Debugger ähneln, bis hin zu Tools, die sich vor allem auf die Visualisierung von Systemen und Abläufen
+konzentrieren. Nachfolgend werden die genannten Methoden und jeweils wichtige Tools weiter erläutert. \cite{challenges_and_options}
 
 \section{Failure Testing}
 Failure Testing ist ein Ansatz zum Testen der Fehlertoleranz verteilter Systeme. Die Grundidee ist immer, als Client mit dem
@@ -248,7 +258,7 @@ Korrektheit, als auch der Performance von verteilten Systemen \cite{so_you_want_
 
 \section{Debugging}
 Neben Werkzeugen wie Tracing, die ebenfalls zum Debugging von verteilten Systemen dienen gibt es eine Reihe weiterer Tools, die
-konkret diesem Zweck dienen, oft mit einem speziellen Fokus auf entweder eine bestimmte Art von Systemen oder eine bestimmte
+konkret diesem Zweck dienen, oft mit einem speziellen Fokus auf entweder eine bestimmte Art von System oder eine bestimmte
 Klasse von Fehlern. Die Tools lassen sich in zwei grobe Kategorien einteilen: Visuelle Debugger und Klassische Debugger.
 
 \subsection{Interaktives Debugging}
@@ -348,7 +358,7 @@ ist, um weitreichend einsetzbar zu sein. Heute verwenden einige große Projekte 
 die sich auf ein konkretes System beschränken und durch den getrennten Entwicklungsaufwand nicht mit dem Funktionsumfang von Tools
 wie Jepsen mithalten können. \cite{failify_masters_thesis}
 
-Ebenfalls im Bezug auf allemeineres Tooling stellen Basiri et. al. \cite{chaos_engineering} die Fragen, ob sich allgemeineres
+Ebenfalls im Bezug auf allemeineres Tooling stellen Basiri et. al. \cite{chaos_engineering} die Frage, ob sich allgemeineres
 Tooling für Chaos-Engineering entwickeln lässt, da auch hier Organisationen ursprünglich vorwiegend eigene, interne Tools
 entwickelt haben.
 
@@ -369,22 +379,25 @@ deterministisch wiedergeben kann, als sehr hilfreich erweisen und ist eine Entwi
 \chapter{Systembeschreibung}
 \label{chap:system}
 Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
+
 \section{Idee}
-Die grundlegende Idee dieser Arbeit ist ein Tool, welches die Ideen des Failure Testings mit denen des Record and Replay
-Debuggings vereint. Dieses Tool soll nach Record and Replay Prinzip beim Debugging von Bugs im Zusammenhang mit
-Netwerk-Unterbrechungen in verteilten Systemen helfen. Mit Hilfe des Tools sollen wie beim Failure Testing Netwerk-Unterbrechungen
-während Test Durchläufen simuliert werden, allerdings nicht wie beim Failure-Testing in programmatisch von vorn herein definierten
-Testfällen, sondern interaktiv, während der Nutzer mit dem System interagiert. Um gefundene Bugs dennoch zuverlässig reproduzieren
-zu können, soll das Tool Situationen aufzeichnen und zum späteren Zeitpunkt wieder abspielen können, insbesondere mit den gleichen
-simulierten Netzwerk-Bedingungen wie während der Aufzeichnung.
+\label{chap:idea}
+Die grundlegende Idee dieser Arbeit ist genau ein solches Tool, welches die Ideen des Failure-Testings mit denen des
+Replay-Debuggings vereint. Dieses Tool soll nach Record-and-Replay-Prinzip beim Debugging von Bugs im Zusammenhang mit
+Netwerk-Unterbrechungen in verteilten Systemen helfen. Dazu sollen mit dem Tool wie beim Failure Testing Netwerk-Unterbrechungen
+während Test-Durchläufen erzeugt werden. Dies soll allerdings im Gegensatz zum Failure-Testing nicht nur programmatisch in von
+vorn herein definierten Testfällen, sondern auch interaktiv, während der Nutzer mit dem System interagiert möglich sein. Um
+gefundene Bugs dennoch zuverlässig reproduzieren zu können, soll das Tool Situationen aufzeichnen und zum späteren Zeitpunkt
+wieder abspielen können, insbesondere mit den gleichen Netzwerk-Bedingungen wie während der Aufzeichnung.
 
 Ein großer Fokus der Arbeit ist dabei speziell auf dem verfolgten Ansatz für ein solches System. Dieser ist, alle Nachrichten
-innerhalb eines verteilten Systems über einen Proxy zu leiten, der diese inklusive Metadaten aufzeichnet und in der Lage ist,
-kontrolliert Netwerk-Unterbrechungen zu simulieren, indem einzelne Nachrichten geblockt, bzw. nicht weiter geleitet, werden.  Mit
-diesem Aufbau soll auch ein Replay der Netzwerk-Bedingungen anhand eines zuvor durch den Proxy aufgezeichneten Test Durchlaufs
-möglich sein, sofern der Proxy in der Lage ist, während des Replays für jeden erhaltenen Request zu identifizieren, welchem
-Request aus der Aufzeichnung er jeweils zuzuordnen ist. Zudem muss der Proxy Requests, die in der Aufzeichnung von außerhalb des
-Systems kamen, identifizieren und während des Replays zum richtigen Zeitpunkt selbstständig in das System senden.
+innerhalb des SUT über einen Proxy zu leiten, der diese inklusive Metadaten aufzeichnet und in der Lage ist, kontrolliert
+Netwerk-Unterbrechungen zu erzeugen, indem einzelne Nachrichten geblockt, bzw. nicht weiter geleitet, werden. Mit diesem Aufbau
+soll auch ein Replay der Netzwerk-Bedingungen anhand eines zuvor durch den Proxy aufgezeichneten Test-Durchlaufs möglich sein.
+Dazu soll der Proxy während eines Replays für jeden erhaltenen Request identifizieren, welchem Request aus der Aufzeichnung dieser
+entspricht, um die gleichen Netzwerk-Bedingungen erzeugen zu können. Zudem muss der Proxy Requests, die in der Aufzeichnung von
+außerhalb des Systems kommen, identifizieren und während des Replays zum richtigen Zeitpunkt selbstständig in das System senden,
+um so die Interaktionen des Nutzers mit dem System wiederzugeben.
 
 Ein Proxy wird den anderen, verbreiteteren Fehler-Mechanismen des Failure-Testings vorgezogen, da die Erwartung ist, dass dieser
 sich insbesondere besser für Replays eignet. Das liegt daran, dass ein Proxy jede Nachricht des SUT einzeln betrachten und
@@ -410,8 +423,8 @@ Tabelle \ref{tab:fa} beschreibt die funktionalen Anforderungen an das System dit
 	FA3  & Replay                        & Das System soll anhand einer durch das System erstellten Aufzeichnung die Situation in der Aufzeichnung am laufenden Testsystem wiederherstellen und vor allem inklusive Netzwerk-Unterbrechungen wiedergeben können. \\ \hline
 	FA4  & Zufällige Unterbrechungen     & Das System soll Netwerk-Unterbrechungen zufällig erzeugen können.                                                                                                                                                     \\ \hline
 	FA5  & Kontrollierte Unterbrechungen & Das System soll dem Nutzer die Möglichkeit geben, Netwerk-Unterbrechungen konkret zu steuern.                                                                                                                         \\ \hline
-	FA6  & Log Aggregation               & Das System soll zusätzlich zum Netzwerkverkehr auch die Log ausgaben des zu testenden Systems aufzeichnen und aggregieren können.                                                                                     \\ \hline
-	FA7  & Log Matching                  & Das System soll die aufgezeichneten Nachrichten und Logs in chronologischer Reihenfolge gemeinsam anzeigen können.                                                                                                    \\ \hline
+	FA6  & Log-Aggregation               & Das System soll zusätzlich zum Netzwerkverkehr auch die Log ausgaben des zu testenden Systems aufzeichnen und aggregieren können.                                                                                     \\ \hline
+	FA7  & Log-Matching                  & Das System soll die aufgezeichneten Nachrichten und Logs in chronologischer Reihenfolge gemeinsam anzeigen können.                                                                                                    \\ \hline
 	FA8  & Volume Snapshots              & Das System soll für zustandsbehaftete Systeme Snapshots der Docker Volumes erstellen und zu einem späteren Zeitpunk wiederherstellen können.                                                                          \\ \hline
 	FA9  & Nachrichten von außen         & Das System soll dem Nutzer Schnittstelle bieten, über die Nachrichten reproduzierbar von außen in das zu testende System gesendet werden können, um Prozesse im zu testenden System anzustoßen.                       \\ \hline
 	FA10 & Responses Blocken             & Das System soll in der Lage sein, nicht nur Requests auf dem Hinweg zum Server zu blockieren, sondern optional auch erst die Antwort auf dem Rückweg.                                                                 \\ \hline
@@ -423,13 +436,13 @@ Tabelle \ref{tab:nfa} beschreibt die nicht-funktionalen Anforderungen an das Sys
 	\caption{Nicht-Funktionale Anforderungen\label{tab:nfa}}                                                                                                                                                                                        \\
 	\hline
 	ID   & Anforderung              & Beschreibung                                                                                                                                                                                                  \\ \hline
-	NFA1 & Portabilität             & Das System soll vollständig in Docker lauffähig sein und mittlels docker-compose konfigurierbar sein.                                                                                                         \\ \hline
-	NFA2 & Proxy Architektur        & Umsetzung des Konzepts, einen Proxy zur erzeugung etc von Partitionen zu verwenden                                                                                                                            \\ \hline
-	NFA3 & HTTP                     & Das System soll mit HTTP als Netzwerkprotokoll Arbeiten und grundlegend alle verteilten Systeme, die ausschließlich über HTTP kommunizieren und die Umgebungsvariable HTTP\_PROXY respektieren, unterstützen. \\ \hline
+	NFA1 & Portabilität             & Das System soll vollständig in Docker lauffähig und mittlels docker-compose konfigurierbar sein.                                                                                                         \\ \hline
+	NFA2 & Proxy Architektur        & Das System soll die in Kapitel \ref{chap:idea} beschriebene Idee umsetzen.                                                                                                                                    \\ \hline
+	NFA3 & HTTP                     & Das System soll mit HTTP als Netzwerkprotokoll arbeiten und grundlegend alle verteilten Systeme, die ausschließlich über HTTP kommunizieren und die Umgebungsvariable HTTP\_PROXY respektieren, unterstützen. \\ \hline
 	NFA4 & Deterministische Replays & In der Wiedergabe einer Aufzeichnung sollen immer genau die Teile des Netzwerkverkehrs geblockt werden, die auch in der Aufzeichnung vom System geblockt wurden. Nicht mehr, nicht weniger und keine anderen. \\ \hline
 	NFA5 & Usability                & Das System soll einfach über eine graphische Oberfläche bedienbar sein.                                                                                                                                       \\ \hline
-	NFA6 & Echtzeit                 & Requests und Logs einer laufenden Aufzeichnung sollen in Echtzeicht angezeigt werden.                                                                                                                         \\ \hline
-	NFA7 & SUT Default Settings     & Das zu testenden System sollte für den Test nicht angepasst werden müssen.                                                                                                                                    \\ \hline
+	NFA6 & Echtzeit                 & Requests und Logs einer laufenden Aufzeichnung sollen in Echtzeit angezeigt werden.                                                                                                                         \\ \hline
+	NFA7 & Unverändertes SUT        & Das SUT soll für die Verwendung des Systems nicht angepasst werden müssen.                                                                                                                                    \\ \hline
 \end{longtable}
 
 \section{Architektur}
@@ -642,23 +655,24 @@ welcher Matcher sich besser verhält.
 \subsubsection{Zeitbasiert}
 Der Zeitbasierte Matcher funktioniert grundlegend anders als die anderen Matcher und passt nicht direkt in das Design des Matcher
 Interfaces. Er wurde deutlich später als Reaktion auf die mangelhafte Performance der anderen Matcher in gewissen Situationen
-entwickelt und musste sich deshalb mit Workarounds der bereits existierenden internen API anpassen.
+entwickelt und musste sich deshalb mit Workarounds der bereits existierenden internen API anpassen. Er bricht insbesondere mit der
+in Kapitel \ref{chap:idea} beschriebenen Idee, Requests einander genau zuzuordnen.
 
-Der Zeitbasierte Matcher ist entwickelt für Situationen, in denen selbst bei exact gleichen äußeren Bedingungen das SUT in
-Aufzeichnung und Replay unterschiedliche Requests sendet. Die Raft Implementierung, welche in Kapitel \ref{} beschrieben wird ist ein
+Der Zeitbasierte Matcher ist entwickelt für Situationen, in denen selbst bei genau gleichen äußeren Bedingungen das SUT in
+Aufzeichnung und Replay unterschiedliche Requests sendet. Die Raft Implementierung, welche in Kapitel \ref{chap:raft} beschrieben wird ist ein
 Beispiel für ein System, welches inherent Zufallskomponenten verwendet um zu bestimmen, welche Requests wann gesendet werden.
 Die Idee hier ist, Requests nicht ein genaues Match zuzuordnen, sondern stattdessen die BlockConfig zu ermitteln, mit welcher der
 Request aufgrund seiner Zeitlichen Position im Replay behandelt werden sollte. Sofern ausschließlich Konfigurationen ohne
-Zufallskomponente verwendet wurden, kann dies ein effektiver Weg sein, Replays zu erzeugen, die zwar nicht eins zu eins der
+Zufallskomponente verwendet wurden, kann dies ein effektiver Weg sein, Replays zu erzeugen, die zwar vielleicht nicht eins zu eins der
 Aufzeichnung entsprechen, aber trotzdem Bugs zuverlässig reproduzieren.
 
 Zur Umsetzung werden alle Änderungen an der BlockConfig mit Zeitstempel im Recording gespeichert. Anstelle eines gematchten
 Requests gibt der Matcher einen neuen Dummy Request zurück, der lediglich die Information enthält, wie der aktuelle Request
-behandelt werden soll. Auch die Funktionalität des Matchers, Requests zu identifizieren, die bereits im Replay aufgetaucht sind,
-wird über die im Replay vergangene Zeit implementiert, so dass Requests als bereits gesehen gelten, sobald der Zeitpunkt
-überschritten ist, an dem sie in der Aufzeichnung vorkamen. Eine Ausnahme hierbei sind die Requests von außerhalb des SUTs. Diese
-werden wie bei den anderen Matchern erst markiert, wenn sie tatsächlich gesendet wurden, da es wichtig ist, diese vollständig
-während des Replays wiederzugeben.
+behandelt werden soll. Dieser Workaround ist notwendig, um in das Matcher-Interface zu passen. Auch die Funktionalität des
+Matchers, Requests zu identifizieren, die bereits im Replay aufgetaucht sind, wird hier über die im Replay vergangene Zeit
+implementiert, so dass Requests als bereits gesehen gelten, sobald der Zeitpunkt überschritten ist, an dem sie in der Aufzeichnung
+vorkamen. Einzige Ausnahme hierbei sind die Requests von außerhalb des SUTs. Diese werden wie bei den anderen Matchern erst markiert,
+wenn sie tatsächlich gesendet wurden, da es wichtig ist, diese während des Replays vollständig wiederzugeben.
 
 \section{Nutzung}
 \subsection{Konfiguration}
@@ -818,6 +832,7 @@ Gateway, welches die Funktionalitäten des Systems kapselt. Es werden insgesamt 
 Kontos, das Abfragen eines Kontostands und das Ein- und Auszahlen von Geld auf einem Konto.
 
 \subsubsection{Raft}
+\label{chap:raft}
 Das zweite System ist eine Implementierung des Raft Konsens Algorithmus in der Form eines Append-Logs. Es handelt sich um ein
 Hobby-Projekt, welches ausschließlich im Kontext dieser Arbeit verwendet wird. Dennoch ist die Implementierung vollständig und
 bietet damit alle nötige Funktionalität, um daran Bugs aus realen verteilen Systemen, die ähnliche Algorithmen verwenden,
@@ -1199,12 +1214,13 @@ in Aufnahme und Wiedergabe zueinander zu matchen und andererseits das Konzept, N
 Ablaufs einer Situation wiederzugeben.
 
 Obwohl die Versuche zeigen, dass Request-Matching zumindest an HTTP Requests möglich ist, hat sich dieser Mechanismus nicht als
-effektiv für die Reproduktion vieler realer Bugs erwiesen. Das liegt daran, dass sich Request-Matching auf die Annahme verlässt,
-dass ein verteiltes System unter gleichen äußeren Bedingungen auch immer die gleichen Nachrichten intern versendet. Das trifft auf
-Systeme wie verteilte Datenbanken wie MongoDB, die Raft o.Ä. verwenden, nicht zu. Stattdessen konnte empirisch gezeigt werden,
-dass in diesen Systemen der deutlich einfachere zeitbasierte Mechanismus effektiv ist. Insgesamt ist dieser Ansatz zwar weniger genau
-in der Lage, zwischen einzelnen Nachrichten zu differenzieren, für die Reproduktion der meisten Bugs genügen aber auch laut Alquraan et. al.
-\cite{analysis_of_network_partition_failures} einfache Netzwerk-Unterbrechungen, auf die der Ansatz spezialisiert ist.
+effektiv für die Reproduktion vieler realer Bugs erwiesen. Das liegt daran, dass sich Request-Matching auf die falsche Annahme
+stützt, dass ein verteiltes System unter gleichen äußeren Bedingungen auch immer die gleichen Nachrichten intern versendet. Das
+trifft auf Systeme wie verteilte Datenbanken wie MongoDB, die Raft o.Ä. verwenden, nicht zu. Stattdessen konnte empirisch gezeigt
+werden, dass in diesen Systemen der deutlich einfachere zeitbasierte Mechanismus effektiv ist, was genau der ursprünglichen
+Annahme aus Kapitel \ref{chap:idea} widerspricht. Insgesamt ist dieser Ansatz zwar weniger genau in der Lage, zwischen einzelnen
+Nachrichten zu differenzieren, für die Reproduktion der meisten Bugs genügen aber auch laut Alquraan et. al.
+\cite{analysis_of_network_partition_failures} einfache Netzwerk-Unterbrechungen, mit denen dieser Ansatz gut umgehen kann.
 
 Die Ergebnisse der Untersuchung zeigen, dass es möglich ist, mit Hilfe eines Proxys durch Netzwerk-Unterbrechungen
 ausgelöste Bugs deterministisch in Replays zu reproduzieren, ohne das SUT zu instrumentieren oder anderweitig zu verändern.
@@ -1267,10 +1283,34 @@ Situation komplett händisch neu reproduziert werden müsste.
 % vielleicht EBPF basiertes system, das wie proxy einzelne Requests blocken kann, aber auf jedem Knoten einzeln agiert?
 
 \chapter{Fazit}
-Im Rahmen dieser Arbeit wurde
+Im Rahmen dieser Arbeit wurde erforscht, ob Netzwerk-Unterbrechungen deterministisch in einer Testumgebung für verteilte Systeme
+mittels eines Proxies reproduziert werden können. Zu diesem Zweck wurde ein Prototyp namens ditm entwickelt, der das Konzept für
+HTTP-basierte Systeme implementiert. ditm ermöglicht es, Netzwerk-Unterbrechungen zu erzeugen, Abläufe und persistierte Zustände
+in verteilten Systemen aufzuzeichnen und anhand der Aufzeichnungen Replays durchzuführen, die zuverlässig Bugs reproduzieren. ditm
+funktioniert grundlegend für alle Systeme, die die Umgebungsvariablen HTTP\_PROXY respektieren und erfordert keine Veränderung des
+Systems. Zur Bedienung bietet ditm eine GUI, in der die aufgezeichneten Requests gemeinsam mit den Log-Ausgaben des SUT
+dargestellt werden und mit Hilfe von docker-compose ist ditm leicht zu konfigurieren und vollständig mit einem Kommando zu starten.
 
-Diese Arbeit trägt dem Stand der Technik einen einfachen Replay-Mechanismus für verteilte Systeme bei, der in Kombination mit
-der nächsten Generation von Failure-Testing Tools das Debugging verteilter Systemen zugänglicher machen kann.
+Die Fähigkeit von ditm, Bugs deterministisch zu reproduzieren wurde mit fünf verschiedenen Bugs in drei verschiedenen Systemen
+evaluiert, darunter das Produktionssystem eines jungen Startups. Die Ergebnisse zeigen, dass das Prinzip funktioniert, auch wenn
+ditm noch unter gewissen Kinderkrankheiten leidet. Beispielsweise fehlt die Möglichkeit während Replays korrekt mit Tokenbasierter
+Authentifizierung umzugehen, wofür es noch eine sinnvolle Lösung zu finden gilt. Weitere nächste Schritte für den realen Einsatz
+eines Tools wie ditm als Debugger sind, das System für TCP als Netzwerkprotokoll zu implementieren und ein Frontend zu entwickeln,
+das die aggregierten Events des SUT als Zeit-Raum-Diagramm virtualisieren kann.
+
+Die Zukunftsvision ist eine Integration mit einem Failure-Testing-Tool wie Jepsen, so dass gefundene Bugs automatisch
+aufgezeichnet werden und für Replay-Debugging zur Verfügung stehen. Im Kontext dieser Vision trägt diese Arbeit dem
+Forschungsfeld einen einfachen Replay-Mechanismus für verteilte Systeme bei, der in Kombination mit der nächsten Generation von
+Failure-Testing-Tools das Debugging verteilter Systemen effizienter machen kann.
+
+% Anhand des entwickelten Prototypen ditm wurde demonstriert, dass mit Hilfe eines Proxies
+% Netzwerk-Partitionen erzeugt, aufgezeichnet und wiedergegeben werden können. Auf diese Weise können durch
+% Netzwerk-Unterbrechungen ausgelöste Bugs deterministisch reproduziert werden. Ein solches Replay-System könnte in Zukunft sowohl zum
+% Debugging, als auch für Regressionstests eingesetzt werden.
+% 
+% 
+% Diese Arbeit trägt dem Forschungsfeld einen einfachen Replay-Mechanismus für verteilte Systeme bei, der in Kombination mit
+% der nächsten Generation von Failure-Testing Tools das Debugging verteilter Systemen zugänglicher machen kann.
 
 \printbibliography
 
