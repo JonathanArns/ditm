@@ -38,6 +38,7 @@
 %   morestring=[b]"
 % }
 \usepackage[font={small,it}]{caption}
+\usepackage{subcaption}
 \usepackage[english,ngerman]{babel}
 \usepackage[backend=biber,
             sorting=none,   % Keine Sortierung
@@ -78,7 +79,7 @@
 \maketitle
 
 \tableofcontents
-% \setlength{\parindent}{0em}
+\setlength{\parindent}{0em}
 \setlength{\parskip}{0.6em}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Document beginning %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -151,21 +152,63 @@ gegeben.
 
 \section{Verteilte Systeme}
 % kontext der Arbeit sind verteilte systeme, die heute sich auf virtualisierung, dev ops, cloud native verlassen
+Gunawi et. al. \cite{distributed_systems_concepts_and_design} definieren eine verteiltes System als ein System, in dem Hardware-
+oder Software-Komponenten, die auf oder an vernetzten Rechnern laufen, untereinander kommunizieren und ihre Aktionen
+ausschließlich mittels Nachrichten über das Netzwerk koordinieren. Van Steen et. al.
+\cite{brief_introduction_to_distributed_systems} fügen dieser Definition hinzu, dass die jeweils autonomen Komponenten gemeinsam
+einem Nutzer des Systems gegenüber wie ein einziges System erscheinen. Ein Nutzer kann dabei sowohl ein Mensch, als auch eine
+Applikation sein.
+
+\cite{cloud_virtualization}
 
 % We define a distributed system as one in which hardware or software components
 % located at networked computers communicate and coordinate their actions only by
 % passing messages. This simple definition covers the entire range of systems in which
 % networked computers can usefully be deployed. \cite{distributed_systems_concepts_and_design}
+\subsection{Verteilter Consens}
 
 \section{Netzwerk-Unterbrechungen}
+
+\subsection{Arten von Netzwerk-Unterbrechungen}
+Netzwerk-Unterbrechungen lassen sich in drei Kategorien einteilen. Vollständige Netzwerk-Unterbrechungen wie in Abbildung
+\ref{fig:full_partition} trennen ein verteiltes System in zwei komplett alleinstehende Teile. Sie sind die häufigste Art von
+Netzwerk-Unterbrechung und können sowohl zwischen verschiedenen Data-Centern, als auch zwischen Teilen eines Systems im gleichen
+Data-Center auftreten. Teilweise Netzwerk-Unterbrechungen wie in Abbildung \ref{fig:partial_partition} trennen einen Teil des
+Systems von einem Anderen, während ein dritter Teil des Systems weiterhin beide anderen Teile erreichen kann. Sie entstehen, indem
+zwei Data-Center voneinander getrennt werden, die beiden weiterhin von einem dritten Data-Center erreichbar sind. Einseitige
+Netzwerk-Unterbrechungen wie in \ref{fig:simplex_partition} lassen Nachrichten nur in eine Richtung fließen. Diese Art von
+Netzwerk-Unterbrechung tritt selten auf und wird ausgelöst durch fehlerhafte Konfigurationen oder Hardware-Fehler.
+\cite{analysis_of_network_partition_failures}
+
+\begin{figure}[H]
+	\centering
+	\begin{subfigure}{.495\textwidth}
+		\centering
+		\includegraphics[width=.8\linewidth]{img/ditm-Partitions-full.pdf}
+		\caption{Vollständige Netzwerk-Unterbrechung: Das System ist in zwei alleinstehende Teile getrennt.
+			\cite{analysis_of_network_partition_failures}}
+		\label{fig:full_partition}
+	\end{subfigure}
+	\begin{subfigure}{.495\textwidth}
+		\centering
+		\includegraphics[width=.85\linewidth]{img/ditm-Partitions-partial.pdf}
+		\caption{Teilweise Netzwerk-Unterbrechung: Teile des Systems sind voneinander getrennt, aber nicht alle Knoten des Systems
+			sind betroffen. \cite{analysis_of_network_partition_failures}}
+		\label{fig:partial_partition}
+	\end{subfigure}
+	\begin{subfigure}{.495\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{img/ditm-Partitions-simplex.pdf}
+		\caption{Einseitige Netzwerk-Unterbrechung: Nachrichten können nur in eine Richtung fließen.
+			\cite{analysis_of_network_partition_failures}}
+		\label{fig:simplex_partition}
+	\end{subfigure}
+	\caption{Arten von Netzwerk-Unterbrechungen}
+	\label{fig:partition_types}
+\end{figure}
+
 \subsection{CAP}
 \subsection{Linearisierbarkeit}
-\subsection{Verteilter Consens}
-\section{Docker}
-% Docker als leichtgewichtige Alternative zu virtuellen Maschinen ist inzwischen weitgehen bekannt und bildet das Rückrad vieler
-% moderner Cloud Anwendungen. Verteilte Microservice-basierte Systeme laufen heute fast ausschließlich in Containern und damit oft
-% in Docker oder ähnlichen Technologien.
-\section{Proxy}
 
 \chapter{Stand der Technik}
 Im Umgang mit Fehlern in verteilten Systemen werden eine Reihe verschiedener Ansätze mit unterschiedlichen Zielen verfolgt.
@@ -193,11 +236,12 @@ und wird für Projekte wie MongoDB, etcd, VoltDB, Hazelcast, Elasticsearch und C
 Systeme bereits reale Bugs aufgedeckt \cite{jepsen_analyses}.
 
 Bei Jepsen-Tests werden auf einem Kontrollknoten eine Reihe von Client Prozessen ausgeführt, die Requests an das SUT senden.
-Gleichzeitig werden mit Hilfe von sog. Nemesis Prozessen zufallsbasiert verschiedene Fehler in das System eingeführt. Zur
-Erzeugung von Netzwerk-Unterbrechungen verwendet Jepsen die in Linux integrierten Netwerk-Tools auf den jeweiligen Knoten des SUT.
-Neben Netzwerk-Unterbrechungen ist Jepsen in der Lage, verschiedene andere Fehler zu erzeugen, wie beispielsweise Unterschiede
-zwischen den Systemuhren der einzelnen Knoten.  Am Ende eines Tests wird verifiziert, ob alle durchgeführten Operationen unter den
-Regeln des SUT linearisierbar sind. Sind sie das nicht, hat Jepsen einen Bug gefunden. \cite{jepsen_github}
+Gleichzeitig werden mit Hilfe von sog. Nemesis Prozessen zufallsbasiert verschiedene Fehler in das System eingeführt. Jepsen
+greift dazu per SSH auf die einzelnen Knoten des SUT zu und verwendet die in Linux integrierten Möglichkeiten zum Filtern von
+Netzwerk-Paketen (iptables) zur Erzeugung von Netzwerk-Unterbrechungen. Neben Netzwerk-Unterbrechungen ist Jepsen in der Lage,
+verschiedene andere Fehler zu erzeugen, wie beispielsweise Unterschiede zwischen den Systemuhren der einzelnen Knoten. Am Ende
+eines Tests wird verifiziert, ob alle durchgeführten Operationen unter den Regeln des SUT linearisierbar sind. Sind sie das nicht,
+hat Jepsen einen Bug gefunden. \cite{jepsen_github}
 
 Failure-Testing eignet sich vor allem gut für Komponenten mit hohen Anforderungen an Fehlertoleranz und Korrektheit, wie verteilte
 Datenbanken, Message-Broker und verteilte Dateisysteme. Failure-Testing ist heute der effektivste Ansatz, um Bugs in solchen
@@ -339,12 +383,12 @@ Oberfläche von ShiViz.
 	\label{fig:debugAR}
 \end{figure}
 
-\section{Was fehlt noch?}
+\section{Offene Fragen}
 Fehlertoleranz und Debugging in verteilten Systemen sind aktuelle Forschungsfelder, die sich schnell weiterentwickeln und
 dementsprechend noch viele Möglichkeiten für Innovationen bieten. Die folgenden sind derzeit offene Probleme, die weiteren
 Entwicklungen bedürfen.
 
-\subsection{Failure-Testing und Chaos-Engineering}
+\subsection{Failure-Testing und Chaos-Engineering} % remove headline
 Alvaro und Tymon \cite{abstracting_the_geniuses} stellen als großen aktuellen Mangel heraus, dass sowohl Failure-Testing, als auch
 Chaos Engineering in der Anwendung so komplex sind, dass die Techniken ausschließlich den Entwicklern zur Verfügung stehen, die
 sich voll darauf spezialisieren. Sie schlagen unter Anderem eine weitgehende Automatisierung von Failure-Testing in der Zukunft
@@ -362,7 +406,7 @@ Ebenfalls im Bezug auf allemeineres Tooling stellen Basiri et. al. \cite{chaos_e
 Tooling für Chaos-Engineering entwickeln lässt, da auch hier Organisationen ursprünglich vorwiegend eigene, interne Tools
 entwickelt haben.
 
-\subsection{Debugging}
+\subsection{Debugging} % remove headline
 Im Bereich des Debuggings von verteilten Systemen stellen sich ebenfalls noch eine Reihe von Herausforderungen für die Zukunft.
 Unter Anderem die Frage danach, wie unterschiedliche Aspekte von verteilten Systemen am besten visualisiert werden können
 \cite{oddity_graphical_debugger}. Auch ist noch offen, wie interaktive Debugger mit sehr großen Systemen skalieren können, sowohl
@@ -373,6 +417,8 @@ insbesondere offline-Replay als Teil Ihrer Zukunftsvision heraus, um mit D3S ide
 Praxis haben sich seitdem Failure-Testing und Chaos-Engineering gegenüber Prädikat-Checkern zur Bug-Identifikation durchgesetzt.
 Nichts desto trotz könnte sich ein Programmiersprachen-agnostischer Replay-Debugger, welcher durch Failure-Testing gefundene Bugs
 deterministisch wiedergeben kann, als sehr hilfreich erweisen und ist eine Entwicklung, die es noch zu machen gilt.
+
+\section{Offene Herausforderungen}
 
 
 
@@ -436,12 +482,12 @@ Tabelle \ref{tab:nfa} beschreibt die nicht-funktionalen Anforderungen an das Sys
 	\caption{Nicht-Funktionale Anforderungen\label{tab:nfa}}                                                                                                                                                                                        \\
 	\hline
 	ID   & Anforderung              & Beschreibung                                                                                                                                                                                                  \\ \hline
-	NFA1 & Portabilität             & Das System soll vollständig in Docker lauffähig und mittlels docker-compose konfigurierbar sein.                                                                                                         \\ \hline
+	NFA1 & Portabilität             & Das System soll vollständig in Docker lauffähig und mittlels docker-compose konfigurierbar sein.                                                                                                              \\ \hline
 	NFA2 & Proxy Architektur        & Das System soll die in Kapitel \ref{chap:idea} beschriebene Idee umsetzen.                                                                                                                                    \\ \hline
 	NFA3 & HTTP                     & Das System soll mit HTTP als Netzwerkprotokoll arbeiten und grundlegend alle verteilten Systeme, die ausschließlich über HTTP kommunizieren und die Umgebungsvariable HTTP\_PROXY respektieren, unterstützen. \\ \hline
 	NFA4 & Deterministische Replays & In der Wiedergabe einer Aufzeichnung sollen immer genau die Teile des Netzwerkverkehrs geblockt werden, die auch in der Aufzeichnung vom System geblockt wurden. Nicht mehr, nicht weniger und keine anderen. \\ \hline
 	NFA5 & Usability                & Das System soll einfach über eine graphische Oberfläche bedienbar sein.                                                                                                                                       \\ \hline
-	NFA6 & Echtzeit                 & Requests und Logs einer laufenden Aufzeichnung sollen in Echtzeit angezeigt werden.                                                                                                                         \\ \hline
+	NFA6 & Echtzeit                 & Requests und Logs einer laufenden Aufzeichnung sollen in Echtzeit angezeigt werden.                                                                                                                           \\ \hline
 	NFA7 & Unverändertes SUT        & Das SUT soll für die Verwendung des Systems nicht angepasst werden müssen.                                                                                                                                    \\ \hline
 \end{longtable}
 
@@ -840,7 +886,7 @@ nachstellen zu können. Dazu zählen Systeme wie MongoDB, Redis und VoltDB. Die 
 ursprünglich aus MongoDB und Redis.
 
 \subsubsection{Startup}
-Das dritte und letzte System ist das Produktionssystem eines jungen Startups. Konkret handelt es sich um eine SaaS-Lösung für das
+Das dritte und letzte System ist das System eines realen jungen Startups. Konkret handelt es sich um eine SaaS-Lösung für das
 Sustainability Reporting von Mittelständischen Unternehmen. Das System setzt auf eine verteilte, Service-orientierte Architektur
 und besteht aus derzeit 5 Services. Im Kontext von ditm kann einer der fünf Services nicht verwendet werden, da dieser von AWS
 Diensten wie S3 abhängig ist, es wird hier also ein Cluster aus vier Knoten verwendet. Die anderen Services sind von dem
@@ -887,7 +933,7 @@ gibt allerdings auch Bugs, die sich nur bei einer teilweisen Zertrennung eines S
 Alquraan et. al. \cite{analysis_of_network_partition_failures} nennen, ist ein Bug in MongoDB, welcher zu einer Schleife führt, in
 der endlos neue Leader gewählt werden. MongoDB verwendet einen Verwaltungsknoten, um unentschiedene Elections zu entscheiden.
 Tritt in einem Cluster mit zwei Replica-Knoten und einem Verwaltungsknoten eine Netzwerk-Unterbrechung wie in Abbildung
-\ref{fig:partial_partition} auf, führt das dazu, dass Knoten A und B sich abwechselnd zum Leader wählen lassen, da sie jeweils nie
+\ref{fig:partial_partition_mongo} auf, führt das dazu, dass Knoten A und B sich abwechselnd zum Leader wählen lassen, da sie jeweils nie
 den Leader erreichen können, der Verwaltungsknoten aber immer an beiden Elections teilnehmen kann und den alten Leader dann über
 den neuen Leader informiert. Dieser Bug manifestiert sich vollständig ohne Interaktionen durch einen Client von außen und
 der Effekt verschwindet wieder, sobald die Netzwerk-Unterbrechung geheilt ist.
@@ -896,7 +942,7 @@ der Effekt verschwindet wieder, sobald die Netzwerk-Unterbrechung geheilt ist.
 	\centering
 	\includegraphics[width=0.6\linewidth]{img/ditm-Partitions.pdf}
 	\caption{Visualisierung einer Netzwerk-Unterbrechung (rot), die in MongoDB eine Election-Endlosschleife auslösen konnte}
-	\label{fig:partial_partition}
+	\label{fig:partial_partition_mongo}
 \end{figure}
 
 Im Gegensatz zu MongoDB verwendet Raft keinen Verwaltungsknoten. Der beschriebene Bug kann dennoch realitätsnah in einem
@@ -915,11 +961,12 @@ einen Leader stimmen darf. Die Maßnahme, dessen Fehlen diesen konkreten Bug erm
 dem Cluster eine Mehrheitsentscheidung aller Knoten ist. Der Leader sollte also nicht in der Lage sein, einen Knoten zu entfernen,
 ohne eine Bestätigung der Aktion von mindestens der Hälfte des Clusters zu erhalten.
 
-Fehlt diese Einschränkung, ermöglicht das, eine Split-Brain Situation zu erzeugen, indem der Leader durch eine
+Einer frühen Version der Raft-Implementierung Redis-Raft, welche optinal in Redis verwendet werden kann, fehlte diese
+Einschränkung. In dieser Version ist es möglich, eine Split-Brain Situation zu erzeugen, indem der Leader durch eine
 Netzwerk-Unterbrechung vom Rest des Clusters getrennt wird und dann auf einmal angewiesen wird, alle anderen Knoten aus dem
 Cluster zu entfernen. Das führt dazu, dass der alte Leader effektiv zu einen ein-Knoten Cluster wird, während die anderen Knoten
 einen neuen Leader wählen und gemeinsam weiter als Cluster funktionieren. Das passiert, weil die anderen Knoten durch die
-Netzwerk-Unterbrechung nie von ihrer Entfernung informiert werden und diese auch nicht bestätigen.
+Netzwerk-Unterbrechung nie von ihrer Entfernung informiert werden und diese auch nicht bestätigen. \cite{jepsen_redis_raft}
 
 \subsubsection{B5: Unereichbare Daten}
 % token login funktioniert in replays nicht, workaround: token lifetime wurde für Experimente auf 100 Tage gesetzt
