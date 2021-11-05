@@ -11,7 +11,6 @@
 	volume = {14},
 	number = {2},
 	issn = {1542-7730},
-	url = {https://doi.org/10.1145/2927299.2940294},
 	doi = {10.1145/2927299.2940294},
 	abstract = {Distributed systems pose unique challenges for software
 	            developers. Reasoning about concurrent activities of system nodes
@@ -38,7 +37,6 @@
 	address = {New York, NY, USA},
 	volume = {2},
 	number = {POPL},
-	url = {https://doi.org/10.1145/3158134},
 	doi = {10.1145/3158134},
 	abstract = {Random testing has proven to be an effective way to catch bugs
 	            in distributed systems in the presence of network partition
@@ -82,7 +80,6 @@
 	volume = {61},
 	number = {1},
 	issn = {0001-0782},
-	url = {https://doi.org/10.1145/3152483},
 	doi = {10.1145/3152483},
 	abstract = {Ordinary users need tools that automate the selection of
 	            custom-tailored faults to inject.},
@@ -152,7 +149,6 @@
 	isbn = {0897919815},
 	publisher = {Association for Computing Machinery},
 	address = {New York, NY, USA},
-	url = {https://doi.org/10.1145/269629.269649},
 	doi = {10.1145/269629.269649},
 	booktitle = {Proceedings of the Conference on TRI-Ada '97},
 	pages = {189–195},
@@ -189,7 +185,6 @@
 	volume = {59},
 	number = {8},
 	issn = {0001-0782},
-	url = {https://doi.org/10.1145/2909480},
 	doi = {10.1145/2909480},
 	abstract = {ShiViz is a new distributed system debugging visualization tool.
 	            },
@@ -206,7 +201,6 @@
 	isbn = {9781450369954},
 	publisher = {Association for Computing Machinery},
 	address = {New York, NY, USA},
-	url = {https://doi.org/10.1145/3359591.3359733},
 	doi = {10.1145/3359591.3359733},
 	abstract = {Debugging distributed systems is hard. Most of the techniques
 	            that have been developed for debugging such systems use either
@@ -314,7 +308,6 @@
 	isbn = {9781450356213},
 	publisher = {Association for Computing Machinery},
 	address = {New York, NY, USA},
-	url = {https://doi.org/10.1145/3170427.3188679},
 	doi = {10.1145/3170427.3188679},
 	abstract = {Distributed systems are very complex and in case of errors hard
 	            to debug. The high number of messages with non deterministic
@@ -363,7 +356,6 @@
 	isbn = {9781450362818},
 	publisher = {Association for Computing Machinery},
 	address = {New York, NY, USA},
-	url = {https://doi.org/10.1145/3302424.3303947},
 	doi = {10.1145/3302424.3303947},
 	abstract = {Writing correct distributed systems code is difficult,
 	            especially for novice programmers. The inherent asynchrony and
@@ -398,7 +390,6 @@
 	volume = {29},
 	number = {2},
 	issn = {1049-331X},
-	url = {https://doi.org/10.1145/3375633},
 	doi = {10.1145/3375633},
 	journal = {ACM Trans. Softw. Eng. Methodol.},
 	month = mar,
@@ -463,7 +454,6 @@
 	isbn = {9781450369732},
 	publisher = {Association for Computing Machinery},
 	address = {New York, NY, USA},
-	url = {https://doi.org/10.1145/3357223.3366026},
 	doi = {10.1145/3357223.3366026},
 	booktitle = {Proceedings of the ACM Symposium on Cloud Computing},
 	pages = {486},
@@ -500,7 +490,6 @@
 	isbn = {9781450345255},
 	publisher = {Association for Computing Machinery},
 	address = {New York, NY, USA},
-	url = {https://doi.org/10.1145/2987550.2987583},
 	doi = {10.1145/2987550.2987583},
 	abstract = {We conducted a cloud outage study (COS) of 32 popular Internet
 	            services. We analyzed 1247 headline news and public post-mortem
@@ -556,4 +545,109 @@
 	volume = {1},
 	journal = {Journal of Applied Science and Technology Trends},
 	doi = {10.38094/jastt1331},
+}
+
+@article{the_network_is_reliable,
+	title = {The network is reliable: An informal survey of real-world
+	         communications failures},
+	author = {Bailis, Peter and Kingsbury, Kyle},
+	journal = {Queue},
+	volume = {12},
+	number = {7},
+	pages = {20--32},
+	year = {2014},
+	publisher = {ACM New York, NY, USA},
+}
+
+@article{linearizability_paper,
+	author = {Herlihy, Maurice P. and Wing, Jeannette M.},
+	title = {Linearizability: A Correctness Condition for Concurrent Objects},
+	year = {1990},
+	issue_date = {July 1990},
+	publisher = {Association for Computing Machinery},
+	address = {New York, NY, USA},
+	volume = {12},
+	number = {3},
+	issn = {0164-0925},
+	doi = {10.1145/78969.78972},
+	abstract = {A concurrent object is a data object shared by concurrent
+	            processes. Linearizability is a correctness condition for
+	            concurrent objects that exploits the semantics of abstract data
+	            types. It permits a high degree of concurrency, yet it permits
+	            programmers to specify and reason about concurrent objects using
+	            known techniques from the sequential domain. Linearizability
+	            provides the illusion that each operation applied by concurrent
+	            processes takes effect instantaneously at some point between its
+	            invocation and its response, implying that the meaning of a
+	            concurrent object's operations can be given by pre- and
+	            post-conditions. This paper defines linearizability, compares it
+	            to other correctness conditions, presents and demonstrates a
+	            method for proving the correctness of implementations, and shows
+	            how to reason about concurrent objects, given they are
+	            linearizable.},
+	journal = {ACM Trans. Program. Lang. Syst.},
+	month = jul,
+	pages = {463–492},
+	numpages = {30},
+}
+
+@inproceedings{cap_brewer,
+	title = {Towards robust distributed systems},
+	author = {Brewer, Eric A},
+	booktitle = {PODC},
+	volume = {7},
+	number = {10.1145},
+	pages = {343477--343502},
+	year = {2000},
+	organization = {Portland, OR},
+}
+
+@article{perspectives_on_cap,
+	author = {Gilbert, Seth and Lynch, Nancy},
+	journal = {Computer},
+	title = {Perspectives on the CAP Theorem},
+	year = {2012},
+	volume = {45},
+	number = {2},
+	pages = {30-36},
+	doi = {10.1109/MC.2011.389},
+}
+
+@inproceedings{mugshot_js_replay_proxy,
+	author = {Mickens, James and Elson, Jeremy and Howell, Jon},
+	title = {Mugshot: Deterministic Capture and Replay for Javascript
+	         Applications},
+	year = {2010},
+	publisher = {USENIX Association},
+	address = {USA},
+	booktitle = {Proceedings of the 7th USENIX Conference on Networked Systems
+	             Design and Implementation},
+	pages = {11},
+	numpages = {1},
+	location = {San Jose, California},
+	series = {NSDI'10},
+}
+
+@inproceedings{mahimahi_http_replay,
+	author = {Ravi Netravali and Anirudh Sivaraman and Somak Das and Ameesh
+	          Goyal and Keith Winstein and James Mickens and Hari Balakrishnan},
+	title = {Mahimahi: Accurate Record-and-Replay for {HTTP}},
+	booktitle = {2015 {USENIX} Annual Technical Conference ({USENIX} {ATC} 15)},
+	year = {2015},
+	isbn = {978-1-931971-225},
+	address = {Santa Clara, CA},
+	pages = {417--429},
+	publisher = {{USENIX} Association},
+	month = jul,
+}
+
+@inproceedings{performace_replay_testing,
+	author = {Bertolino, Antonia and De Angelis, Guglielmo and Sabetta, Antonino
+	          },
+	booktitle = {2008 23rd IEEE/ACM International Conference on Automated
+	             Software Engineering},
+	title = {VCR: Virtual Capture and Replay for Performance Testing},
+	year = {2008},
+	pages = {399-402},
+	doi = {10.1109/ASE.2008.58},
 }

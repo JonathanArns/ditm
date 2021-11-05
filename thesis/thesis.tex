@@ -106,17 +106,16 @@ Systems. Um die Verfügbarkeit und Korrektheit von Systemen zu garantieren, ist 
 sich von diesen Fehlern selbstständig erholen und weiter funktionieren können. \cite{distributed_systems_book}
 
 Eine häufige Annahme, die in diesem Kontext problematisch ist, ist dass das Netzwerk, welches zur Kommunikation verwendet wird,
-fehlerfrei ist \cite{brief_introduction_to_distributed_systems}. In der Realität sorgen Netzwerk-Unterbrechungen und andere Fehler
-dafür, dass die Kommunikation innerhalb verteilter Systeme grundsätzlich unzuverlässig ist \cite{distributed_systems_book,
-	distributed_systems_concepts_and_design}. Verteilte Systeme müssen also auch in der Gegenwart von Netzwerk-Unterbrechungen die
-Integrität des jeweiligen System und seiner Daten garantieren. Obwohl das Problem an sich bereits intensiv erforscht ist, führen
-Netzwerk-Unterbrechungen weiterhin zu schwerwiegenden Fehlern in vielen wichtigen Produktionssystemen
-\cite{analysis_of_network_partition_failures}. Dazu trägt unter Anderem ein Mangel an Test- und Debugging-Tools für diesen Zweck
-bei \cite{failify_paper,simple_testing_can_prevent}, der eine Folge der rasanten Entwicklung moderner Cloud-Infrastruktur ist
-\cite{why_does_cloud_stop_computing}.
-Zwar gibt es bereits Tools, die effektiv darin sind, neue Bugs zu finden, diese sind aber nicht in der Lage, gefundene Bugs
-deterministisch zu reproduzieren \cite{failify_paper}. Das ist sowohl für das Erstellen von Regressionstests, als auch beim Debugging
-ein Problem.
+fehlerfrei ist \cite{brief_introduction_to_distributed_systems, the_network_is_reliable}. In der Realität sorgen
+Netzwerk-Unterbrechungen und andere Fehler dafür, dass die Kommunikation innerhalb verteilter Systeme grundsätzlich unzuverlässig
+ist \cite{distributed_systems_book, distributed_systems_concepts_and_design}. Verteilte Systeme müssen also auch in der Gegenwart
+von Netzwerk-Unterbrechungen die Integrität des jeweiligen System und seiner Daten garantieren. Obwohl das Problem an sich bereits
+intensiv erforscht ist, führen Netzwerk-Unterbrechungen weiterhin zu schwerwiegenden Fehlern in vielen wichtigen
+Produktionssystemen \cite{analysis_of_network_partition_failures}. Dazu trägt unter Anderem ein Mangel an Test- und
+Debugging-Tools für diesen Zweck bei \cite{failify_paper,simple_testing_can_prevent}, der eine Folge der rasanten Entwicklung
+moderner Cloud-Infrastruktur ist \cite{why_does_cloud_stop_computing}. Zwar gibt es bereits Tools, die effektiv darin sind, neue
+Bugs zu finden, diese sind aber nicht in der Lage, gefundene Bugs deterministisch zu reproduzieren \cite{failify_paper}. Das ist
+sowohl für das Erstellen von Regressionstests, als auch beim Debugging ein Problem.
 
 % Forschungsfrage: Können durch Netzwerk-Unterbrechungen ausgelöste Bugs in einer Testumgebung für verteilte Systeme erzeugt,
 % aufgezeichnet und deterministisch wiedergegeben werden? - unabhängig von technologie des systems
@@ -166,8 +165,20 @@ Applikation sein.
 % passing messages. This simple definition covers the entire range of systems in which
 % networked computers can usefully be deployed. \cite{distributed_systems_concepts_and_design}
 \subsection{Verteilter Consens}
+\cite{raft_original_paper}
 
 \section{Netzwerk-Unterbrechungen}
+Eine Netzwerk-Unterbrechung ein einem verteilten System ist eine Situation, in der ein Teil des Netzwerks ausfällt, so dass Teile
+des Systems, die eigentlich miteinander kommunizieren können sollten, sich nicht mehr erreichen können. Netzwerk-Unterbrechungen
+können zu fatalen Folgen, wie dem Verlust oder der Korruption von Daten, führen. Sie können außerdem auf ganz unterschiedlichen
+Größenordnungen auftreten, sowohl zwischen geographisch unterschiedlich gelegenen Data-Centern, als auch zwischen Rechnern im
+gleichen Data-Center. \cite{analysis_of_network_partition_failures}
+
+Zwar gibt es keine zuverlässigen Zahlen dazu, wie oft Netzwerk-Unterbrechungen auftreten, auch deshalb, weil Netzwerk nicht gleich
+Netzwerk ist und die Unterschiede auch im Bezug auf die Häufigkeit und Dauer von Netzwerk-Unterbrechungen sehr groß sind. Aus
+anekdotischen Berichten und internen Studien großer Unternehmen lässt sich trotzdem schließen, dass Netzwerk-Unterbrechungen nicht
+nur ein akademisches Problem sind, sondern auch in der Realität auftreten und Schaden anrichten. Aus diesem Grund ist es wichtig,
+verteilte Systeme so zu entwerfen, dass sie mit Netzwerk-Unterbrechungen umgehen können. \cite{the_network_is_reliable}
 
 \subsection{Arten von Netzwerk-Unterbrechungen}
 Netzwerk-Unterbrechungen lassen sich in drei Kategorien einteilen. Vollständige Netzwerk-Unterbrechungen wie in Abbildung
@@ -207,8 +218,12 @@ Netzwerk-Unterbrechung tritt selten auf und wird ausgelöst durch fehlerhafte Ko
 	\label{fig:partition_types}
 \end{figure}
 
-\subsection{CAP}
+\subsection{Partitionstoleranz und CAP}
+\cite{cap_brewer}
+\cite{perspectives_on_cap}
+
 \subsection{Linearisierbarkeit}
+\cite{linearizability_paper}
 
 \chapter{Stand der Technik}
 Im Umgang mit Fehlern in verteilten Systemen werden eine Reihe verschiedener Ansätze mit unterschiedlichen Zielen verfolgt.
@@ -300,7 +315,7 @@ Profiling von Systemen und die Diagnose von Problemen im Ruhezustand des Systems
 \cite{magpie_tracing} ist ein Tracing System, welches sich insbesondere zur Annomalieerkennung eignet, sowohl für Probleme in der
 Korrektheit, als auch der Performance von verteilten Systemen \cite{so_you_want_to_trace}.
 
-\section{Debugging}
+\section{Debugger}
 Neben Werkzeugen wie Tracing, die ebenfalls zum Debugging von verteilten Systemen dienen gibt es eine Reihe weiterer Tools, die
 konkret diesem Zweck dienen, oft mit einem speziellen Fokus auf entweder eine bestimmte Art von System oder eine bestimmte
 Klasse von Fehlern. Die Tools lassen sich in zwei grobe Kategorien einteilen: Visuelle Debugger und Klassische Debugger.
@@ -383,7 +398,23 @@ Oberfläche von ShiViz.
 	\label{fig:debugAR}
 \end{figure}
 
-\section{Offene Fragen}
+\section{Proxies}
+Proxies finden in verteilten Systemen unter Anderem Verwendung, um die Verfügbarkeit von Systemen zu verbessern
+\cite{distributed_systems_concepts_and_design}, aber auch zum Testen und beim Debugging können Proxies eingesetzt werden. Der bei
+Shopify entwickelte Toxiproxy\footnote{\url{https://github.com/Shopify/toxiproxy}} ist ein für das Failure-Testing von verteilten
+Systemen entwickelter TCP-Proxy, welcher Netzwerk-Unterbrechungen und andere Netzwerk-Fehler simulieren kann.
+
+In anderen Feldern werden Proxies außerdem erfolgreich an verschiedenen Stellen eingesetzt, um Replays von Netzwerk-Verkehr
+abzuspielen. Beispielsweise werden Proxy-basierte Replays für reproduzierbare Performance-Tests von nicht-verteilten Systemen
+verwendet \cite{performace_replay_testing}. Das Web-Security-Testing-Tool Burp Suite\footnote{\url{https://portswigger.net/burp}}
+verwendet ebenfalls einen Proxy, um Requests abzufangen, aufzuzeichnen und gegen ein Angriffziel wiedergeben zu können.
+
+Auch Debugger, die auf das Prinzip setzen, gibt es bereits. Mugshot \cite{mugshot_js_replay_proxy} und ähnliche Tools
+\cite{mahimahi_http_replay} sind Replay-Debugger für Browser-Applikationen, die einen Proxy einsetzen, um Requests aufzuzeichnen
+und in Replays deterministisch wiederzugeben. Speziell für das Debugging verteilter Systeme wurde ein Proxy-basierter
+Replay-Mechanismus hingegen noch nicht eingesetzt.
+
+\section{Offene Fragen und Herausforderungen}
 Fehlertoleranz und Debugging in verteilten Systemen sind aktuelle Forschungsfelder, die sich schnell weiterentwickeln und
 dementsprechend noch viele Möglichkeiten für Innovationen bieten. Die folgenden sind derzeit offene Probleme, die weiteren
 Entwicklungen bedürfen.
@@ -402,9 +433,9 @@ ist, um weitreichend einsetzbar zu sein. Heute verwenden einige große Projekte 
 die sich auf ein konkretes System beschränken und durch den getrennten Entwicklungsaufwand nicht mit dem Funktionsumfang von Tools
 wie Jepsen mithalten können. \cite{failify_masters_thesis}
 
-Ebenfalls im Bezug auf allemeineres Tooling stellen Basiri et. al. \cite{chaos_engineering} die Frage, ob sich allgemeineres
-Tooling für Chaos-Engineering entwickeln lässt, da auch hier Organisationen ursprünglich vorwiegend eigene, interne Tools
-entwickelt haben.
+Ebenfalls im Bezug auf allemeiner verwendbares Tooling stellen Basiri et. al. \cite{chaos_engineering} die Frage, ob sich
+allgemeiner verwendbares Tooling für Chaos-Engineering entwickeln lässt, da auch hier Organisationen ursprünglich vorwiegend
+eigene, interne Tools entwickelt haben.
 
 \subsection{Debugging} % remove headline
 Im Bereich des Debuggings von verteilten Systemen stellen sich ebenfalls noch eine Reihe von Herausforderungen für die Zukunft.
@@ -422,7 +453,7 @@ deterministisch wiedergeben kann, als sehr hilfreich erweisen und ist eine Entwi
 
 
 
-\chapter{Systembeschreibung}
+\chapter{Ein Proxy zum Debugging von Netzwerk-Unterbrechungen}
 \label{chap:system}
 Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
 
