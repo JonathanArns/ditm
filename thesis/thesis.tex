@@ -60,6 +60,8 @@
 % \rhead{\thechapter}
 % \cfoot{\thepage}
 
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
@@ -105,7 +107,7 @@ auftreten. Eine davon ist, dass in verteilten Systemen oft einzelne Komponenten 
 Systems. Um die Verfügbarkeit und Korrektheit von Systemen zu garantieren, ist es wichtig, verteilte Systeme zu entwickeln, die
 sich von diesen Fehlern selbstständig erholen und weiter funktionieren können. \cite{distributed_systems_book}
 
-Eine häufige Annahme, die in diesem Kontext problematisch ist, ist dass das Netzwerk, welches zur Kommunikation verwendet wird,
+Eine häufige Annahme, die problematisch ist, ist dass das Netzwerk, welches zur Kommunikation verwendet wird,
 fehlerfrei ist \cite{brief_introduction_to_distributed_systems, the_network_is_reliable}. In der Realität sorgen
 Netzwerk-Unterbrechungen und andere Fehler dafür, dass die Kommunikation innerhalb verteilter Systeme grundsätzlich unzuverlässig
 ist \cite{distributed_systems_book, distributed_systems_concepts_and_design}. Verteilte Systeme müssen also auch in der Gegenwart
@@ -132,14 +134,15 @@ Programmiersprachen-agnostisch Bugs in verteilten Systemen reproduzieren kann.
 % Approach
 Der verfolge Ansatz für ein solches Tool ist eine Testumgebung, welche einen Proxy verwendet, um Netzwerk-Unterbrechungen zu
 erzeugen. Dieser Proxy zeichnet zusätzlich den gesamten Netzwerk-Verkehr des Systems inklusive Metadaten auf, um die erzeugten
-Netzwerk-Unterbrechungen später korrekt wiedergeben zu können. Eine graphische Oberfläche bündelt den Netzwerk-Verkehr und die
-Log-Ausgaben des System under Test (SUT), um dem Nutzer einen bei der Identifikation von Bugs zu helfen.
+Netzwerk-Unterbrechungen später in einem Replay gleich wiedergeben zu können. Eine graphische Oberfläche stellt den
+Netzwerk-Verkehr und die Log-Ausgaben des System under Test (SUT) gemeinsam chronologisch sortiert dar, um dem Nutzer einen bei
+der Identifikation von Bugs zu helfen.
 
 % Overview
 Zu Anfang der Arbeit werden zunächst die technischen Grundlagen über verteilte Systeme, Netzwerk-Unterbrechungen und relevante
 Technologien erläutert. Im Anschluss folgt eine Darstellung des aktuellen Stands der Technik, sowie offener Forschungsfragen und
 noch fehlender Entwicklungen im Forschungsgebiet. Kapitel \ref{chap:system} knüpft daran an, indem im Detail die verfolgte Idee
-und der daraus entwickelte Prototyp ditm beschrieben wird.
+und der daraus entwickelte Prototyp beschrieben wird.
 
 Für die empirische Evaluation des Prototypen werden erst alle entworfenen Experimente berschrieben, bevor in Kapitel
 \ref{chap:results} die Ergebnisse zusammengefasst werden. Im Anschluss werden alle Ergebnisse und deren Einschränkungen
@@ -168,7 +171,7 @@ Applikation sein.
 \cite{raft_original_paper}
 
 \section{Netzwerk-Unterbrechungen}
-Eine Netzwerk-Unterbrechung ein einem verteilten System ist eine Situation, in der ein Teil des Netzwerks ausfällt, so dass Teile
+Eine Netzwerk-Unterbrechung ein einem verteilten System ist eine Situation, in der ein Teil des Netzwerks ausfällt, sodass Teile
 des Systems, die eigentlich miteinander kommunizieren können sollten, sich nicht mehr erreichen können. Netzwerk-Unterbrechungen
 können zu fatalen Folgen, wie dem Verlust oder der Korruption von Daten, führen. Sie können außerdem auf ganz unterschiedlichen
 Größenordnungen auftreten, sowohl zwischen geographisch unterschiedlich gelegenen Data-Centern, als auch zwischen Rechnern im
@@ -225,30 +228,37 @@ Netzwerk-Unterbrechung tritt selten auf und wird ausgelöst durch fehlerhafte Ko
 \subsection{Linearisierbarkeit}
 \cite{linearizability_paper}
 
+
+
 \chapter{Stand der Technik}
 Im Umgang mit Fehlern in verteilten Systemen werden eine Reihe verschiedener Ansätze mit unterschiedlichen Zielen verfolgt.
 Failure Testing und Chaos Engineering sind zwei ähnliche Methoden, die sich darauf verlassen, Fehler mit Hilfe von Tests zu
 finden, mit dem Unterschied, dass Failure Testing in einer Testumgebung und Chaos Engineering in der Produktions-Umgebung
-eingesetzt werden. Daneben gibt es Log-Analyse und Tracing Systeme, die vor allem dazu dienen, aufgetretene Fehler
+eingesetzt werden. Daneben gibt es Log-Analyse und Tracing-Systeme, die vor allem dazu dienen, aufgetretene Fehler
 nachzuvollziehen. Zu diesem Zweck gibt es ebenfalls eine Handvoll weiterer, oft experimenteller Debugging-Tools. Diese reichen von
-Tools, die einem normalen Debugger ähneln, bis hin zu Tools, die sich vor allem auf die Visualisierung von Systemen und Abläufen
-konzentrieren. Nachfolgend werden die genannten Methoden und jeweils wichtige Tools weiter erläutert. \cite{challenges_and_options}
+Tools, die einem klassischen Debugger ähneln, bis hin zu Tools, die sich vor allem auf die Visualisierung von Systemen und Abläufen
+konzentrieren. \cite{challenges_and_options}
+
+Nachfolgend werden die genannten Methoden und jeweils wichtige Tools weiter erläutert. Außerdem wird betrachtet, welche Rolle
+Proxies als Technologie heute in dem Anwendungsbereich einnehmen und welche weiteren Möglichkeiten sie in adjazenten Bereichen
+bieten. Schlussendlich wird daraus in Kombination mit den noch offenen Herausforderungen des Forschungsfeldes die zentrale
+Hypothese dieser Arbeit abgeleitet.
 
 \section{Failure Testing}
 Failure Testing ist ein Ansatz zum Testen der Fehlertoleranz verteilter Systeme. Die Grundidee ist immer, als Client mit dem
-System zu interagieren und zeitgleich die Umgebung des Systems zu manipulieren, beispielsweise mit Netzwerk-Unterbrechungen.
+System zu interagieren und gleichzeitig die Umgebung des Systems zu manipulieren, beispielsweise mit Netzwerk-Unterbrechungen.
 Failure Tests werden als automatisierte Integrationstests über eine Programmierschnittstelle definiert und umfassen in der Regel den Aufbau
 und Abbau des Systems, eine Reihe definierter Interaktionen mit dem System und zufällige oder deterministische Fehler-Injektionen
-in die Systemumgebung. Zusätzlich wird oft nach Tests die Einhaltung von Invarianten des Systems anhand eines Modells geprüft, um
+in die Systemumgebung. Zusätzlich wird oft nach den Tests die Einhaltung von Invarianten des Systems anhand eines Modells geprüft, um
 in zufallsgetriebenen Tests automatisch Bugs identifizieren zu können. \cite{failify_masters_thesis}
 
 Majumdar et. al. \cite{why_is_random_testing_effective} zeigen, dass zufallsgetriebenes Failure-Testing effektiv für
 Partition-Toleranz Bugs ist, obwohl die Menge an potentiell fehlerhaften Abläufen in realen Systemen gewaltig ist. Diese
-Effektivität zeigt sich auch in der Realität an Tools wie Jepsen. Jepsen ist ein Failure-Testing-Framework in der Sprache
-Clojure, welches speziell auf das Verhalten von verteilten Systemen bei Netwerk-Unterbrechungen u.Ä. ausgerichtet ist. Jepsen hat
-sich auf dem Gebiet zu einem Industriestandart für das Testen von verteilte Datenbanken entwickelt \cite{abstracting_the_geniuses}
-und wird für Projekte wie MongoDB, etcd, VoltDB, Hazelcast, Elasticsearch und CockroachDB verwendet und hat in jedem dieser
-Systeme bereits reale Bugs aufgedeckt \cite{jepsen_analyses}.
+Effektivität zeigt sich auch in der Realität an Tools wie Jepsen\footnote{https://github.com/jepsen-io/jepsen}. Jepsen ist ein
+Failure-Testing-Framework in der Sprache Clojure, welches speziell auf das Verhalten von verteilten Systemen bei
+Netwerk-Unterbrechungen u.Ä. ausgerichtet ist. Jepsen hat sich auf dem Gebiet zu einem Industriestandart für das Testen von
+verteilte Datenbanken entwickelt \cite{abstracting_the_geniuses} und wird für Projekte wie MongoDB, etcd, VoltDB, Hazelcast,
+Elasticsearch und CockroachDB verwendet und hat in jedem dieser Systeme bereits reale Bugs aufgedeckt \cite{jepsen_analyses}.
 
 Bei Jepsen-Tests werden auf einem Kontrollknoten eine Reihe von Client Prozessen ausgeführt, die Requests an das SUT senden.
 Gleichzeitig werden mit Hilfe von sog. Nemesis Prozessen zufallsbasiert verschiedene Fehler in das System eingeführt. Jepsen
@@ -270,39 +280,39 @@ Netwerk-Unterbrechungen durchgeführt, um Schwachstellen zu identifizieren und z
 derartigen Fehlern umgehen kann. Basiri et. al. \cite{chaos_engineering}, die Chaos Engineering, wie es bei Netflix eingesetzt
 wird, vorstellen, definieren den Ablauf eines Experiments dabei in vier Schritten.
 \begin{enumerate}
-	\item Definiere den Ruhezustand des Systems anhand vorhandener Ausgaben Systems.
-	\item Erwarte, dass der Ruhezustand sowohl in der Kontrollgruppe, als auch in der Versuchsgruppe bestehen bleibt.
+	\item Definiere den Ruhezustand des Systems anhand vorhandener Ausgaben.
+	\item Hypothese: Der Ruhezustand bleibt sowohl in der Kontrollgruppe, als auch in der Versuchsgruppe während des Experiments erhalten.
 	\item Injiziere Ereignisse wie Server-Abstürze und Netzwerk-Unterbrechungen in der Versuchsgruppe von Services.
-	\item Versuche die Hypothese anhand der Unterschiede zwischen Kontroll- und Versuchsgruppe zu widerlegen.
+	\item Versuche die Hypothese anhand von Unterschieden zwischen Kontroll- und Versuchsgruppe zu widerlegen.
 \end{enumerate}
 Bekannt gemacht wurde die Methode durch Netflix \cite{abstracting_the_geniuses}, unter anderem mit dem dort entwickelten Chaos
 Monkey. Dieser ist ein Service, der automatisiert während der normalen Arbeiteszeiten Fehler im Produktionssystem erzeugt. Die
 injizierten Fehlern sind dabei Abstürze von internen Services, Abstürze von virtuellen Maschinen und Netzwerk-Unterbrechungen und
-Netzwerk-Latenz für einzelne Nachrichten. Netflix stellt heraus, dass als Folge dessen Entwickler ihre Services resilient gegen
+erhöhte Netzwerk-Latenz für einzelne Nachrichten. Netflix stellt heraus, dass als Folge dessen Entwickler ihre Services resilient gegen
 dearartige Fehler bauen und die Verfügbarkeit des Systems sich dadurch deutlich verbessert. Zusätzlich zu automatisierten Tools
 wie dem Chaos Monkey wird beim Chaos Engineering auf manuelle Experimente gesetzt, die Teilweise sehr große Störungen wie
-Netzwerk-Unterbrechungen zu großen Teilen des Systems in Form von ganzen AWS Regionen umfassen. Erweisen sich manuelle Experimente
+Netzwerk-Unterbrechungen zu mehreren Data-Centern auf einmal umfassen. Erweisen sich manuelle Experimente
 als effektiv, werden diese wiederum nach und nach automatisiert. \cite{chaos_engineering}
 
 Chaos Engineering eignet sich besonders gut für sehr große, heterogene Systeme bei großen Organisationen wie Netflix, die in der
-Lage sind, spezialisierte Chaos Engineers einzustellen oder auszubilden. Dort hat sich die Methode aus der Not heraus als Best
-Practice und fester Teil der Engineering Kultur etabliert. \cite{abstracting_the_geniuses}
+Lage sind, spezialisierte Chaos Engineers einzustellen oder auszubilden. Dort hat sich die Methode aus der Not heraus, die
+Qualität immer größerer, heterogener Systeme sichern zu müssen, als Best Practice und fester Teil der Engineering-Kultur
+etabliert. \cite{abstracting_the_geniuses}
 
-\section{Log-Analyse}
-Log Analyse ist ein leichtgewichtiger Black-Box Ansatz zur Fehleridentifikation und -Analyse, der sich für Systeme eignet, welche
+\section{Log-Analyse und Tracing}
+Log Analyse ist ein leichtgewichtiger Black-Box Ansatz zur Fehleridentifikation und -Analyse, der sich für Systeme eignet, die
 nicht modifiziert werden können \cite{challenges_and_options}. Es werden so viele Logs wie möglich aus den
 verschiedenen Teilen eines Systems aggregiert und gemeinsam analysiert. Aufgrund der großen Menge an Logs sind diese allein oft
-nicht direkt für einen Menschen verwendbar. Stattdessen werden Data-Mining-Techniken eingesetzt, um nützliche Information aus den
-aggregierten Logs zu extrahieren \cite{log_analysis_at_google}.
+nicht direkt für einen Menschen nützlich. Stattdessen werden Data-Mining-Techniken eingesetzt, um relevante Informationen aus den
+aggregierten Logs zu gewinnen \cite{log_analysis_at_google}.
 
-\section{Tracing}
-Eine deutlich schwergewichtigere Lösung ist das Tracing eines verteilten Systems. Die Idee ist, jede Aktion, die im Zusammenhang
-mit einem User-Request passiert, aggregiert aufzuzeichnen, um so den gesamten Weg eines Requests durch das System zeigen zu können.
-Dabei können verschiedene Informationen aufgezeichnet werden, unter anderem Log Nachrichten und RPC Aufrufe, bzw. interne
-Nachrichten, je nach dem, was das Ziel des konkreten Tracing Systems ist. Im Gegensatz zur einfachen Log Analyse erfordert Tracing
-Eingriffe in das verteilte System, um die notwendigen Informationen zu generieren und mit Trace-IDs zu kennzeichnen. Die erzeugten
-Traces können dafür in der Regel gut visualisiert werden und bieten Entwicklern in dieser Form direkt nützliche Einsichten in das
-System. \cite{dapper_tracing}
+Eine deutlich schwergewichtigere Lösung als die Black-Box-Log-Analyse ist das Tracing eines verteilten Systems. Die Idee ist, jede
+Aktion, die im Zusammenhang mit einem User-Request passiert, aggregiert aufzuzeichnen, um so den gesamten Weg eines Requests durch
+das System zeigen zu können. Dabei können verschiedene Informationen aufgezeichnet werden, unter anderem Log Nachrichten und
+RPC-Aufrufe, bzw. interne Nachrichten, je nach dem, was das Ziel des konkreten Tracing Systems ist. Im Gegensatz zur einfachen
+Log-Analyse erfordert Tracing Eingriffe in das verteilte System, um die notwendigen Informationen zu generieren und mit Trace-IDs
+zu kennzeichnen. Die erzeugten Traces können dafür in der Regel gut visualisiert werden und bieten Entwicklern in dieser Form
+direkt nützliche Einsichten in das System. \cite{dapper_tracing}
 
 Tracing ist eine vielseitige Methode, die je nach Implementierung unterschiedliche Use-Cases bedienen kann. Neben verteiltem
 Profiling zur Identifikation von Bottlenecks im System und der Diagnose von Problemen im Ruhezustand des Systems zählt
@@ -317,43 +327,45 @@ Korrektheit, als auch der Performance von verteilten Systemen \cite{so_you_want_
 
 \section{Debugger}
 Neben Werkzeugen wie Tracing, die ebenfalls zum Debugging von verteilten Systemen dienen gibt es eine Reihe weiterer Tools, die
-konkret diesem Zweck dienen, oft mit einem speziellen Fokus auf entweder eine bestimmte Art von System oder eine bestimmte
+konkret diesem Zweck dienen, oft mit einem speziellen Fokus auf entweder eine bestimmte Art von Systemen oder eine bestimmte
 Klasse von Fehlern. Die Tools lassen sich in zwei grobe Kategorien einteilen: Visuelle Debugger und Klassische Debugger.
 
-\subsection{Interaktives Debugging}
-Die Tools in dieser Kategorie versuchen, die interaktive Debugging-Erfahrung von nicht-verteilten Systemen mit Debuggern wie GDB
+\subsection{Klassische Debugger}
+Die Tools in dieser Kategorie versuchen, das klassische, interaktive Debugging von nicht-verteilten Systemen mit Debuggern wie GDB
 auf verteilte Systeme zu übertragen. Die Herausforderung dabei ist, dass klassische Debugger darauf ausgelegt sind, genau einen
 Prozess zu kontrollieren, in verteilten Systemen aber per Definition mehrere Prozesse, oft auf verschiedenen Rechnern, existieren.
 Zusätzlich zu Kontrollfluss und Zustandsänderungen in einzelnen Prozessen müssen durch die Verteiltheit des Systems ebenfalls
 Nachrichtenflüsse zwischen den Prozessen beobachtet werden. Achar et. al. \cite{gotcha_interactive_debugger} stellen heraus, dass
-interaktives Debugging im klassischen Sinne in verteilten Systemen nicht im generellen Fall möglich ist. Stattdessen muss ein
+interaktives Debugging im klassischen Sinne nicht in allen verteilten Systemen möglich ist. Stattdessen muss ein
 System gewisse Einschränkungen im Bezug auf Zustandsänderungen und die Trennung zwischen lokalen und geteilten Zuständen
 einhalten. Mit GoTcha \cite{gotcha_interactive_debugger} stellen sie einen vollständigen interaktiven Debugger für Systeme mit dem
 Global Object Tracker (GoT) Programmiermodell vor. Konkret funktioniert GoTcha nur für Systeme, die eine GoT Implementierung in
 Python namens Spacetime\footnote{\url{https://github.com/Mondego/spacetime}} verwenden. Damit ist GoTcha zwar für solche Systeme
-ein mächtiges Tool, in seiner Anwendbarkeit aber enorm eingeschränkt.
+ein mächtiges Tool, in seiner Anwendbarkeit aber eingeschränkt.
 
-Ein anderer Ansatz, der eine interaktive Debugging-Erfahrung erzielen kann, der auch in nicht-verteilten Systemen Anwendung findet
-\cite{normal_record_and_replay}, um besonders flüchtige Bugs zu reproduzieren, ist Record-and-Replay Debugging. Dieser Ansatz
-wurde erstmals bereits 1997 auch auf verteilte Systeme angewandt \cite{distributed_replay_debugging_1997}, damals im Modul für
-verteilte Applikationen des Compilers der Programmiersprache Ada95. Damit konnten Abläufe von verteilten Systemen aufgezeichnet
-werden, um dann zu Debugging Zwecken die Abläufe auf einzelne Knoten des Systems wiederzugeben.
+Ein anderer Ansatz, der interaktives Debugging ermöglichen kann, welcher auch in nicht-verteilten Systemen Anwendung findet
+\cite{normal_record_and_replay}, um besonders flüchtige Bugs zu reproduzieren, ist Replay-Debugging. Dieser Ansatz wurde erstmals
+1997 auch auf verteilte Systeme angewandt \cite{distributed_replay_debugging_1997}, damals im Modul für verteilte
+Applikationen des Compilers der Programmiersprache Ada95. Damit konnten Abläufe von verteilten Systemen aufgezeichnet werden, um
+dann zu Debugging Zwecken die Abläufe auf einzelne Knoten des Systems wiederzugeben.
 
-Ein etwas moderneres Beispiel für die gleiche Idee ist liblog \cite{distributed_replay_debugging_2006}, ein Record-and-Replay Debugger für
-C und C++ Applicationen, der in der Lage ist, Netzwerk Verkehr mit aufzuzeichnen. Der Mechanismus hinter liblog ist, alle
-Systemaufrufe, die eine Applikation macht, zu loggen, so dass diese später deterministisch wiedergegeben werden können.
+Ein moderneres Beispiel für die gleiche Idee ist liblog \cite{distributed_replay_debugging_2006}, ein Replay-Debugger für C und
+C++ Applikationen, der in der Lage ist, Netzwerk-Verkehr mit aufzuzeichnen. Der Mechanismus hinter liblog ist, für eine
+Applikation alle Aufrufe der Standartbibliothek libc, inklusive ihrer Ergebnisse, sowie alle über ein Netzwerk empfangenen
+Nachrichten zu loggen, sodass diese später deterministisch in einem Replay wiedergegeben werden können.
 
-\subsection{Visuelles Debugging}
-Ein Problem des klassischen interaktiven Debugging Ansatzes ist, alle relevanten Informationen verständlich darzustellen. Das
+\subsection{Visuelle Debugger}
+Ein Problem des klassischen interaktiven Debugging-Ansatzes ist, alle relevanten Informationen verständlich darzustellen. Das
 liegt daran, dass nicht nur die Zustände der einzelnen Knoten, sondern als zusätzliche Ebene auch die Kommunikation
 zwischen den Knoten relevant ist. Die Problematik wird unter anderem dadurch deutlich, dass liblog beispielsweise gleich mehrere
 GBD Instanzen als Frontend für Replays benötigt \cite{distributed_replay_debugging_2006}.
 
-Um das Problem zu lösen haben sich mit der Zeit eine Reihe von Debugging Tools für verteilte Systeme entwickelt, die sich darauf
-konzentrieren, Abläufe und Zustände auf Systemebene zu visualisieren. Ein gemeinsames Konzept der verschiedenen Lösungen ist die
-Verwendung von Zeit-Raum-Diagrammen zur visualisierung von Events und Nachrichtenflüssen zwischen den einzelnen Knoten. Ein
-Beispiel hierfür ist in Abbildung \ref{fig:shiviz} dargestellt, diese zeigt ein interaktives Zeit-Raum-Diagramm aus dem Tool
-ShiViz \cite{ShiViz_visual_debugger}, welches zusätzliche Detailinformationen zu Events anbietet.
+Um das Problem zu lösen haben sich mit der Zeit eine Reihe von Debugging Tools für verteilte Systeme entwickelt, die die Zustände
+einzelner Prozesse abstrahieren und sich darauf konzentrieren, Abläufe und Zustände auf Systemebene zu visualisieren. Ein
+gemeinsames Konzept der verschiedenen Lösungen ist die Verwendung von Zeit-Raum-Diagrammen zur Visualisierung von Events und
+Nachrichtenflüssen zwischen den einzelnen Knoten. Ein Beispiel hierfür ist in Abbildung \ref{fig:shiviz} dargestellt, diese zeigt
+ein interaktives Zeit-Raum-Diagramm aus dem Tool ShiViz \cite{ShiViz_visual_debugger}, welches zusätzliche Detailinformationen zu
+Events bietet.
 
 \begin{figure}[H]
 	\centering
@@ -362,13 +374,13 @@ ShiViz \cite{ShiViz_visual_debugger}, welches zusätzliche Detailinformationen z
 	\label{fig:shiviz}
 \end{figure}
 
-Ein sehr mächtiger visueller Debugger ist Oddity \cite{oddity_graphical_debugger}. Das Tool bietet eine interaktive Debugging
-Erfahrung, die in vielen Aspekten normalen Debuggern ähnelt, allerdings nur auf Systemebene. Oddity erlaubt es, die Ausführung von
-einzelnen Knoten des SUT zu pausieren, sowie einzelne Nachrichten und Events zu kontrollieren, alles in einer graphischen
-Oberfläche, die den Zustand des Systems inklusive Events und Nachrichten darstellt. Ein Screenshot dieser Darstellung ist in
-Abbildung \ref{fig:oddity} zu sehen. Oddity erlaubt es außerdem den Systemzustand zu einem früheren Zustand zurück zu setzen und
-so mehrere Kontrollflüsse in einer Session zu debuggen. Zusätzlich zu der graphischen Oberfläche, die live den Systemzustand
-abbildet, kann Oddity auch Zeit-Raum-Diagramme für Abläufe des Systems generieren.
+Ein sehr mächtiger visueller Debugger ist Oddity \cite{oddity_graphical_debugger}. Das Tool bietet interaktives Debugging, das in
+vielen Aspekten klassischen Debuggern ähnelt, allerdings nur auf Systemebene. Oddity erlaubt es, die Ausführung von einzelnen Knoten
+des SUT zu pausieren und den Erhalt einzelner Nachrichten und Events an den Knoten zu kontrollieren, alles in einer graphischen Oberfläche, die den
+Zustand des Systems inklusive anstehender Nachrichten und Events darstellt. Ein Screenshot dieser Darstellung ist in Abbildung
+\ref{fig:oddity} zu sehen. Oddity erlaubt es außerdem den Systemzustand auf einen früheren Zustand zurückzusetzen und so mehrere
+Kontrollflüsse in einer Session zu debuggen. Zusätzlich zu der graphischen Oberfläche, die live den Systemzustand abbildet, kann
+Oddity auch Zeit-Raum-Diagramme für Abläufe des Systems generieren.
 
 Bei all diesen Vorzügen hat Oddity zwei große Einschränkungen. Einerseits funktioniert das Tool aktuell nur für Systeme, die als
 eine Sammlung von Event Handlern implementiert sind. Andererseits erfordert Oddity erheblichen Aufwand zur Einrichtung, da eine
@@ -398,11 +410,13 @@ Oberfläche von ShiViz.
 	\label{fig:debugAR}
 \end{figure}
 
-\section{Proxies}
+\section{Verwendung von Proxies}
+\label{chap:proxies}
 Proxies finden in verteilten Systemen unter Anderem Verwendung, um die Verfügbarkeit von Systemen zu verbessern
 \cite{distributed_systems_concepts_and_design}, aber auch zum Testen und beim Debugging können Proxies eingesetzt werden. Der bei
-Shopify entwickelte Toxiproxy\footnote{\url{https://github.com/Shopify/toxiproxy}} ist ein für das Failure-Testing von verteilten
-Systemen entwickelter TCP-Proxy, welcher Netzwerk-Unterbrechungen und andere Netzwerk-Fehler simulieren kann.
+Shopify entwickelte Toxiproxy\footnote{\label{foot:toxiproxy}\url{https://github.com/Shopify/toxiproxy}} ist ein für das
+Failure-Testing von verteilten Systemen entwickelter TCP-Proxy, welcher Netzwerk-Unterbrechungen und andere Netzwerk-Fehler
+simulieren kann.
 
 In anderen Feldern werden Proxies außerdem erfolgreich an verschiedenen Stellen eingesetzt, um Replays von Netzwerk-Verkehr
 abzuspielen. Beispielsweise werden Proxy-basierte Replays für reproduzierbare Performance-Tests von nicht-verteilten Systemen
@@ -415,119 +429,112 @@ und in Replays deterministisch wiederzugeben. Speziell für das Debugging vertei
 Replay-Mechanismus hingegen noch nicht eingesetzt.
 
 \section{Offene Fragen und Herausforderungen}
+\label{chap:hypothesis}
 Fehlertoleranz und Debugging in verteilten Systemen sind aktuelle Forschungsfelder, die sich schnell weiterentwickeln und
 dementsprechend noch viele Möglichkeiten für Innovationen bieten. Die folgenden sind derzeit offene Probleme, die weiteren
 Entwicklungen bedürfen.
 
-\subsection{Failure-Testing und Chaos-Engineering} % remove headline
 Alvaro und Tymon \cite{abstracting_the_geniuses} stellen als großen aktuellen Mangel heraus, dass sowohl Failure-Testing, als auch
-Chaos Engineering in der Anwendung so komplex sind, dass die Techniken ausschließlich den Entwicklern zur Verfügung stehen, die
+Chaos Engineering in ihrer Anwendung so komplex sind, dass die Techniken ausschließlich den Entwicklern zur Verfügung stehen, die
 sich voll darauf spezialisieren. Sie schlagen unter Anderem eine weitgehende Automatisierung von Failure-Testing in der Zukunft
-vor. Ein weiteres Feld in dem Sie großes Potential zur Verbesserung sehen, sind Systeme, die die Erklärbarkeit von verteilten
-Systemen verbessern und somit Entwicklern helfen, mittels Failure-Testing o. Ä. entdeckte Bugs besser nachvollziehen zu können.
+vor. Laut Balalaie et. al. \cite{failify_masters_thesis} fehlt der Industrie außerdem ein Failure-Testing Framework, das es
+ermöglicht, effektiv Bugs aufzudecken und diese Bugs mit deterministischen Testfällen zu reproduzieren. Jepsen beispielsweise
+agiert ausschließlich zufallsbasiert und kann Bugs oft nicht zuverlässig reproduzieren. Es ist zudem wichtig, dass ein solches
+Framework cross-Plattform und Programmiersprachen-agnostisch ist, um weitreichend einsetzbar zu sein. Heute verwenden einige große
+Projekte selbst entwickelte Test-Frameworks, die sich auf ein konkretes System beschränken und durch den getrennten
+Entwicklungsaufwand nicht mit dem Funktionsumfang von Tools wie Jepsen mithalten können \cite{failify_masters_thesis}.
 
-Außerdem Fehlt der Industrie ein Failure-Testing Framework, welches es ermöglicht, effektiv Bugs aufzudecken diese Bugs mit
-deterministischen Testfällen zu reproduzieren. Jepsen beispielsweise agiert ausschließlich zufallsbasiert und kann Bugs oft nicht
-zuverlässig reproduzieren. Es ist außerdem wichtig, dass ein solches Framework cross-Plattform und Programmiersprachen-agnostisch
-ist, um weitreichend einsetzbar zu sein. Heute verwenden einige große Projekte sogar noch eigens entwickelte Testing-Frameworks,
-die sich auf ein konkretes System beschränken und durch den getrennten Entwicklungsaufwand nicht mit dem Funktionsumfang von Tools
-wie Jepsen mithalten können. \cite{failify_masters_thesis}
+Im Bereich des Debuggings von verteilten Systemen stellt sich unter Anderem noch die Frage danach, wie unterschiedliche Aspekte
+von verteilten Systemen am besten visualisiert werden können \cite{oddity_graphical_debugger}. Auch ist noch offen, wie
+interaktive Debugger mit sehr großen Systemen skalieren können, sowohl im Sinne der Visualisierung, als auch der Performance
+\cite{gotcha_interactive_debugger}.
 
-Ebenfalls im Bezug auf allemeiner verwendbares Tooling stellen Basiri et. al. \cite{chaos_engineering} die Frage, ob sich
-allgemeiner verwendbares Tooling für Chaos-Engineering entwickeln lässt, da auch hier Organisationen ursprünglich vorwiegend
-eigene, interne Tools entwickelt haben.
-
-\subsection{Debugging} % remove headline
-Im Bereich des Debuggings von verteilten Systemen stellen sich ebenfalls noch eine Reihe von Herausforderungen für die Zukunft.
-Unter Anderem die Frage danach, wie unterschiedliche Aspekte von verteilten Systemen am besten visualisiert werden können
-\cite{oddity_graphical_debugger}. Auch ist noch offen, wie interaktive Debugger mit sehr großen Systemen skalieren können, sowohl
-im Sinne der Visualisierung, als auch der Performance \cite{gotcha_interactive_debugger}.
-
-Im Bereich der Replay-Debugger stellen Liu et. al. \cite{d3s_predicate_checker} im Kontext Ihres Prädikat-Checkers D3S
-insbesondere offline-Replay als Teil Ihrer Zukunftsvision heraus, um mit D3S identifizierte Bugs einfach zu debuggen. In der
+Im Kontext ihres Prädikat-Checkers D3S stellen Liu et. al. \cite{d3s_predicate_checker}
+insbesondere Replay-Debugging als Teil ihrer Zukunftsvision heraus, um mit D3S identifizierte Bugs einfach zu debuggen. In der
 Praxis haben sich seitdem Failure-Testing und Chaos-Engineering gegenüber Prädikat-Checkern zur Bug-Identifikation durchgesetzt.
 Nichts desto trotz könnte sich ein Programmiersprachen-agnostischer Replay-Debugger, welcher durch Failure-Testing gefundene Bugs
 deterministisch wiedergeben kann, als sehr hilfreich erweisen und ist eine Entwicklung, die es noch zu machen gilt.
+In Anbetracht dessen, dass Proxies sich in anderen Bereichen als effektives Werkzeug für Replays von Netzwerk-Verkehr erwiesen
+haben (siehe Kapitel \ref{chap:proxies}), scheint es möglich, dass ein Proxy-basierter Replay-Mechanismus der Schlüssel für die
+Entwicklung eines solchen Tools sein könnte.
 
-\section{Offene Herausforderungen}
+Diese Arbeit stellt die Hypothese auf, dass ein Proxy-basierter Replay-Mechanismus ein effektives Tool beim Debugging von durch
+Netzwerk-Unterbrechungen ausgelösten Bugs in verteilten Systemen ist. Ziel ist es, einen Prototypen zu entwickeln, anhand dessen
+diese Hypothese evaluiert werden kann. Insbesondere soll empirisch untersucht werden, ob durch Netzwerk-Unterbrechungen ausgelöste
+Bugs mit Hilfe eines Proxys in einer Testumgebung deterministisch reproduziert werden können.
 
 
 
-\chapter{Ein Proxy zum Debugging von Netzwerk-Unterbrechungen}
+\chapter{Ein Proxy zum Debuggen von Netzwerk-Unterbrechungen}
 \label{chap:system}
-Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
+% Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
+% 
+% \section{Idee}
+% \label{chap:idea}
+Die grundlegende Idee dieser Arbeit ist, einen Proxy als Kernstück eines Replay-Debuggers für verteilte Systeme zu verwenden.
+Dieses Kapitel beschreibt die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Prototypen ditm (Debugger
+in the middle), anhand dessen das Konzept evaluiert wird.
 
-\section{Idee}
-\label{chap:idea}
-Die grundlegende Idee dieser Arbeit ist genau ein solches Tool, welches die Ideen des Failure-Testings mit denen des
-Replay-Debuggings vereint. Dieses Tool soll nach Record-and-Replay-Prinzip beim Debugging von Bugs im Zusammenhang mit
-Netwerk-Unterbrechungen in verteilten Systemen helfen. Dazu sollen mit dem Tool wie beim Failure Testing Netwerk-Unterbrechungen
-während Test-Durchläufen erzeugt werden. Dies soll allerdings im Gegensatz zum Failure-Testing nicht nur programmatisch in von
-vorn herein definierten Testfällen, sondern auch interaktiv, während der Nutzer mit dem System interagiert möglich sein. Um
-gefundene Bugs dennoch zuverlässig reproduzieren zu können, soll das Tool Situationen aufzeichnen und zum späteren Zeitpunkt
-wieder abspielen können, insbesondere mit den gleichen Netzwerk-Bedingungen wie während der Aufzeichnung.
+Grundsätzlich ähnelt ditm dem in Kapitel \ref{chap:proxies} beschriebenen Toxiproxy, der als Failure-Testing-Tool konzipiert ist
+in der Hinsicht, dass auch ditm die Möglichkeit bietet, mittels eines Proxies Netzwerk-Unterbrechungen zu erzeugen. Im Gegensatz
+zu Failure-Testing-Tools wie dem Toxiproxy geschieht das mit ditm allerdings, während der Nutzer mit dem System interagiert,
+anstatt in programmatisch vordefinierten Testfällen. ditm ähnelt in der Hinsicht mehr einem Debugger, als einem Test-Framwork. Um
+gefundene Bugs dennoch zuverlässig und mit geringem Aufwand reproduzieren zu können, soll ditm Situationen aufzeichnen und zum
+späteren Zeitpunkt wieder abspielen können, insbesondere mit den gleichen Netzwerk-Bedingungen wie während der Aufzeichnung.
 
-Ein großer Fokus der Arbeit ist dabei speziell auf dem verfolgten Ansatz für ein solches System. Dieser ist, alle Nachrichten
-innerhalb des SUT über einen Proxy zu leiten, der diese inklusive Metadaten aufzeichnet und in der Lage ist, kontrolliert
-Netwerk-Unterbrechungen zu erzeugen, indem einzelne Nachrichten geblockt, bzw. nicht weiter geleitet, werden. Mit diesem Aufbau
-soll auch ein Replay der Netzwerk-Bedingungen anhand eines zuvor durch den Proxy aufgezeichneten Test-Durchlaufs möglich sein.
-Dazu soll der Proxy während eines Replays für jeden erhaltenen Request identifizieren, welchem Request aus der Aufzeichnung dieser
-entspricht, um die gleichen Netzwerk-Bedingungen erzeugen zu können. Zudem muss der Proxy Requests, die in der Aufzeichnung von
-außerhalb des Systems kommen, identifizieren und während des Replays zum richtigen Zeitpunkt selbstständig in das System senden,
-um so die Interaktionen des Nutzers mit dem System wiederzugeben.
-
-Ein Proxy wird den anderen, verbreiteteren Fehler-Mechanismen des Failure-Testings vorgezogen, da die Erwartung ist, dass dieser
-sich insbesondere besser für Replays eignet. Das liegt daran, dass ein Proxy jede Nachricht des SUT einzeln betrachten und
-gegebenenfalls blocken kann, andere Mechanismen, die sich rein auf zeitliche Abstände und die Reihenfolge von Operationen
-verlassen, ermöglichen dies nicht ohne weiteres. Dadurch soll das Tool besser mit Unterschieden in der zeitlichen Reihenfolge von
-Nachrichten umgehen können, die im Replay auftreten können, zum Beispiel weil Replays schneller als das originale Recording
-ablaufen, falls im Recording ein Mensch mit dem SUT interagiert hat, dessen Aktionen deutlich schneller als in Echtzeit agbespielt
-werden.
+% Ein großer Fokus der Arbeit liegt dabei speziell auf dem verfolgten Ansatz für ein solches System. Dieser ist, alle Nachrichten
+% innerhalb des SUT über einen Proxy zu leiten, der diese inklusive Metadaten aufzeichnet und in der Lage ist, kontrolliert
+% Netwerk-Unterbrechungen zu erzeugen, indem einzelne Nachrichten geblockt, bzw. nicht weiter geleitet, werden. Mit diesem Aufbau
+% soll auch ein Replay der Netzwerk-Bedingungen anhand eines zuvor durch den Proxy aufgezeichneten Test-Durchlaufs möglich sein.
+% Dazu soll der Proxy während eines Replays für jeden erhaltenen Request identifizieren, welchem Request aus der Aufzeichnung dieser
+% entspricht, um die gleichen Netzwerk-Bedingungen erzeugen zu können. Zudem muss der Proxy Requests, die in der Aufzeichnung von
+% außerhalb des Systems kommen, identifizieren und während des Replays zum richtigen Zeitpunkt selbstständig an das System senden,
+% um so die Interaktionen des Nutzers mit dem System wiederzugeben.
 
 \section{Anforderungen}
-Debugger in the middle (ditm) ist ein Prototyp, der primär dem Zweck dient, die zuvor beschriebene Idee zu verfizieren.
-Die Anforderung reflektieren diesem Umstand, indem beispielsweise die unterstützten Netwerk-Protokolle auf HTTP beschränkt sind,
-um den Entwicklungsaufwand zu beschränken.
+ditm ist ein Prototyp, der primär dem Zweck dient, die in Kapitel \ref{chap:hypothesis} aufgestellte Hypothese zu untersuchen.
+Die Anforderung reflektieren diesen Umstand, indem beispielsweise ausschließlich HTTP als Netwerk-Protokoll unterstützt wird,
+um die Entwicklung einfach zu halten.
 
 \subsection{Funktionale Anforderungen}
 Tabelle \ref{tab:fa} beschreibt die funktionalen Anforderungen an das System ditm.
 \begin{longtable}[H]{|p{\dimexpr 0.17\linewidth - 6\tabcolsep}|p{0.3\linewidth}|p{0.53\linewidth}|}
-	\caption{Funktionale Anforderungen\label{tab:fa}}                                                                                                                                                                                                            \\
+	\caption{Funktionale Anforderungen an ditm\label{tab:fa}}                                                                                                                                                                                                                                                                                                                                                                                        \\
 	\hline
-	ID   & Anforderung                   & Beschreibung                                                                                                                                                                                                          \\ \hline
-	FA1  & Netzwerk Unterbrechungen      & Das System soll kontrolliert Netzwerk-Unterbrechungen zwischen Knoten des zu testenden Systems erzeugen können.                                                                                                       \\ \hline
-	FA2  & Aufzeichnung                  & Das System soll den gesamten Netzwerkverkehr des zu testenden Systems aufzeichnen können. Insbesondere sollen auch erzeugte Netzwerk-Unterbrechungen aufgezeichnet werden.                                            \\ \hline
-	FA3  & Replay                        & Das System soll anhand einer durch das System erstellten Aufzeichnung die Situation in der Aufzeichnung am laufenden Testsystem wiederherstellen und vor allem inklusive Netzwerk-Unterbrechungen wiedergeben können. \\ \hline
-	FA4  & Zufällige Unterbrechungen     & Das System soll Netwerk-Unterbrechungen zufällig erzeugen können.                                                                                                                                                     \\ \hline
-	FA5  & Kontrollierte Unterbrechungen & Das System soll dem Nutzer die Möglichkeit geben, Netwerk-Unterbrechungen konkret zu steuern.                                                                                                                         \\ \hline
-	FA6  & Log-Aggregation               & Das System soll zusätzlich zum Netzwerkverkehr auch die Log ausgaben des zu testenden Systems aufzeichnen und aggregieren können.                                                                                     \\ \hline
-	FA7  & Log-Matching                  & Das System soll die aufgezeichneten Nachrichten und Logs in chronologischer Reihenfolge gemeinsam anzeigen können.                                                                                                    \\ \hline
-	FA8  & Volume Snapshots              & Das System soll für zustandsbehaftete Systeme Snapshots der Docker Volumes erstellen und zu einem späteren Zeitpunk wiederherstellen können.                                                                          \\ \hline
-	FA9  & Nachrichten von außen         & Das System soll dem Nutzer Schnittstelle bieten, über die Nachrichten reproduzierbar von außen in das zu testende System gesendet werden können, um Prozesse im zu testenden System anzustoßen.                       \\ \hline
-	FA10 & Responses Blocken             & Das System soll in der Lage sein, nicht nur Requests auf dem Hinweg zum Server zu blockieren, sondern optional auch erst die Antwort auf dem Rückweg.                                                                 \\ \hline
+	ID   & Anforderung                   & Beschreibung                                                                                                                                                                                                                                                                                                                                                                                              \\ \hline
+	FA1  & Netzwerk-Unterbrechungen      & Das System soll kontrolliert Netzwerk-Unterbrechungen zwischen Knoten des zu testenden Systems erzeugen können.                                                                                                                                                                                                                                                                                           \\ \hline
+	FA2  & Aufzeichnung                  & Das System soll den gesamten Netzwerkverkehr des zu testenden Systems aufzeichnen können. Insbesondere sollen auch erzeugte Netzwerk-Unterbrechungen aufgezeichnet werden.                                                                                                                                                                                                                                \\ \hline
+	FA3  & Replay                        & Das System soll anhand einer durch das System erstellten Aufzeichnung die Situation in der Aufzeichnung am laufenden Testsystem wiederherstellen und vor allem inklusive Netzwerk-Unterbrechungen wieder abspielen können. Dabei sollen immer genau die Teile des Netzwerkverkehrs geblockt werden, die auch in der Aufzeichnung vom System geblockt wurden. Nicht mehr, nicht weniger und keine anderen. \\ \hline
+	FA4  & Zufällige Unterbrechungen     & Das System soll Netwerk-Unterbrechungen zufällig erzeugen können.                                                                                                                                                                                                                                                                                                                                         \\ \hline
+	FA5  & Kontrollierte Unterbrechungen & Das System soll dem Nutzer die Möglichkeit geben, Netwerk-Unterbrechungen feingranular zu steuern.                                                                                                                                                                                                                                                                                                        \\ \hline
+	FA6  & Log-Aggregation               & Das System soll zusätzlich zum Netzwerkverkehr auch die Log ausgaben des zu testenden Systems aufzeichnen und aggregieren können.                                                                                                                                                                                                                                                                         \\ \hline
+	FA7  & Log-Matching                  & Das System soll die aufgezeichneten Nachrichten und Logs in chronologischer Reihenfolge gemeinsam anzeigen können.                                                                                                                                                                                                                                                                                        \\ \hline
+	FA8  & Volume-Snapshots              & Das System soll für zustandsbehaftete Systeme Snapshots der Docker-Volumes erstellen und zu einem späteren Zeitpunk wiederherstellen können, um deterministisch Replays für zustandbehaftete Systeme zu ermöglichen.                                                                                                                                                                                      \\ \hline
+	FA9  & Nachrichten von außen         & Das System soll dem Nutzer Schnittstelle bieten, über die Nachrichten reproduzierbar von außen in das zu testende System gesendet werden können, um Prozesse im zu testenden System anzustoßen.                                                                                                                                                                                                           \\ \hline
+	FA10 & Responses Blocken             & Das System soll in der Lage sein, nicht nur Requests auf dem Hinweg zum Server zu blockieren, sondern optional auch erst die Antwort auf dem Rückweg.                                                                                                                                                                                                                                                     \\ \hline
 \end{longtable}
 
 \subsection{Nicht-Funktionale Anforderungen}
 Tabelle \ref{tab:nfa} beschreibt die nicht-funktionalen Anforderungen an das System ditm.
 \begin{longtable}[H]{|p{\dimexpr 0.17\linewidth - 6\tabcolsep}|p{0.3\linewidth}|p{0.53\linewidth}|}
-	\caption{Nicht-Funktionale Anforderungen\label{tab:nfa}}                                                                                                                                                                                        \\
+	\caption{Nicht-Funktionale Anforderungen an ditm\label{tab:nfa}}                                                                                                                      \\
 	\hline
-	ID   & Anforderung              & Beschreibung                                                                                                                                                                                                  \\ \hline
-	NFA1 & Portabilität             & Das System soll vollständig in Docker lauffähig und mittlels docker-compose konfigurierbar sein.                                                                                                              \\ \hline
-	NFA2 & Proxy Architektur        & Das System soll die in Kapitel \ref{chap:idea} beschriebene Idee umsetzen.                                                                                                                                    \\ \hline
-	NFA3 & HTTP                     & Das System soll mit HTTP als Netzwerkprotokoll arbeiten und grundlegend alle verteilten Systeme, die ausschließlich über HTTP kommunizieren und die Umgebungsvariable HTTP\_PROXY respektieren, unterstützen. \\ \hline
-	NFA4 & Deterministische Replays & In der Wiedergabe einer Aufzeichnung sollen immer genau die Teile des Netzwerkverkehrs geblockt werden, die auch in der Aufzeichnung vom System geblockt wurden. Nicht mehr, nicht weniger und keine anderen. \\ \hline
-	NFA5 & Usability                & Das System soll einfach über eine graphische Oberfläche bedienbar sein.                                                                                                                                       \\ \hline
-	NFA6 & Echtzeit                 & Requests und Logs einer laufenden Aufzeichnung sollen in Echtzeit angezeigt werden.                                                                                                                           \\ \hline
-	NFA7 & Unverändertes SUT        & Das SUT soll für die Verwendung des Systems nicht angepasst werden müssen.                                                                                                                                    \\ \hline
+	ID   & Anforderung       & Beschreibung                                                                                                                                               \\ \hline
+	NFA1 & Portabilität      & Das System soll vollständig in Docker lauffähig und mittlels docker-compose konfigurierbar sein.                                                           \\ \hline
+	NFA2 & Proxy Architektur & Das System soll auf einen Proxy-basierten Replay-Mechanismus setzen, um die in Kapitel \ref{chap:hypothesis} beschriebene Hypothese untersuchen zu können. \\ \hline
+	NFA3 & HTTP              & Das System soll mit HTTP als Netzwerkprotokoll arbeiten und grundlegend alle verteilten Systeme, die ausschließlich über HTTP kommunizieren, unterstützen. \\ \hline
+	NFA4 & Usability         & Das System soll einfach über eine graphische Oberfläche bedienbar sein.                                                                                    \\ \hline
+	NFA5 & Echtzeit          & Requests und Logs einer laufenden Aufzeichnung sollen in Echtzeit angezeigt werden.                                                                        \\ \hline
+	NFA6 & Unverändertes SUT & Das SUT soll für die Verwendung des Systems nicht angepasst werden müssen.                                                                                 \\ \hline
 \end{longtable}
 
 \section{Architektur}
-Das Herzstück des Systems ist entsprechend der Idee ein eigens entwickelter HTTP Proxy, welcher den Netzwerk-Verkehr in einem
-verteilten System aufzeichnen und Nachrichten wahlweise nicht weiter leiten kann. Dieser Proxy läuft in einem Docker Container
-direkt neben dem SUT und ist auch Teil des gleichen Docker Netzwerks wie das SUT. Außer dem Proxy hat ditm eine weitere eigens
-entwickelte Komponente, ein Log-Driver-Plugin für Docker, welches Container-Logs an den Proxy sendet. Die Datenflüsse zwischen
-Komponenten des Systems sind in Abbildung \ref{fig:dataflow} im Kontext eines SUT mit zwei Knoten dargestellt.
+Das Herzstück des Systems ist entsprechend der Idee ein eigens entwickelter HTTP-Proxy, welcher den Netzwerk-Verkehr in einem
+verteilten System inklusive Metadaten aufzeichnet und Nachrichten wahlweise nicht weiter leiten kann, um Netzwerk-Unterbrechungen
+zu simulieren. Dieser Proxy läuft in einem Docker Container direkt neben dem SUT und ist auch Teil des gleichen Docker Netzwerks
+wie das SUT. Außer dem Proxy hat ditm eine weitere, selbst entwickelte Komponente, ein Log-Driver-Plugin für Docker, welches
+Container-Logs an den Proxy sendet. Die Datenflüsse zwischen Komponenten des Systems sind in Abbildung \ref{fig:dataflow} im
+Kontext eines SUT mit zwei Knoten dargestellt.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{img/ditm-Dataflow.pdf}
@@ -543,9 +550,9 @@ diese weiter voneinander zu trennen. Sollte eine gefilterte Liste benötigt werd
 wird diese dynamisch erzeugt. Recordings enthalten außerdem eine Referenz auf einen Volume Snapshot, sofern für das Recording
 einer existiert.
 
-Die eigentlichen Request Datenobjekte enthalten neben dem Request Body eine Menge Metadaten, die teilweise vom Request selbst
+Die eigentlichen Request-Datenobjekte enthalten neben dem Request Body eine Menge Metadaten, die teilweise vom Request selbst
 stammen und teilweise durch ditm erzeugt wurden, beispielsweise ob der Request geblockt wurde oder nicht.
-Log Nachrichten umfassen neben der eigentlichen Nachricht ebenfalls wichtige Metadaten, wie den Namen des Containers, der die
+Log-Nachrichten umfassen neben der eigentlichen Nachricht ebenfalls wichtige Metadaten, wie den Namen des Containers, der die
 Nachricht geloggt hat. In Abbildung \ref{fig:class} ist das beschriebene Datenmodell in einem Klassendiagramm dargestellt. Die
 Implementierungen des Matcher-Interfaces fehlen im Klassendiagramm, da sich hier keine Unterschiede zwischen den einzelnen
 Implementierungen zeigen würden und diese gesondert in Kapitel \ref{chap:matcher} behandelt werden. Die Methoden der Klasse Proxy wurden
@@ -571,7 +578,7 @@ Frontend aufzuzeichnen, sie zu blocken falls vorher festgelegt oder sie ansonste
 Der Grund dafür ist, dass fast alle für ditm relevanten Metadaten bereits aus dem Request abgeleitet werden können. Zwar
 könnten die Länge der Response und die Response Header möglicherweise ebenfalls von Interesse sein, der Kompromiss wird
 hier aber in Kauf genommen, da das die Implementierung erheblich vereinfacht und auch so genügend Metadaten vorliegen,
-um verschiedene Algorithmen zur Entscheidung, ob ein Reqeust im Replay geblockt werden soll, zu evaluieren.
+um verschiedene Algorithmen zur Entscheidung, ob ein Requests im Replay geblockt werden soll, zu evaluieren.
 Die verschiedenen Ansätze, die diese Arbeit betrachtet, werden in Kapitel \ref{chap:matcher} behandelt.
 \begin{figure}[H]
 	\centering
@@ -592,30 +599,29 @@ es spart also an Komplexität für den Prototypen, für die restlichen Daten ein
 Zum anderen bieten Dateien den Vorteil, dass der Nutzer die Möglichkeit hat, diese selbst einzeln zu verwalten.
 Es ist dem Nutzer also möglich, die Dateien einer einzelnen Aufzeichnung und des zugehörigen Snapshots getrennt
 zu sichern oder einfach mit anderen Nutzern über einen generischen Filesharing Dienst zu teilen.
-\subsection{Log Driver}
-Um die Logging Ausgaben des SUT in ditm aggregieren zu können, muss ditm aus seinem Container heraus auf die Logs der
+\subsection{Log-Driver}
+Um die Log-Ausgaben des SUT in ditm aggregieren zu können, muss ditm aus seinem Container heraus auf die Logs der
 anderen Container zugreifen. Leider bietet Docker von sich aus keine einfache Möglichkeit dies zu konfigurieren,
-stattdessen muss auf Dockers Plugin API zurück gegriffen werden. Immerhin bietet Docker eine spezielle Plugin API
-für Log Driver, die es ermöglicht Log Nachrichten durch einen eigenen Driver beliebig weiter zu verarbeiten.
-Für ditm wurde ein einfaches Log Driver Plugin entwickelt, welches Nachrichten als HTTP Request an eine beliebige URL
+stattdessen muss auf Dockers Plugin-API zurück gegriffen werden. Immerhin bietet Docker eine spezielle Plugin-API
+für Log-Driver, die es ermöglicht, Log-Nachrichten durch einen eigenen Driver beliebig weiter zu verarbeiten.
+ditm verwendet ein einfaches, eigenes Log-Driver-Plugin, welches Nachrichten als HTTP Request an eine beliebige URL
 sendet. ditm selbst bietet in seiner API einen Endpunkt an, welcher diese Log Nachrichten empfangen und verarbeiten kann.
 \subsection{Frontend}
-Als Frontend bietet ditm dem Nutzer eine Web Oberfläche, in der laufende, sowie vergangene, Aufzeichnungen
-tabellarisch visualisiert werden können. Des weiteren ist der Proxy vollständig über die GUI kontrollierbar.
-Events einer laufenden Aufzeichnung werden in Echtzeicht per Server-Sent-Events Schnittstelle an das Frontend
-gesendet und dort dargestellt.
-Das Frontend selbst ist eine einfache, serverseitig gerenderte, HTML Seite mit dem notwendigen JavaScript Code,
-um SSEs zu empfangen und zu verarbeiten. Die Seite ist mittels Bootstrap gestyled und in Tabs aufgeteilt.
+Als Frontend bietet ditm dem Nutzer eine Web-Oberfläche, in der laufende sowie vergangene Aufzeichnungen tabellarisch visualisiert
+werden können. Des Weiteren ist der Proxy vollständig über die GUI kontrollierbar. Events einer laufenden Aufzeichnung werden in
+Echtzeicht per Server-Sent-Events (SSE) an das Frontend gesendet und dort dargestellt. Das Frontend selbst ist eine einfache,
+serverseitig gerenderte, HTML-Seite mit dem notwendigen JavaScript Code, um SSEs zu empfangen und zu verarbeiten. Die Seite ist
+mittels Bootstrap gestyled und in Tabs aufgeteilt.
 \subsection{Request Matcher}
 \label{chap:matcher}
 Die Logik zur Entscheidung, ob ein Request, bzw. eine Response, während eines Replays geblockt werden soll,
 ist ein Kernstück des Proxys, welches es ermöglicht, Aufzeichnungen zuverlässig wiederzugeben.
 Das Problem lässt sich darauf herunterbrechen, genau den Request im ursprünglichen Recording zu identifizieren,
 dem der aktuelle Request während des Replays entspricht. Das liegt daran, dass sich der Proxy während eines
-Replays immer exact wie während der Aufnahme verhalten soll.
+Replays immer exakt wie während der Aufnahme verhalten soll.
 
 Der erste Schritt dabei, Requests aus Recording und Replay zu matchen, ist immer die Requests sowohl im
-Recording als auch im Replay nach dem StreamIdentifier des aktuellen Requests zu filtern, so dass zwei
+Recording als auch im Replay nach dem StreamIdentifier des aktuellen Requests zu filtern, sodass zwei
 kleinere Request Streams entstehen. Der StreamIdentifier wird zusammengesetzt aus den Namen des Clients
 und des Servers für den jeweiligen Request, ein so gefilterter Stream stellt also den gesamten Verkehr
 zwischen genau zwei Knoten des SUT dar.
@@ -632,7 +638,7 @@ Die Methode Match erwartet als Parameter den aktuellen Request, dessen Index im 
 und den gesamten gefilterten Stream des Recordings und gibt einen Pointer auf den Request im Recording zurück,
 der das beste Match darstellt. Die Methoden Seen und MarkSeen dienen dazu, Requests zu markieren, falls sie bereits
 im aktuellen Replay vorgekommen sind, bzw. abzufragen, ob ein Request bereits markiert wurde. Es wird also nach jedem Aufruf
-von Match der zurück gegebene Request markiert. Eine Methode um Requests zu entmarkieren wird nicht benötigt, da für
+von Match der zurückgegebene Request markiert. Eine Methode um Requests zu entmarkieren wird nicht benötigt, da für
 jedes Replay ein neuer Matcher initialisiert wird. Insgesamt wurden vier Implementierungen für das Interface mit
 verschiedenen Algorithmen für Match erstellt, die im Folgenden dargestellt und später gegeneinander evaluiert werden.
 Alle vier Implementierungen verwenden eine Hashtabelle zur Umsetzung der Seen und MarkSeen Funktionalität und ignorieren
@@ -646,10 +652,10 @@ wird kein Match zurück gegeben, was bei allen Matchern dazu führt, dass ditm d
 Der Zählende Matcher ist nicht als ernsthafter Versuch gemeint, einen guten Matcher zu entwickeln. Vielmehr soll
 er als Vergleichsgrundlage für die anderen Matcher dienen.
 
-\subsubsection{Exact}
-Alle weiteren Matcher, der Exacte eingeschlossen, verwenden ein Punktesystem, in dem allen Requests des Recordings für verschiedene
+\subsubsection{Exakt}
+Alle weiteren Matcher, der exakte eingeschlossen, verwenden ein Punktesystem, in dem allen Requests des Recordings für verschiedene
 Eigenschaften Punkte zugewiesen werden und am Ende der Request mit der höchsten Punktzahl als Match zurück gegeben wird.
-Der Exacte Matcher vergibt einen Punkt, falls die Requests an gleicher Stelle in ihren Streams stehen, falls die URIs der
+Der Exakte Matcher vergibt einen Punkt, falls die Requests an gleicher Stelle in ihren Streams stehen, falls die URIs der
 Requests gleich sind, falls die Länge der URIs gleich ist, falls die Bodies gleich sind und falls die Länge der Bodies gleich ist.
 Sei i der Index im Replay, j der Index im Recording, req der aktuelle Request im Replay und r der aktuelle
 Request im Recording, dann wird der Score für r also wie folgt berechnet.
@@ -702,7 +708,7 @@ if len(req.Body) == len(r.Body) {
 \end{lstlisting}
 
 \subsubsection{Heuristisch}
-Der Heuristische Matcher unterscheidet sich vom Mix Matcher nur in zwei Stellen. Anstatt die Längen der URIs und Bodies
+Der Heuristische Matcher unterscheidet sich vom Mix Matcher nur an zwei Stellen. Anstatt die Längen der URIs und Bodies
 absolut miteinander zu vergleichen, wird hier wie bei der Position die Differenz zwischen den beiden genommen und eine kleinere
 Differenz besser bewertet. Die Werte werden weiterhing mit der Länge des Recordings als Faktor multipliziert. Um die Tatsache
 auszugleichen, dass die Differenz selbst größere Werte annehmen kann, als die konstanten Werte, wird sie allerdings zusätzlich
@@ -731,9 +737,7 @@ welcher Matcher sich besser verhält.
 
 \subsubsection{Zeitbasiert}
 Der Zeitbasierte Matcher funktioniert grundlegend anders als die anderen Matcher und passt nicht direkt in das Design des Matcher
-Interfaces. Er wurde deutlich später als Reaktion auf die mangelhafte Performance der anderen Matcher in gewissen Situationen
-entwickelt und musste sich deshalb mit Workarounds der bereits existierenden internen API anpassen. Er bricht insbesondere mit der
-in Kapitel \ref{chap:idea} beschriebenen Idee, Requests einander genau zuzuordnen.
+Interfaces. Er bricht insbesondere mit der Idee, Requests einander genau zuzuordnen, um zu entscheiden welche Requests geblockt werden.
 
 Der Zeitbasierte Matcher ist entwickelt für Situationen, in denen selbst bei genau gleichen äußeren Bedingungen das SUT in
 Aufzeichnung und Replay unterschiedliche Requests sendet. Die Raft Implementierung, welche in Kapitel \ref{chap:raft} beschrieben wird ist ein
@@ -747,7 +751,7 @@ Zur Umsetzung werden alle Änderungen an der BlockConfig mit Zeitstempel im Reco
 Requests gibt der Matcher einen neuen Dummy Request zurück, der lediglich die Information enthält, wie der aktuelle Request
 behandelt werden soll. Dieser Workaround ist notwendig, um in das Matcher-Interface zu passen. Auch die Funktionalität des
 Matchers, Requests zu identifizieren, die bereits im Replay aufgetaucht sind, wird hier über die im Replay vergangene Zeit
-implementiert, so dass Requests als bereits gesehen gelten, sobald der Zeitpunkt überschritten ist, an dem sie in der Aufzeichnung
+implementiert, sodass Requests als bereits gesehen gelten, sobald der Zeitpunkt überschritten ist, an dem sie in der Aufzeichnung
 vorkamen. Einzige Ausnahme hierbei sind die Requests von außerhalb des SUTs. Diese werden wie bei den anderen Matchern erst markiert,
 wenn sie tatsächlich gesendet wurden, da es wichtig ist, diese während des Replays vollständig wiederzugeben.
 
@@ -809,7 +813,10 @@ services:
 
 \subsection{Bedienung}
 
-\chapter{Evaluation}
+
+
+
+\chapter{Methodik und Versuchsaufbau}
 Dieses Kapitel beschreibt die Versuche, mit denen die folgenden Fragen über den zuvor beschriebenen Prototypen ditm beantwortet
 werden sollen.
 \begin{itemize}
@@ -819,28 +826,26 @@ werden sollen.
 \end{itemize}
 \section{Request-Matching}
 Ziel dieses Versuchs ist es, die Grenzen von ditm im Bezug auf die erste Frage auszuloten.
-Der Versuch wurde konzipiert und durchgeführt, bevor der zeitbasierte Matcher entwickelt wurde. Der zeitbasierte Matcher ist
-in seinem Ansatz Grundlegend anders als die anderen Matcher, für die dieser Versuchsaufbau entwickelt wurde. Er ist für die
-zufallsbasierten Netzwerk-Unterbrechungen, die für diese Experimente verwendet werden vollkommen ungeeignet, dementsprechend
-wurden die Experimente nicht mit dem neuen Matcher wiederholt. Stattdessen wird dieser nur mit den Versuchen in
-\ref{chap:debugging_exp} evaluiert.
+Der zeitbasierte Matcher wird in diesem Versuch nicht evaluiert, da er aufgrund seiner Funktionsweise schon per Design für die
+zufallsbasierten Netzwerk-Unterbrechungen, die für diese Experimente verwendet werden, ungeeignet ist. Stattdessen wird er nur mit
+den Versuchen in \ref{chap:debugging_exp} evaluiert.
 % Dazu wird eine große Menge an eindeutig identifizierbarer Requests unter leicht unterschiedlichen Bedingungen gesendet.
 % Da sich ditm beim Log-Matching auf Zeitstempel verlässt und diese für die Logs von Docker kommen, ist die Erwartung,
-% dass das Log-Matching in allen Situationen akzeptabel funktioniert. Für das Reqeust Matching ist die Erwartungshaltung, dass
+% dass das Log-Matching in allen Situationen akzeptabel funktioniert. Für das Request Matching ist die Erwartungshaltung, dass
 % der ...Mix und der heuristic Matcher am besten funktionieren.
-Das Test System ist ein einfacher HTTP Server mit zwei Endpunkten. Einer davon löst eine große Menge an Requests aus, der andere
+Das Test System ist ein einfacher HTTP-Server mit zwei Endpunkten. Einer davon löst eine große Menge an Requests aus, der andere
 verarbeitet diese. Es wird für den Versuch ein Cluster aus zwei identischen Knoten verwendet, wovon einer die Rolle eines API
 Gateways einnimmt, über das von außen der Versuch ausgelöst wird, und der andere die eines dahinter verborgenen Services. Da ditm
 den Nachrichtenfluss zwischen zwei Knoten des SUT immer einzeln betrachtet, genügen zwei Knoten aus, um die Grenzen des
 Request-Matchings abzustecken.
 
-Die Requests, die der Gateway Knoten versendet, sind anhand eines Query Parameters eindeutig identifizierbar. Das System versendet
-diese in einer Schleife und bietet neben der Anzahl zu versendener Reqeusts verschiedene andere Konfigurationsmöglichkeiten, die
+Die Requests, die der Gateway-Knoten versendet, sind anhand eines Query Parameters eindeutig identifizierbar. Das System versendet
+diese in einer Schleife und bietet neben der Anzahl zu versendener Requests verschiedene andere Konfigurationsmöglichkeiten, die
 den Strom von Requests beeinflussen. Die Requests können in vollständig fester oder in unterschiedlich stark gemischter
 Reihenfolge erfolgen. Wie stark eine Request-Reihenfolge gemischt ist, wird dabei darüber definiert, um wie viele Stellen ein
 Request beim Mischen maximal von seiner ursprünglichen Position verschoben werden kann. Sei dies der Mischungsgrad, dann
 entspricht ein Mischungsgrad von 0 immer einem vollständig geordneten Nachrichten-Fluss. Für jeden anderen Wert wird der Fluss vor
-jeder Ausführung neu zufällig gemischt, so dass ditm die Requests während eines Replays also in anderer Reihenfolge erhält, als
+jeder Ausführung neu zufällig gemischt, sodass ditm die Requests während eines Replays also in anderer Reihenfolge erhält, als
 während der Aufzeichnung. Die folgenden Reihenfolgen stellen beispielhaft dar, wie ein Fluss von zehn Requests bei
 unterschiedlichen Mischungsgraden angeordnet werden könnte.
 \begin{verbatim}
@@ -850,19 +855,19 @@ unterschiedlichen Mischungsgraden angeordnet werden könnte.
 (3): 4 2 1 0 7 3 9 5 6 8
 \end{verbatim}
 Requests können außerdem optional asynchron erfolgen, was ebenfalls dazu führt dass sie in stark gemischter Reihenfolge und nahezu
-gleichzeitig gesendet werden. Zusätzlich besteht Möglichkeit, entweder einfache GET Requests zu senden, die selben GET Requests
-mit einem Zeitstempel als zusätzlichem Parameter oder POST Requests mit einem Zeitstempel und einem zusätzlichen Füller im
+gleichzeitig gesendet werden. Zusätzlich besteht Möglichkeit, entweder einfache GET-Requests zu senden, die selben GET-Requests
+mit einem Zeitstempel als zusätzlichem Parameter oder POST-Requests mit einem Zeitstempel und einem zusätzlichen Füller im
 Request-Body. Der Füller hat eine von drei festen Längen, somit dient die Länge des Request-Bodys als weiteres Merkmal für ditm,
-um Requests identifizierbar zu machen. Die Zeitstempel dienen genau umgekehrt dazu, Reqeusts schwieriger identifizierbar zu
+um Requests identifizierbar zu machen. Die Zeitstempel dienen genau umgekehrt dazu, Requests schwieriger identifizierbar zu
 machen, indem ditm durch die Zeitstempel die Query Parameter, bzw. die Bodies der Requests nicht mehr einfach direkt miteinander
-vergleichen kann, um Reqeusts zu identifizieren.
+vergleichen kann, um Requests zu identifizieren.
 
-Zuletzt gibt es die Möglichkeit, für den verwendeten HTTP Client (Go net/http) die Wiederverwendung von TCP Verbingungen mit Keep-Alive
+Zuletzt gibt es die Möglichkeit, für den verwendeten HTTP-Client (Go net/http) die Wiederverwendung von TCP Verbingungen mit Keep-Alive
 zu deaktivieren. Dies ist notwendig, da der Client sonst in bestimmten Situationen Retries sendet, was durch diese Einstellung
 verhindert werden kann, mehr dazu in Kapitel \ref{chap:debugging_go}.
 
-Für die Evaluation werden einfache GET Requests, GET Requests mit Zeitstempel, GET Reqeusts ohne Keep-Alive, GET Requests mit
-Zeitstempel und ohne Keep-Alive und POST Requests verwendet. Für jede Art von Reqeust werden Experimente mit fünf
+Für die Evaluation werden einfache GET-Requests, GET-Requests mit Zeitstempel, GET-Requests ohne Keep-Alive, GET-Requests mit
+Zeitstempel und ohne Keep-Alive und POST-Requests verwendet. Für jede Art von Request werden Experimente mit fünf
 unterschiedlichen Konfigurationen zur Reihenfolge der Requests durchgeführt. Diese sind asynchron, synchron mit fester Reihenfolge
 und synchron mit gemischter Reihenfolge mit Mischungsgraden von 1, 2 und 3. Zusätzlich wird jedes Experiment einmal mit 10
 Requests und einmal mit 100 Requests durchgeführt.
@@ -881,13 +886,13 @@ hierfür zusätzliche Experimente von Hand durchgeführt und ausgewertet. Es wer
 denen eine Aufzeichnung mit jeweils 10 und 100 Requests einmal synchron und einmal asynchron erstellt wird. Das Ergebnis sind
 hierbei jeweils zwei Werte: die maximale Entfernung einer Log Nachricht von ihrer korrekten Position, also der größte vorgekommene
 Fehler und die Gesamtzahl an Nachrichten, die an falscher Stelle eingeordnet wurden, also die Anzahl vorgekommener Fehlern. Da das
-Log-Matching im Replay exact gleich funktioniert, wie in der Aufzeichnung, sind für die Evaluation des Log-Matchings keine Replays
+Log-Matching im Replay exakt gleich funktioniert, wie in der Aufzeichnung, sind für die Evaluation des Log-Matchings keine Replays
 notwendig.
 
 \section{Debugging}
 \label{chap:debugging_exp}
 Im Folgenden sollen die tatsächlichen Debugging Möglichkeiten von ditm möglichst empirisch evaluiert werden. Eine empirische
-Evaluation eines Debuggers ist grundsätzlich sehr schwierig, da es beim Debugging vor allem darum geht, Entwicklern beim
+Evaluation eines Debuggers ist grundsätzlich schwierig, da es beim Debugging vor allem darum geht, Entwicklern beim
 Verständnis eines komplexen Problems zu helfen, welches sie noch nie zuvor gesehen haben. Es bräuchte also im Optimalfall eine
 große Menge relevanter, bekannter Bugs und Entwickler, denen diese Bugs vollständig unbekannt sind, um zu evaluieren, wie effektiv
 ein Debugger tatsächlich ist.
@@ -904,14 +909,16 @@ Es werden insgesamt drei verschiedene Systeme verwendet, in denen jeweils mindes
 Netzwerk-Unterbrechungen bekannt ist.
 
 \subsubsection{Bank}
-Das erste System ist eine kleine Bank Simulation mit einem zentralen Server, der Kontodaten transaktionell verwaltet und einem API
-Gateway, welches die Funktionalitäten des Systems kapselt. Es werden insgesamt vier Operationen unterstützt, das Anlegen eines
+Das erste System ist eine kleine Bank Simulation mit einem zentralen Server, der Kontodaten transaktionell verwaltet und einem
+API-Gateway, welches die Funktionalitäten des Systems kapselt. Es werden insgesamt vier Operationen unterstützt, das Anlegen eines
 Kontos, das Abfragen eines Kontostands und das Ein- und Auszahlen von Geld auf einem Konto.
 
 \subsubsection{Raft}
 \label{chap:raft}
-Das zweite System ist eine Implementierung des Raft Konsens Algorithmus in der Form eines Append-Logs. Es handelt sich um ein
-Hobby-Projekt, welches ausschließlich im Kontext dieser Arbeit verwendet wird. Dennoch ist die Implementierung vollständig und
+Das zweite System ist eine Implementierung des Raft-Konsens-Algorithmus in der Form eines Append-Logs. Die Implementierung basiert
+auf einem auf Github öffentlichen Hobby-Projekt\footnote{https://github.com/eileen-code4fun/SimpleRaft}, das Raft mit Threads als
+Knoten umsetzt. Für diese Arbeit wurde die Implementierung angepasst, um als verteiltes System zu laufen und über HTTP zu
+kommunizieren. Obwohl es sich um eine minimale Implementierung handelt, ist diese im Sinne des Raft-Algorithmus vollständig und
 bietet damit alle nötige Funktionalität, um daran Bugs aus realen verteilen Systemen, die ähnliche Algorithmen verwenden,
 nachstellen zu können. Dazu zählen Systeme wie MongoDB, Redis und VoltDB. Die Bugs, welche hier nachgestellt werden, stammen
 ursprünglich aus MongoDB und Redis.
@@ -1013,45 +1020,58 @@ In neueren Versionen des Systems schlagen stattdessen Schreiboperationen in dies
 verhindern. Der Bug wurde hier in eine aktuelle Version des Systems wieder eingebaut, anstatt die alte Version des Systems zu
 verwenden, da dies einfacher war, als kompatible alte Versionen aller Teile des Systems zu finden und zu konfigurieren.
 
+
+
 \chapter{Ergebnisse}
 \label{chap:results}
 Im Folgenden werden die Ergebnisse der einzelnen Experimente dargestellt und interpretiert. Im Anschluss folgt eine
 zusammenfassende Diskussion der Evaluationsergebnisse.
 
 \section{Request-Matching}
-Die Ergebnisse der Experimente zur Evaluation den Request-Matchings sind gruppiert nach Art der Requests, so dass pro Tabelle
-der Einfluss von Zufall in der Reihenfolge der Requests auf das Matching erkennbar wird. Die vom beschriebenen Bug im SUT
+Die Ergebnisse der Experimente zur Evaluation den Request-Matchings sind gruppiert nach Art der Requests, sodass pro Tabelle
+der Einfluss von Zufall in der Reihenfolge der Requests auf das Matching erkennbar wird.
+Jede Zeile in den Tabellen stellt die Ergebnisse für eine bestimmte Konfiguration des in Kapitel \ref{chap:exp_matching}
+beschriebenen Versuchs dar, jeweils für die vier verschiedenen Request-Matcher, die hier evaluiert werden. Für jedes Experiment
+wird wowohl der Durchschnitt, als auch der Median über 10 individuelle Durchführungen des jeweiligen Versuchs angegeben.
+
+Die vom beschriebenen Bug im SUT
 betroffenen Experimente sind in den Tabellen \ref{tab:get} und \ref{tab:get_ts} dargestellt und daran erkennbar, dass die Anzahl
-der Requests von den vorgesehenen 10 und 100 abweicht. Interessant in diesen Experimenten ist zu beobachten, dass selbst bei
-ungemischten Reqeust-Flüssen Fehler passieren, der Blick auf dem Median zeigt aber, dass dies nur in weniger als der Hälfte der
-Durchführungen der Fall sein kann. Die Erklärung hierfür ist, dass durch den Bug ein vorangegangener Aufruf des SUT einen
-Einfluss auf den nächsten haben kann, falls der letzte Request des vorangegangenen Aufrufs erfolgreich war und der erste Request
-des neuen Aufrufs geblockt wird. In diesem Fall wird der erste Request erneut versucht, was in isolation selbst mit dem Bug
-nicht passieren sollte. Tritt dieser Fall ein, verändert sich dadurch die Reihenfolge des gesamten Request-Flusses, da direkt am
-Anfang ein zusätzlicher Request eingefügt wird, was zu den beobachteten Fehlern führt. Tabelle \ref{tab:get_nka} zeigt, dass
-diese Fehler in der Tat durch den Bug ausgelöst werden, da sie nicht auftreten, wenn die Retries mittels no-keep-alive
-verhindert werden. Des weiteren zeigt sich an den jeweils geringeren Request Anzahlen, dass der Bug deutlich weniger bei den
-asynchronen Experimenten auftritt, vermutlich, weil dort weniger Verbindungen wiederverwendet werden, als im synchronen
-Versuchsaufbau. Das seltenere Auftreten des Bugs erklärt auch die deutlich bessere Performance der heuristischen und Mix-Matcher
-bei den asynchronen Experimenten im Vergleich zu den synchron gemischten in Tabelle \ref{tab:get}.
+der Requests von den vorgesehenen 10 und 100 abweicht.
+% Interessant in diesen Experimenten ist zu beobachten, dass selbst bei
+% ungemischten Request-Flüssen Fehler passieren, der Blick auf dem Median zeigt aber, dass dies nur in weniger als der Hälfte der
+% Durchführungen der Fall sein kann. Die Erklärung hierfür ist, dass durch den Bug ein vorangegangener Aufruf des SUT einen
+% Einfluss auf den nächsten haben kann, falls der letzte Request des vorangegangenen Aufrufs erfolgreich war und der erste Request
+% des neuen Aufrufs geblockt wird. In diesem Fall wird der erste Request erneut versucht, was in isolation selbst mit dem Bug
+% nicht passieren sollte. Tritt dieser Fall ein, verändert sich dadurch die Reihenfolge des gesamten Request-Flusses, da direkt am
+% Anfang ein zusätzlicher Request eingefügt wird, was zu den beobachteten Fehlern führt. Tabelle \ref{tab:get_nka} zeigt, dass
+% diese Fehler in der Tat durch den Bug ausgelöst werden, da sie nicht auftreten, wenn die Retries mittels no-keep-alive
+% verhindert werden. Des weiteren zeigt sich an den jeweils geringeren Request Anzahlen, dass der Bug deutlich weniger bei den
+% asynchronen Experimenten auftritt, vermutlich, weil dort weniger Verbindungen wiederverwendet werden, als im synchronen
+% Versuchsaufbau. Das seltenere Auftreten des Bugs erklärt auch die deutlich bessere Performance der heuristischen und Mix-Matcher
+% bei den asynchronen Experimenten im Vergleich zu den synchron gemischten in Tabelle \ref{tab:get}.
 \begin{table}[H]
 	\centering
-	\caption{Ergebnisse der Request-Matching Experimente mit einfachen GET Requests}
+	\caption{
+        Matching von einfachen GET-Requests:
+		Anzahl der im Replay falsch behandelten Requests pro Anzahl Requests im Recording,
+		beides als Durchschnitt und Median über zehn Durchführungen des Versuchs mit dem jeweiligen Matcher.
+	}
 	\label{tab:get}
 	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
-		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg  & med  & avg  & med  \\ \hline
-		no                       & 13.3                               & 13.5                            & 0.8                         & 0.0                       & 0.8                            & 0.0  & 0.8  & 0.0  & 1.7  & 0.0  \\ \hline
-		no                       & 133.6                              & 133.0                           & 2.9                         & 0.0                       & 0.3                            & 0.0  & 2.9  & 0.0  & 15.2 & 0.0  \\ \hline
-		1                        & 13                                 & 13.0                            & 1.7                         & 1.5                       & 2.2                            & 2.0  & 1.7  & 2.0  & 2.6  & 2.5  \\ \hline
-		1                        & 133.2                              & 134.0                           & 22.7                        & 23.0                      & 39.1                           & 38.0 & 23.6 & 25.0 & 34.6 & 36.5 \\ \hline
-		2                        & 13.5                               & 14.0                            & 2.5                         & 2.5                       & 3.0                            & 3.0  & 2.5  & 3.0  & 3.3  & 4.0  \\ \hline
-		2                        & 131.5                              & 130.0                           & 22.5                        & 21.5                      & 40.3                           & 42.5 & 21.4 & 20.0 & 45.2 & 46.0 \\ \hline
-		3                        & 13.3                               & 14.0                            & 2.0                         & 2.0                       & 3.5                            & 3.0  & 2.3  & 2.5  & 4.5  & 4.0  \\ \hline
-		3                        & 135.1                              & 137.0                           & 25.8                        & 27.0                      & 42.2                           & 39.0 & 24.8 & 27.5 & 46.7 & 47.0 \\ \hline
-		async                    & 13                                 & 14.0                            & 1.5                         & 1.5                       & 3.4                            & 4.0  & 1.4  & 1.0  & 5.5  & 5.0  \\ \hline
-		async                    & 113.1                              & 111.5                           & 7.2                         & 6.5                       & 30.7                           & 31.0 & 7.0  & 6.0  & 68.2 & 67.0 \\ \hline
+		\multirow{3}{*}{Shuffle} & \multicolumn{2}{|c|}{Anzahl}   & \multicolumn{2}{|c|}{Heurist.} & \multicolumn{2}{|c|}{Exakter} & \multicolumn{2}{|c|}{Mix}     & \multicolumn{2}{|c|}{Zählender}                                    \\
+		                         & \multicolumn{2}{|c|}{Requests} & \multicolumn{2}{|c|}{Matcher}  & \multicolumn{2}{|c|}{Matcher} & \multicolumn{2}{|c|}{Matcher} & \multicolumn{2}{|c|}{Matcher}                                      \\ \cline{2-11}
+		                         & avg                            & med                            & avg                           & med                           & avg                             & med  & avg  & med  & avg  & med  \\ \hline
+		no                       & 13.3                           & 13.5                           & 0.8                           & 0.0                           & 0.8                             & 0.0  & 0.8  & 0.0  & 1.7  & 0.0  \\ \hline
+		no                       & 133.6                          & 133.0                          & 2.9                           & 0.0                           & 0.3                             & 0.0  & 2.9  & 0.0  & 15.2 & 0.0  \\ \hline
+		1                        & 13                             & 13.0                           & 1.7                           & 1.5                           & 2.2                             & 2.0  & 1.7  & 2.0  & 2.6  & 2.5  \\ \hline
+		1                        & 133.2                          & 134.0                          & 22.7                          & 23.0                          & 39.1                            & 38.0 & 23.6 & 25.0 & 34.6 & 36.5 \\ \hline
+		2                        & 13.5                           & 14.0                           & 2.5                           & 2.5                           & 3.0                             & 3.0  & 2.5  & 3.0  & 3.3  & 4.0  \\ \hline
+		2                        & 131.5                          & 130.0                          & 22.5                          & 21.5                          & 40.3                            & 42.5 & 21.4 & 20.0 & 45.2 & 46.0 \\ \hline
+		3                        & 13.3                           & 14.0                           & 2.0                           & 2.0                           & 3.5                             & 3.0  & 2.3  & 2.5  & 4.5  & 4.0  \\ \hline
+		3                        & 135.1                          & 137.0                          & 25.8                          & 27.0                          & 42.2                            & 39.0 & 24.8 & 27.5 & 46.7 & 47.0 \\ \hline
+		async                    & 13                             & 14.0                           & 1.5                           & 1.5                           & 3.4                             & 4.0  & 1.4  & 1.0  & 5.5  & 5.0  \\ \hline
+		async                    & 113.1                          & 111.5                          & 7.2                           & 6.5                           & 30.7                            & 31.0 & 7.0  & 6.0  & 68.2 & 67.0 \\ \hline
 	\end{tabular}
 \end{table}
 
@@ -1067,7 +1087,7 @@ ein möglicher Bugfix getestet werden soll.
 	\label{tab:get_ts}
 	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exakt} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
 		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg  & med  & avg  & med  \\ \hline
 		no                       & 13.6                               & 14.0                            & 0.7                         & 0.0                       & 0.9                            & 0.0  & 1.2  & 0.0  & 2.1  & 0.0  \\ \hline
 		no                       & 134.7                              & 136.5                           & 19.6                        & 0.0                       & 19.0                           & 0.0  & 9.4  & 0.0  & 19.9 & 0.0  \\ \hline
@@ -1092,7 +1112,7 @@ Matcher haben erneut deutliche Probleme.
 	\label{tab:get_nka}
 	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                  \\ \cline{2-11}
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exakt} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                  \\ \cline{2-11}
 		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg & med & avg  & med  \\ \hline
 		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0 & 0.0 & 0.0  & 0.0  \\ \hline
 		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0 & 0.0 & 0.0  & 0.0  \\ \hline
@@ -1117,7 +1137,7 @@ klaren Favoriten gibt es hier aber zwischen den beiden nicht, wie Tabelle \ref{t
 	\label{tab:get_ts_nka}
 	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exakt} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
 		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg  & med  & avg  & med  \\ \hline
 		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
 		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
@@ -1147,7 +1167,7 @@ zwischen den beiden besteht dann aber kein relevanter Unterschied mehr, der in d
 	\label{tab:post}
 	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exact} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
+		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exakt} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
 		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg  & med  & avg  & med  \\ \hline
 		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
 		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
@@ -1169,8 +1189,8 @@ nur sehr wenige gemischte Requests im gleichen Fluss auftreten, da ein Fluss imm
 abbildet. Reale Systeme senden vielmehr viele Requests zwischen unterschiedlichen Knoten des Systems, die ditm aufgrund
 dessen von vornherein getrennt betrachtet und somit auch keine Fehler beim Matching macht. Die Experimente haben also gezeigt,
 dass es durchaus Situationen geben kann, in denen ditm nicht funktioniert. Vor allem haben sie aber auch demonstriert, dass ditm
-mit Schwierigkeiten umgehen kann, sofern diese nicht zu gehäuft auftreten. Leicht identifizierbare Reqeusts in stark gemischter
-Reihenfolge sind kein Problem, genauso wie schwierig identifizierbare Reqests, die in größtenteils korrekter Reihenfolge
+mit Schwierigkeiten umgehen kann, sofern diese nicht zu gehäuft auftreten. Leicht identifizierbare Requests in stark gemischter
+Reihenfolge sind kein Problem, genauso wie schwierig identifizierbare Requests, die in größtenteils korrekter Reihenfolge
 auftreten. Erst wenn beides zusammen kommt, funktioniert ditms Matching nicht mehr.
 
 \section{Log-Matching}
@@ -1178,7 +1198,7 @@ Die Ergebnisse für das Log-Matching sind in Tabelle \ref{tab:logs} zusammengefa
 Es ist anzumerken, dass die Anzahl der Fehler und auch der maximale Fehler bei den asynchronen Experimenten Schätzwerte sind, da durch
 die asynchrone Natur der Experimente bei manchen Logs nicht eindeutig zu sagen ist, ob sie an richtiger Stelle stehen oder nicht.
 Trotzdem zeigen die Werte demonstativ, dass das Log-Matching bei hoch asynchronen Prozessen mit vielen schnellen Logs
-und Reqeusts an seine Grenzen kommen kann und dann effektiv unbrauchbar wird. Ganz im Gegenteil dazu stehen die Ergebnisse der
+und Requests an seine Grenzen kommen kann und dann effektiv unbrauchbar wird. Ganz im Gegenteil dazu stehen die Ergebnisse der
 synchronen Experimente. Zwar gibt es auch hier durchaus Fehler, diese sind aber selten genug und vor allem klein genug, dass das Log-Matching
 hier erheblich zur Effektivität von ditm als Debugging Werkzeug beitragen kann, wie sich auch schon im vorangegangenen Kapitel in
 der Praxis gezeigt hat.
@@ -1201,7 +1221,7 @@ von zwei bis drei Fehlern direkt hintereinander auftreten. Bei den asynchronen E
 und fast alle Requests gemischt mit nur sehr wenigen Logs am Anfang. Beides deutet darauf hin, dass irgendwo in der Logging Pipeline möglicherweise
 ein Buffer nicht schnell genug abgearbeitet wird und sich die Log-Nachrichten so anstauen können. Es ist außerdem naheliegend, dass nicht der ditm Proxy
 selbst, welcher die Logs sammelt, den Flaschenhals bildet, sondern bereits der Docker Daemon oder noch wahrscheinlicher der verwendete HTTP-Log-Driver,
-da die Zeitstempel, welche zur Sortierung der Tabelle von Reqeusts und Logs verwendet werden, in diesem Teil des Systems generiert werden.
+da die Zeitstempel, welche zur Sortierung der Tabelle von Requests und Logs verwendet werden, in diesem Teil des Systems generiert werden.
 
 \section{Debugging}
 Alle der beschriebenen Bugs lassen sich mit Hilfe von ditm in Recordings und in Replays reproduzieren. Da insbesondere für die
@@ -1242,7 +1262,7 @@ Mechanismus ist, dass dieser in der aktuellen Form nicht für Recordings funktio
 verwenden.
 
 Eine wichtige Beobachtung bei Bug 5 ist, dass ditm grundsätzlich keine Token-basierte Authentifizierung während Replays unterstützt, da hierfür
-Daten aus einer Response in den folgenden Requests mitgesendet werden müssen. Ditm hingegen sendet im Replay den exact gleichen
+Daten aus einer Response in den folgenden Requests mitgesendet werden müssen. Ditm hingegen sendet im Replay den exakt gleichen
 Request, wie im Recording und ignoriert einen neu generierten Token. Als Workaround wurde hier die Lebensdauer der Access-Token
 des SUT auf mehrere Monate gesetzt, um ditm zu erlauben, diese während eines Replays wiederzuverwenden. Mit dieser Einstellung
 hatte ditm keine Probleme, den Bug deterministisch zu reproduzieren.
@@ -1326,7 +1346,7 @@ verwendeten Visualisierung sehr effektiv sein kann.
 
 \section{Ausblick}
 Die Vision, die durch die Ergebnisse dieser Arbeit unterstützt wird, einen Replay-Debugger wie ditm mit einem Failure-Testing Tool
-wie Jepsen zu kombinieren, so dass Jepsen für jeden identifizierten Bug ein Recording erstellt, welches dann debuggt werden kann.
+wie Jepsen zu kombinieren, sodass Jepsen für jeden identifizierten Bug ein Recording erstellt, welches dann debuggt werden kann.
 Eine große Herausforderung dabei ist, Jepsen dazu zu bringen, Aufzeichnungen zu erstellen, anhand derer ein deterministisches
 Replay möglich ist. Es ist möglich, dass für die Symbiose der beiden Techniken ein neues Failure-Testing Tool notwendig ist,
 welches die Anforderungen des Replay-Debuggings von vorn herein mit einbezieht.
@@ -1376,7 +1396,7 @@ Authentifizierung umzugehen, wofür es noch eine sinnvolle Lösung zu finden gil
 eines Tools wie ditm als Debugger sind, das System für TCP als Netzwerkprotokoll zu implementieren und ein Frontend zu entwickeln,
 das die aggregierten Events des SUT als Zeit-Raum-Diagramm virtualisieren kann.
 
-Die Zukunftsvision ist eine Integration mit einem Failure-Testing-Tool wie Jepsen, so dass gefundene Bugs automatisch
+Die Zukunftsvision ist eine Integration mit einem Failure-Testing-Tool wie Jepsen, sodass gefundene Bugs automatisch
 aufgezeichnet werden und für Replay-Debugging zur Verfügung stehen. Im Kontext dieser Vision trägt diese Arbeit dem
 Forschungsfeld einen einfachen Replay-Mechanismus für verteilte Systeme bei, der in Kombination mit der nächsten Generation von
 Failure-Testing-Tools das Debugging verteilter Systemen effizienter machen kann.
