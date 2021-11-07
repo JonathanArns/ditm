@@ -816,23 +816,21 @@ services:
 
 
 
-\chapter{Methodik und Versuchsaufbau}
-Dieses Kapitel beschreibt die Versuche, mit denen die folgenden Fragen über den zuvor beschriebenen Prototypen ditm beantwortet
-werden sollen.
-\begin{itemize}
-	\item Wie gut funktionieren Replays von Netwerk-Unterbrechungen über einen Proxy?
-	\item Wie gut funktioniert ditms Log-Matching, bzw. die chronologische Ordnung von Log Nachrichten relativ zu Requests?
-	\item Lassen sich durch Netzwerk-Unterbrechungen ausgelöste Bugs deterministisch mit ditms Replay-Mechanismus reproduzieren?
-\end{itemize}
+\chapter{Versuchsaufbaue}
+Dieses Kapitel beschreibt die Versuche, mit denen die in Kapitel \ref{chap:hypothesis} aufgestellte Hypothese evaluiert wird.
+Konkret sollen die folgenden Fragen über den zuvor beschriebenen Prototypen ditm beantwortet werden.
+\begin{enumerate}
+	\item Was sind die Grenzen von ditms Request-Matching?
+	\item Wie gut funktioniert ditms Log-Matching, bzw. die chronologische Ordnung von Log-Nachrichten relativ zu Requests?
+	\item Lassen sich durch Netzwerk-Unterbrechungen ausgelöste Bugs deterministisch mit ditms Replay-Mechanismen reproduzieren?
+\end{enumerate}
 \section{Request-Matching}
-Ziel dieses Versuchs ist es, die Grenzen von ditm im Bezug auf die erste Frage auszuloten.
+\label{chap:exp_matching}
+Ziel dieses Versuchs ist es, die erste Frage zu beantworten.
 Der zeitbasierte Matcher wird in diesem Versuch nicht evaluiert, da er aufgrund seiner Funktionsweise schon per Design für die
 zufallsbasierten Netzwerk-Unterbrechungen, die für diese Experimente verwendet werden, ungeeignet ist. Stattdessen wird er nur mit
 den Versuchen in \ref{chap:debugging_exp} evaluiert.
-% Dazu wird eine große Menge an eindeutig identifizierbarer Requests unter leicht unterschiedlichen Bedingungen gesendet.
-% Da sich ditm beim Log-Matching auf Zeitstempel verlässt und diese für die Logs von Docker kommen, ist die Erwartung,
-% dass das Log-Matching in allen Situationen akzeptabel funktioniert. Für das Request Matching ist die Erwartungshaltung, dass
-% der ...Mix und der heuristic Matcher am besten funktionieren.
+
 Das Test System ist ein einfacher HTTP-Server mit zwei Endpunkten. Einer davon löst eine große Menge an Requests aus, der andere
 verarbeitet diese. Es wird für den Versuch ein Cluster aus zwei identischen Knoten verwendet, wovon einer die Rolle eines API
 Gateways einnimmt, über das von außen der Versuch ausgelöst wird, und der andere die eines dahinter verborgenen Services. Da ditm
@@ -880,6 +878,7 @@ Alle Experimente zum Request-Matching werden vollständig automatisiert durchgef
 % (Das Python Script hierfür ist im Repo)
 
 \section{Log-Matching}
+\label{chap:exp_logs}
 Für die Evaluation des Log-Matchings wird das gleiche SUT verwendet wie für die Experimente zum Request-Matching.
 Da die chronologische Darstellung von Logs zwischen den Requests leider nicht so einfach automatisch auswertbar ist, werden
 hierfür zusätzliche Experimente von Hand durchgeführt und ausgewertet. Es werden insgesamt vier Experimente durchgeführt, bei
@@ -1031,15 +1030,10 @@ zusammenfassende Diskussion der Evaluationsergebnisse.
 Die Ergebnisse der Experimente zur Evaluation den Request-Matchings sind gruppiert nach Art der Requests, sodass pro Tabelle
 der Einfluss von Zufall in der Reihenfolge der Requests auf das Matching erkennbar wird.
 Jede Zeile in den Tabellen stellt die Ergebnisse für eine bestimmte Konfiguration des in Kapitel \ref{chap:exp_matching}
-beschriebenen Versuchs dar, jeweils für die vier verschiedenen Request-Matcher, die hier evaluiert werden. Für jedes Experiment
+beschriebenen Versuchs dar, jeweils für die vier verschiedenen Request-Matcher, die in den Versuchen evaluiert werden. Für jedes Experiment
 wird wowohl der Durchschnitt, als auch der Median über 10 individuelle Durchführungen des jeweiligen Versuchs angegeben.
 
-Die vom beschriebenen Bug im SUT
-betroffenen Experimente sind in den Tabellen \ref{tab:get} und \ref{tab:get_ts} dargestellt und daran erkennbar, dass die Anzahl
-der Requests von den vorgesehenen 10 und 100 abweicht.
-% Interessant in diesen Experimenten ist zu beobachten, dass selbst bei
-% ungemischten Request-Flüssen Fehler passieren, der Blick auf dem Median zeigt aber, dass dies nur in weniger als der Hälfte der
-% Durchführungen der Fall sein kann. Die Erklärung hierfür ist, dass durch den Bug ein vorangegangener Aufruf des SUT einen
+% Die Erklärung hierfür ist, dass durch den Bug ein vorangegangener Aufruf des SUT einen
 % Einfluss auf den nächsten haben kann, falls der letzte Request des vorangegangenen Aufrufs erfolgreich war und der erste Request
 % des neuen Aufrufs geblockt wird. In diesem Fall wird der erste Request erneut versucht, was in isolation selbst mit dem Bug
 % nicht passieren sollte. Tritt dieser Fall ein, verändert sich dadurch die Reihenfolge des gesamten Request-Flusses, da direkt am
@@ -1052,7 +1046,7 @@ der Requests von den vorgesehenen 10 und 100 abweicht.
 \begin{table}[H]
 	\centering
 	\caption{
-        Matching von einfachen GET-Requests:
+		Ergebnisse zum Request-Matching von einfachen GET-Requests:
 		Anzahl der im Replay falsch behandelten Requests pro Anzahl Requests im Recording,
 		beides als Durchschnitt und Median über zehn Durchführungen des Versuchs mit dem jeweiligen Matcher.
 	}
@@ -1075,153 +1069,164 @@ der Requests von den vorgesehenen 10 und 100 abweicht.
 	\end{tabular}
 \end{table}
 
-Obwohl ein korrektes Request-Matching bei gemischter Reihenfolge durch den Bug effektiv unmöglich wird, da schlichtweg nicht die
-gleichen Requests im Recording und im Replay sind, ist zu erkennen, dass der Heuristische und der Mix-Matcher sich hier insgesamt
-deutlich besser verhalten, als die anderen beiden. Das ist in so fern relevant, dass auch in realen Szenarien durchaus
-unterschiedliche Mengen an Requests in Recording und Replay sein können, beispielsweise wenn im Laufe eines Debugging Workflows
-ein möglicher Bugfix getestet werden soll.
+Die Tabellen \ref{tab:get} und \ref{tab:get_ts} stellen die Ergebnisse der Experimente dar, in denen durch Retries vom HTTP-Client
+mehr Requests gesendet wurden, als die im Versuchsaufbau speziefizierten 10 oder 100. Die zusätzlichen Requests sind in jedem
+Aufruf des SUT unterschiedlich, auch zwischen Recordings und deren Replays.
 
+In diesen Experimenten ist zu beobachten, dass selbst bei ungemischten Request-Flüssen mit allen Matchern Fehler in manchen
+Replays passieren. Trotzdem ist zu erkennen, dass der Heuristische und der Mix-Matcher sich hier insgesamt deutlich besser
+verhalten, als die anderen beiden. In den Versuchen mit Zeitstempeln, deren Ergebnisse in Tabelle \ref{tab:get_ts} dargestellt
+sind, machen der Heuristische und der Mix-Matcher in vielen Konfigurationen des Versuchs ein Vielfaches der Fehler, die sie in den
+Versuchen ohne Zeitstempel in Tabelle \ref{tab:get} machen.
+
+% Obwohl ein korrektes Request-Matching bei gemischter Reihenfolge durch den Bug effektiv unmöglich wird, da schlichtweg nicht die
+% gleichen Requests im Recording und im Replay sind, ist zu erkennen, dass
+% Das ist in so fern relevant, dass auch in realen Szenarien durchaus
+% unterschiedliche Mengen an Requests in Recording und Replay sein können, beispielsweise wenn im Laufe eines Debugging Workflows
+% ein möglicher Bugfix getestet werden soll.
 \begin{table}[H]
 	\centering
-	\caption{Ergebnisse der Request-Matching Experimente mit GET Requests mit Zeitstempeln}
+	\caption{
+		Ergebnisse zum Request-Matching von GET-Requests mit Zeitstempel:
+		Anzahl der im Replay falsch behandelten Requests pro Anzahl Requests im Recording,
+		beides als Durchschnitt und Median über zehn Durchführungen des Versuchs mit dem jeweiligen Matcher.
+	}
 	\label{tab:get_ts}
 	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exakt} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
-		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg  & med  & avg  & med  \\ \hline
-		no                       & 13.6                               & 14.0                            & 0.7                         & 0.0                       & 0.9                            & 0.0  & 1.2  & 0.0  & 2.1  & 0.0  \\ \hline
-		no                       & 134.7                              & 136.5                           & 19.6                        & 0.0                       & 19.0                           & 0.0  & 9.4  & 0.0  & 19.9 & 0.0  \\ \hline
-		1                        & 13.8                               & 14.0                            & 3.3                         & 3.0                       & 3.0                            & 2.5  & 3.8  & 4.0  & 3.0  & 3.5  \\ \hline
-		1                        & 135.4                              & 137.5                           & 37.0                        & 37.0                      & 36.2                           & 35.0 & 36.7 & 36.5 & 38.1 & 39.5 \\ \hline
-		2                        & 13.4                               & 13.0                            & 3.7                         & 4.0                       & 4.3                            & 4.5  & 3.2  & 3.5  & 3.4  & 3.0  \\ \hline
-		2                        & 134.1                              & 133.5                           & 42.0                        & 41.0                      & 43.1                           & 45.0 & 40.0 & 37.5 & 42.9 & 42.0 \\ \hline
-		3                        & 13.2                               & 13.0                            & 4.1                         & 4.0                       & 5.3                            & 6.0  & 5.0  & 6.0  & 4.8  & 5.0  \\ \hline
-		3                        & 134.5                              & 134.5                           & 48.8                        & 47.0                      & 48.3                           & 47.5 & 50.8 & 51.5 & 49.1 & 48.0 \\ \hline
-		async                    & 13.7                               & 13.5                            & 5.0                         & 5.0                       & 5.6                            & 5.0  & 6.1  & 6.0  & 6.2  & 6.5  \\ \hline
-		async                    & 113.4                              & 108.0                           & 60.9                        & 60.0                      & 65.2                           & 65.0 & 65.0 & 65.0 & 65.6 & 66.5 \\ \hline
+		\multirow{3}{*}{Shuffle} & \multicolumn{2}{|c|}{Anzahl}   & \multicolumn{2}{|c|}{Heurist.} & \multicolumn{2}{|c|}{Exakter} & \multicolumn{2}{|c|}{Mix}     & \multicolumn{2}{|c|}{Zählender}                                    \\
+		                         & \multicolumn{2}{|c|}{Requests} & \multicolumn{2}{|c|}{Matcher}  & \multicolumn{2}{|c|}{Matcher} & \multicolumn{2}{|c|}{Matcher} & \multicolumn{2}{|c|}{Matcher}                                      \\ \cline{2-11}
+		                         & avg                            & med                            & avg                           & med                           & avg                             & med  & avg  & med  & avg  & med  \\ \hline
+		no                       & 13.6                           & 14.0                           & 0.7                           & 0.0                           & 0.9                             & 0.0  & 1.2  & 0.0  & 2.1  & 0.0  \\ \hline
+		no                       & 134.7                          & 136.5                          & 19.6                          & 0.0                           & 19.0                            & 0.0  & 9.4  & 0.0  & 19.9 & 0.0  \\ \hline
+		1                        & 13.8                           & 14.0                           & 3.3                           & 3.0                           & 3.0                             & 2.5  & 3.8  & 4.0  & 3.0  & 3.5  \\ \hline
+		1                        & 135.4                          & 137.5                          & 37.0                          & 37.0                          & 36.2                            & 35.0 & 36.7 & 36.5 & 38.1 & 39.5 \\ \hline
+		2                        & 13.4                           & 13.0                           & 3.7                           & 4.0                           & 4.3                             & 4.5  & 3.2  & 3.5  & 3.4  & 3.0  \\ \hline
+		2                        & 134.1                          & 133.5                          & 42.0                          & 41.0                          & 43.1                            & 45.0 & 40.0 & 37.5 & 42.9 & 42.0 \\ \hline
+		3                        & 13.2                           & 13.0                           & 4.1                           & 4.0                           & 5.3                             & 6.0  & 5.0  & 6.0  & 4.8  & 5.0  \\ \hline
+		3                        & 134.5                          & 134.5                          & 48.8                          & 47.0                          & 48.3                            & 47.5 & 50.8 & 51.5 & 49.1 & 48.0 \\ \hline
+		async                    & 13.7                           & 13.5                           & 5.0                           & 5.0                           & 5.6                             & 5.0  & 6.1  & 6.0  & 6.2  & 6.5  \\ \hline
+		async                    & 113.4                          & 108.0                          & 60.9                          & 60.0                          & 65.2                            & 65.0 & 65.0 & 65.0 & 65.6 & 66.5 \\ \hline
 	\end{tabular}
 \end{table}
-
-Tabelle \ref{tab:get_nka} zeigt, dass ditm problemlos mit stark gemischten Requests umgehen kann, sofern diese keine zufälligen
-anderen komponenten enthalten. Auch hier verhalten sich wieder der Heutristische und der Mix-Matcher am besten, die beiden anderen
-Matcher haben erneut deutliche Probleme.
 
 \begin{table}[H]
 	\centering
-	\caption{Ergebnisse der Request-Matching Experimente mit GET Requests mit no-keep-alive header}
+	\caption{
+		Ergebnisse zum Request-Matching von GET-Requests mit no-keep-alive Header:
+		Anzahl der im Replay falsch behandelten Requests pro Anzahl Requests im Recording,
+		beides als Durchschnitt und Median über zehn Durchführungen des Versuchs mit dem jeweiligen Matcher.
+	}
 	\label{tab:get_nka}
 	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exakt} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                  \\ \cline{2-11}
-		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg & med & avg  & med  \\ \hline
-		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0 & 0.0 & 0.0  & 0.0  \\ \hline
-		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0 & 0.0 & 0.0  & 0.0  \\ \hline
-		1                        & 10                                 & 10.0                            & 0.0                         & 0.0                       & 1.7                            & 2.0  & 0.0 & 0.0 & 4.2  & 3.5  \\ \hline
-		1                        & 100                                & 100.0                           & 0.0                         & 0.0                       & 22.5                           & 22.5 & 0.0 & 0.0 & 40.2 & 41.0 \\ \hline
-		2                        & 10                                 & 10.0                            & 0.0                         & 0.0                       & 2.5                            & 2.0  & 0.0 & 0.0 & 3.6  & 4.0  \\ \hline
-		2                        & 100                                & 100.0                           & 0.0                         & 0.0                       & 25.4                           & 25.5 & 0.0 & 0.0 & 48.8 & 50.5 \\ \hline
-		3                        & 10                                 & 10.0                            & 0.0                         & 0.0                       & 2.2                            & 2.0  & 0.0 & 0.0 & 5.0  & 5.0  \\ \hline
-		3                        & 100                                & 100.0                           & 0.0                         & 0.0                       & 25.4                           & 25.0 & 0.0 & 0.0 & 52.2 & 53.0 \\ \hline
-		async                    & 10                                 & 10.0                            & 0.0                         & 0.0                       & 2.5                            & 2.5  & 0.0 & 0.0 & 7.3  & 7.5  \\ \hline
-		async                    & 100                                & 100.0                           & 0.0                         & 0.0                       & 22.4                           & 21.5 & 0.0 & 0.0 & 68.2 & 65.5 \\ \hline
+		\multirow{3}{*}{Shuffle} & \multicolumn{2}{|c|}{Anzahl}   & \multicolumn{2}{|c|}{Heurist.} & \multicolumn{2}{|c|}{Exakter} & \multicolumn{2}{|c|}{Mix}     & \multicolumn{2}{|c|}{Zählender}                                  \\
+		                         & \multicolumn{2}{|c|}{Requests} & \multicolumn{2}{|c|}{Matcher}  & \multicolumn{2}{|c|}{Matcher} & \multicolumn{2}{|c|}{Matcher} & \multicolumn{2}{|c|}{Matcher}                                    \\ \cline{2-11}
+		                         & avg                            & med                            & avg                           & med                           & avg                             & med  & avg & med & avg  & med  \\ \hline
+		no                       & 10                             & 10.0                           & 0.0                           & 0.0                           & 0.0                             & 0.0  & 0.0 & 0.0 & 0.0  & 0.0  \\ \hline
+		no                       & 100                            & 100.0                          & 0.0                           & 0.0                           & 0.0                             & 0.0  & 0.0 & 0.0 & 0.0  & 0.0  \\ \hline
+		1                        & 10                             & 10.0                           & 0.0                           & 0.0                           & 1.7                             & 2.0  & 0.0 & 0.0 & 4.2  & 3.5  \\ \hline
+		1                        & 100                            & 100.0                          & 0.0                           & 0.0                           & 22.5                            & 22.5 & 0.0 & 0.0 & 40.2 & 41.0 \\ \hline
+		2                        & 10                             & 10.0                           & 0.0                           & 0.0                           & 2.5                             & 2.0  & 0.0 & 0.0 & 3.6  & 4.0  \\ \hline
+		2                        & 100                            & 100.0                          & 0.0                           & 0.0                           & 25.4                            & 25.5 & 0.0 & 0.0 & 48.8 & 50.5 \\ \hline
+		3                        & 10                             & 10.0                           & 0.0                           & 0.0                           & 2.2                             & 2.0  & 0.0 & 0.0 & 5.0  & 5.0  \\ \hline
+		3                        & 100                            & 100.0                          & 0.0                           & 0.0                           & 25.4                            & 25.0 & 0.0 & 0.0 & 52.2 & 53.0 \\ \hline
+		async                    & 10                             & 10.0                           & 0.0                           & 0.0                           & 2.5                             & 2.5  & 0.0 & 0.0 & 7.3  & 7.5  \\ \hline
+		async                    & 100                            & 100.0                          & 0.0                           & 0.0                           & 22.4                            & 21.5 & 0.0 & 0.0 & 68.2 & 65.5 \\ \hline
 	\end{tabular}
 \end{table}
 
-Treten in gemischten Request-Flüssen außerdem zufällige Komponenten auf, die das Request Matching zusätzlich erschweren, führt das
-dazu, dass alle Requests-Matcher Fehler machen. Weiterhin sind der Heuristische und der Mix-Matcher mit Abstand am besten, einen
+Tabelle \ref{tab:get_nka} zeigt, dass ditm problemlos mit stark gemischten Requests umgehen kann, sofern diese keine weiteren zufälligen
+komponenten enthalten. Auch hier verhalten sich der Heutristische und der Mix-Matcher am besten, die beiden anderen
+Matcher haben deutliche Probleme.
+
+\begin{table}[H]
+	\centering
+	\caption{
+		Ergebnisse zum Request-Matching von GET-Requests mit Zeitstempel no-keep-alive Header:
+		Anzahl der im Replay falsch behandelten Requests pro Anzahl Requests im Recording,
+		beides als Durchschnitt und Median über zehn Durchführungen des Versuchs mit dem jeweiligen Matcher.
+	}
+	\label{tab:get_ts_nka}
+	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
+		\hline
+		\multirow{3}{*}{Shuffle} & \multicolumn{2}{|c|}{Anzahl}   & \multicolumn{2}{|c|}{Heurist.} & \multicolumn{2}{|c|}{Exakter} & \multicolumn{2}{|c|}{Mix}     & \multicolumn{2}{|c|}{Zählender}                                    \\
+		                         & \multicolumn{2}{|c|}{Requests} & \multicolumn{2}{|c|}{Matcher}  & \multicolumn{2}{|c|}{Matcher} & \multicolumn{2}{|c|}{Matcher} & \multicolumn{2}{|c|}{Matcher}                                      \\ \cline{2-11}
+		                         & avg                            & med                            & avg                           & med                           & avg                             & med  & avg  & med  & avg  & med  \\ \hline
+		no                       & 10                             & 10.0                           & 0.0                           & 0.0                           & 0.0                             & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
+		no                       & 100                            & 100.0                          & 0.0                           & 0.0                           & 0.0                             & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
+		1                        & 10                             & 10.0                           & 3.4                           & 3.0                           & 4.3                             & 4.0  & 3.7  & 4.0  & 3.5  & 3.5  \\ \hline
+		1                        & 100                            & 100.0                          & 40.7                          & 39.0                          & 43.8                            & 45.0 & 40.4 & 40.0 & 43.7 & 43.0 \\ \hline
+		2                        & 10                             & 10.0                           & 5.3                           & 5.5                           & 4.9                             & 5.0  & 5.0  & 4.5  & 4.4  & 4.0  \\ \hline
+		2                        & 100                            & 100.0                          & 50.6                          & 51.5                          & 48.7                            & 48.0 & 50.9 & 52.5 & 48.4 & 48.0 \\ \hline
+		3                        & 10                             & 10.0                           & 4.6                           & 5.0                           & 4.3                             & 4.0  & 4.5  & 4.5  & 5.7  & 6.0  \\ \hline
+		3                        & 100                            & 100.0                          & 48.5                          & 50.0                          & 50.8                            & 51.0 & 49.9 & 50.0 & 50.4 & 48.5 \\ \hline
+		async                    & 10                             & 10.0                           & 5.0                           & 5.0                           & 5.7                             & 6.0  & 4.9  & 4.5  & 7.7  & 7.5  \\ \hline
+		async                    & 100                            & 100.0                          & 61.5                          & 60.5                          & 60.0                            & 61.0 & 62.4 & 62.5 & 68.7 & 69.0 \\ \hline
+	\end{tabular}
+\end{table}
+
+Bei gemischten Request-Flüssen, in denem zusätzliche zufällige Komponenten auftreten, die das Request Matching zusätzlich erschweren,
+machen alle Requests-Matcher Fehler. Weiterhin sind der Heuristische und der Mix-Matcher mit Abstand am besten, einen
 klaren Favoriten gibt es hier aber zwischen den beiden nicht, wie Tabelle \ref{tab:get_ts_nka} zeigt.
 
 \begin{table}[H]
 	\centering
-	\caption{Ergebnisse der Request-Matching Experimente mit GET Requests mit Zeitstempeln und no-keep-alive header}
-	\label{tab:get_ts_nka}
-	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
-		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exakt} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
-		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg  & med  & avg  & med  \\ \hline
-		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
-		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
-		1                        & 10                                 & 10.0                            & 3.4                         & 3.0                       & 4.3                            & 4.0  & 3.7  & 4.0  & 3.5  & 3.5  \\ \hline
-		1                        & 100                                & 100.0                           & 40.7                        & 39.0                      & 43.8                           & 45.0 & 40.4 & 40.0 & 43.7 & 43.0 \\ \hline
-		2                        & 10                                 & 10.0                            & 5.3                         & 5.5                       & 4.9                            & 5.0  & 5.0  & 4.5  & 4.4  & 4.0  \\ \hline
-		2                        & 100                                & 100.0                           & 50.6                        & 51.5                      & 48.7                           & 48.0 & 50.9 & 52.5 & 48.4 & 48.0 \\ \hline
-		3                        & 10                                 & 10.0                            & 4.6                         & 5.0                       & 4.3                            & 4.0  & 4.5  & 4.5  & 5.7  & 6.0  \\ \hline
-		3                        & 100                                & 100.0                           & 48.5                        & 50.0                      & 50.8                           & 51.0 & 49.9 & 50.0 & 50.4 & 48.5 \\ \hline
-		async                    & 10                                 & 10.0                            & 5.0                         & 5.0                       & 5.7                            & 6.0  & 4.9  & 4.5  & 7.7  & 7.5  \\ \hline
-		async                    & 100                                & 100.0                           & 61.5                        & 60.5                      & 60.0                           & 61.0 & 62.4 & 62.5 & 68.7 & 69.0 \\ \hline
-	\end{tabular}
-\end{table}
-
-Auch in den Experimenten in Tabelle \ref{tab:post}, die als zusätzliches Differenzierungsmerkmal drei unterschiedliche
-Request-Body Längen über einen weiteren Parameter einführen, erziehlt kein Matcher selbst in den am leichtesten gemischten
-Experimenten perfekte Ergebnisse. Trotzdem ist eine deutlich bessere Performance im Vergleich zu Tabelle \ref{tab:get_ts_nka} zu
-erkennen. Vor allem in leicht gemischten Experimenten machen der Heuristische und der Mix-Matcher nur weniger als halb so viele
-Fehler.
-
-Insgesamt lässt sich sagen, dass die zwei komplexesten Matcher wie erwartet in allen Experimenten die besten Ergebnisse erzielen,
-zwischen den beiden besteht dann aber kein relevanter Unterschied mehr, der in diesen Ergebnissen erkennbar wird.
-
-\begin{table}[H]
-	\centering
-	\caption{Ergebnisse der Request-Matching Experimente mit POST Requests}
+	\caption{
+		Ergebnisse zum Request-Matching von POST-Requests mit Zeitstempel und Füller im Body:
+		Anzahl der im Replay falsch behandelten Requests pro Anzahl Requests im Recording,
+		beides als Durchschnitt und Median über zehn Durchführungen des Versuchs mit dem jeweiligen Matcher.
+	}
 	\label{tab:post}
 	\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 		\hline
-		\multirow{2}{*}{Shuffle} & \multicolumn{2}{|c|}{num requests} & \multicolumn{2}{|c|}{heuristic} & \multicolumn{2}{|c|}{exakt} & \multicolumn{2}{|c|}{mix} & \multicolumn{2}{|c|}{counting}                                    \\ \cline{2-11}
-		                         & avg                                & med                             & avg                         & med                       & avg                            & med  & avg  & med  & avg  & med  \\ \hline
-		no                       & 10                                 & 10.0                            & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
-		no                       & 100                                & 100.0                           & 0.0                         & 0.0                       & 0.0                            & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
-		1                        & 10                                 & 10.0                            & 0.7                         & 1.0                       & 3.1                            & 2.5  & 0.8  & 1.0  & 4.0  & 4.0  \\ \hline
-		1                        & 100                                & 100.0                           & 8.0                         & 8.5                       & 42.0                           & 41.0 & 7.3  & 6.5  & 46.4 & 45.5 \\ \hline
-		2                        & 10                                 & 10.0                            & 1.3                         & 1.0                       & 3.8                            & 3.5  & 1.5  & 1.0  & 3.9  & 4.0  \\ \hline
-		2                        & 100                                & 100.0                           & 23.6                        & 22.5                      & 44.5                           & 44.5 & 24.9 & 25.0 & 46.6 & 46.5 \\ \hline
-		3                        & 10                                 & 10.0                            & 2.3                         & 2.0                       & 4.4                            & 5.0  & 3.2  & 3.0  & 4.3  & 5.0  \\ \hline
-		3                        & 100                                & 100.0                           & 31.2                        & 31.5                      & 46.6                           & 45.5 & 27.4 & 25.5 & 50.2 & 49.5 \\ \hline
-		async                    & 10                                 & 10.0                            & 5.1                         & 5.0                       & 5.4                            & 6.0  & 4.4  & 4.5  & 7.0  & 7.0  \\ \hline
-		async                    & 100                                & 100.0                           & 59.6                        & 59.0                      & 58.9                           & 60.0 & 58.6 & 58.5 & 66.7 & 67.5 \\ \hline
+		\multirow{3}{*}{Shuffle} & \multicolumn{2}{|c|}{Anzahl}   & \multicolumn{2}{|c|}{Heurist.} & \multicolumn{2}{|c|}{Exakter} & \multicolumn{2}{|c|}{Mix}     & \multicolumn{2}{|c|}{Zählender}                                    \\
+		                         & \multicolumn{2}{|c|}{Requests} & \multicolumn{2}{|c|}{Matcher}  & \multicolumn{2}{|c|}{Matcher} & \multicolumn{2}{|c|}{Matcher} & \multicolumn{2}{|c|}{Matcher}                                      \\ \cline{2-11}
+		                         & avg                            & med                            & avg                           & med                           & avg                             & med  & avg  & med  & avg  & med  \\ \hline
+		no                       & 10                             & 10.0                           & 0.0                           & 0.0                           & 0.0                             & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
+		no                       & 100                            & 100.0                          & 0.0                           & 0.0                           & 0.0                             & 0.0  & 0.0  & 0.0  & 0.0  & 0.0  \\ \hline
+		1                        & 10                             & 10.0                           & 0.7                           & 1.0                           & 3.1                             & 2.5  & 0.8  & 1.0  & 4.0  & 4.0  \\ \hline
+		1                        & 100                            & 100.0                          & 8.0                           & 8.5                           & 42.0                            & 41.0 & 7.3  & 6.5  & 46.4 & 45.5 \\ \hline
+		2                        & 10                             & 10.0                           & 1.3                           & 1.0                           & 3.8                             & 3.5  & 1.5  & 1.0  & 3.9  & 4.0  \\ \hline
+		2                        & 100                            & 100.0                          & 23.6                          & 22.5                          & 44.5                            & 44.5 & 24.9 & 25.0 & 46.6 & 46.5 \\ \hline
+		3                        & 10                             & 10.0                           & 2.3                           & 2.0                           & 4.4                             & 5.0  & 3.2  & 3.0  & 4.3  & 5.0  \\ \hline
+		3                        & 100                            & 100.0                          & 31.2                          & 31.5                          & 46.6                            & 45.5 & 27.4 & 25.5 & 50.2 & 49.5 \\ \hline
+		async                    & 10                             & 10.0                           & 5.1                           & 5.0                           & 5.4                             & 6.0  & 4.4  & 4.5  & 7.0  & 7.0  \\ \hline
+		async                    & 100                            & 100.0                          & 59.6                          & 59.0                          & 58.9                            & 60.0 & 58.6 & 58.5 & 66.7 & 67.5 \\ \hline
 	\end{tabular}
 \end{table}
 
-Auch wenn die hier dargestellten Ergebnisse auf den ersten Blick zeigen, dass ditm sehr viele Fehler macht, sind diese Ergebnisse
-doch positiv zu werten, wenn mit in Betracht gezogen wird, dass vorwiegend Szenarien verwendet wurden, die absichtlich schwierig
-für ditm sein sollte, um die Limits der Request-Matcher herauszufinden. Die Erwartung ist, dass in den meisten realen Anwendungsfällen
-nur sehr wenige gemischte Requests im gleichen Fluss auftreten, da ein Fluss immer genau den Verkehr zwischen nur zwei Knoten
-abbildet. Reale Systeme senden vielmehr viele Requests zwischen unterschiedlichen Knoten des Systems, die ditm aufgrund
-dessen von vornherein getrennt betrachtet und somit auch keine Fehler beim Matching macht. Die Experimente haben also gezeigt,
-dass es durchaus Situationen geben kann, in denen ditm nicht funktioniert. Vor allem haben sie aber auch demonstriert, dass ditm
-mit Schwierigkeiten umgehen kann, sofern diese nicht zu gehäuft auftreten. Leicht identifizierbare Requests in stark gemischter
-Reihenfolge sind kein Problem, genauso wie schwierig identifizierbare Requests, die in größtenteils korrekter Reihenfolge
-auftreten. Erst wenn beides zusammen kommt, funktioniert ditms Matching nicht mehr.
+Auch in den Experimenten in Tabelle \ref{tab:post}, die als zusätzliches Differenzierungsmerkmal drei unterschiedliche Längen der
+Request-Bodies über einen weiteren Query-Parameter einführen, erziehlt kein Matcher selbst in den am leichtesten gemischten
+Experimenten perfekte Ergebnisse. Trotzdem ist eine deutlich bessere Performance im Vergleich zu Requests ohne den zusätzlichen
+Parameter in Tabelle \ref{tab:get_ts_nka} zu erkennen. Vor allem in leicht gemischten Experimenten machen der Heuristische und der
+Mix-Matcher weniger als halb so viele Fehler.
+
 
 \section{Log-Matching}
 Die Ergebnisse für das Log-Matching sind in Tabelle \ref{tab:logs} zusammengefasst.
 Es ist anzumerken, dass die Anzahl der Fehler und auch der maximale Fehler bei den asynchronen Experimenten Schätzwerte sind, da durch
-die asynchrone Natur der Experimente bei manchen Logs nicht eindeutig zu sagen ist, ob sie an richtiger Stelle stehen oder nicht.
-Trotzdem zeigen die Werte demonstativ, dass das Log-Matching bei hoch asynchronen Prozessen mit vielen schnellen Logs
-und Requests an seine Grenzen kommen kann und dann effektiv unbrauchbar wird. Ganz im Gegenteil dazu stehen die Ergebnisse der
-synchronen Experimente. Zwar gibt es auch hier durchaus Fehler, diese sind aber selten genug und vor allem klein genug, dass das Log-Matching
-hier erheblich zur Effektivität von ditm als Debugging Werkzeug beitragen kann, wie sich auch schon im vorangegangenen Kapitel in
-der Praxis gezeigt hat.
+die asynchrone Natur der Experimente bei manchen Logs nicht eindeutig festzustellen ist, ob sie an richtiger Stelle stehen oder nicht.
 \begin{table}[H]
 	\centering
-	\caption{Ergebnisse der Log-Matching Experimente}
+	\caption{
+		Ergebnisse der Log-Matching Experimente: Der maximale Fehler beschreibt, wie weit entfernt eine Log-Nachricht maximal von
+		ihrer korrekten Position eingeordnet war, die Anzahl an Fehlern, wie viele Log-Nachrichten insgesamt falsch eingeordnet waren.
+	}
 	\label{tab:logs}
-	\begin{tabular}{|l|l|l|l|l|}
+	\begin{tabular}{|r|r|l|r|r|}
 		\hline
-		Anzahl Requests & Anzahl Logs & async & maximaler Fehler & Anzahl Fehler \\ \hline
-		10              & 18          & nein  & 1                & 1             \\ \hline
-		100             & 178         & nein  & 1                & 8             \\ \hline
-		10              & 19          & ja    & 15               & 17            \\ \hline
-		100             & 165         & ja    & 121              & 162           \\ \hline
+		Anzahl Requests & Anzahl Logs & async & max. Fehler & Anzahl Fehler \\ \hline
+		10              & 18          & nein  & 1           & 1             \\ \hline
+		100             & 178         & nein  & 1           & 8             \\ \hline
+		10              & 19          & ja    & 15          & 17            \\ \hline
+		100             & 165         & ja    & 121         & 162           \\ \hline
 	\end{tabular}
 \end{table}
 
-Eine weitere interessante Beobachtung ist, dass in dem längeren der beiden synchronen Experimenten die Fehler vorwiegend eng zusammen in Clustern
+Eine interessante Beobachtung ist, dass in dem längeren der beiden synchronen Experimenten die Fehler vorwiegend eng zusammen in Clustern
 von zwei bis drei Fehlern direkt hintereinander auftreten. Bei den asynchronen Experimenten stehen sogar fast alle Logs ganz am Ende der Aufzeichnung
-und fast alle Requests gemischt mit nur sehr wenigen Logs am Anfang. Beides deutet darauf hin, dass irgendwo in der Logging Pipeline möglicherweise
-ein Buffer nicht schnell genug abgearbeitet wird und sich die Log-Nachrichten so anstauen können. Es ist außerdem naheliegend, dass nicht der ditm Proxy
-selbst, welcher die Logs sammelt, den Flaschenhals bildet, sondern bereits der Docker Daemon oder noch wahrscheinlicher der verwendete HTTP-Log-Driver,
-da die Zeitstempel, welche zur Sortierung der Tabelle von Requests und Logs verwendet werden, in diesem Teil des Systems generiert werden.
+und fast alle Requests gemischt mit nur sehr wenigen Logs am Anfang.
 
 \section{Debugging}
 Alle der beschriebenen Bugs lassen sich mit Hilfe von ditm in Recordings und in Replays reproduzieren. Da insbesondere für die
@@ -1246,116 +1251,112 @@ sind.
 	\end{tabular}
 \end{table}
 
-Die doppelte Buchung ist nur deshalb nicht mit den zeitbasierten Matcher reproduzierbar, weil der Prototyp ditm nicht die
-notwendigen Optionen anbietet, um den Bug ohne zufallsgetriebene Netzwerk-Unterbrechungen zu erzeugen.
+Außer der Doppelten Buchung sind alle Bugs mit dem zeitbasierten Matcher reproduzierbar. Im Gegensatz dazu hat der Heuristische
+Matcher, welcher hier stellvertretend für die anderen drei Matcher mit aufgeführt ist, Probleme mit dem Raft-basierten System.
+Zwar kann der Heuristische Matcher den Bug 3 in einem Cluster mit drei Knoten zuverlässig reproduzieren, wird das gleiche
+Experiment in einem Cluster mit fünf Knoten durchgeführt, ist aber auch dieser Bug nur noch mit dem zeitbasierten Matcher
+reproduzierbar.
 
-Ditm war mit dem ursprünglich konzipierten Request-Matching-Mechanismus nicht in der Lage, die Bugs, welche in Raft nachgestellt
-wurden, deterministisch zu reproduzieren. Das liegt daran, dass Raft und ähnliche Systeme die grundlegende Annahme dieses Ansatzes
-verletzen, dass das SUT unter gleichen Umständen auch die gleichen Nachrichten zwischen den gleichen Knoten versendet. Die
-Ausnahme, dass Bug 3 in einem Cluster von drei Knoten mit dem heutristischen Matcher reproduzierbar ist, kommt allein daher, dass
-es in der Konfiguration immer alle Knoten an dem Bug beteiligt sein müssen und somit immer die gleichen Nachrichten gesendet
-werden.  Wird das gleiche Experiment in einem Cluster mit fünf Knoten durchgeführt, ist der Bug nur noch mit dem zeitbasierten
-Matcher reproduzierbar.
+% Die doppelte Buchung ist nur deshalb nicht mit den zeitbasierten Matcher reproduzierbar, weil der Prototyp ditm nicht die
+% notwendigen Optionen anbietet, um den Bug ohne zufallsgetriebene Netzwerk-Unterbrechungen zu erzeugen.
+% 
+% Ditm war mit dem ursprünglich konzipierten Request-Matching-Mechanismus nicht in der Lage, die Bugs, welche in Raft nachgestellt
+% wurden, deterministisch zu reproduzieren. Das liegt daran, dass Raft und ähnliche Systeme die grundlegende Annahme dieses Ansatzes
+% verletzen, dass das SUT unter gleichen Umständen auch die gleichen Nachrichten zwischen den gleichen Knoten versendet. Die
+% Ausnahme, dass Bug 3 in einem Cluster von drei Knoten mit dem heutristischen Matcher reproduzierbar ist, kommt allein daher, dass
+% in der Konfiguration immer alle Knoten an dem Bug beteiligt sein müssen und somit immer die gleichen Nachrichten gesendet
+% werden. 
+% 
+% Der zeitbasierte Matcher wurde als Reaktion auf die Ergebnisse dieser Versuche entwickelt. Der Nachteil dieses neuen
+% Mechanismus ist, dass dieser in der aktuellen Form nicht für Recordings funktioniert, die zufallsbasierte Netzwerk-Unterbrechungen
+% verwenden.
 
-Der zeitbasierte Matcher wurde als Reaktion auf die Ergebnisse dieser Versuche entwickelt. Der Nachteil dieses neuen
-Mechanismus ist, dass dieser in der aktuellen Form nicht für Recordings funktioniert, die zufallsbasierte Netzwerk-Unterbrechungen
-verwenden.
-
-Eine wichtige Beobachtung bei Bug 5 ist, dass ditm grundsätzlich keine Token-basierte Authentifizierung während Replays unterstützt, da hierfür
-Daten aus einer Response in den folgenden Requests mitgesendet werden müssen. Ditm hingegen sendet im Replay den exakt gleichen
-Request, wie im Recording und ignoriert einen neu generierten Token. Als Workaround wurde hier die Lebensdauer der Access-Token
+Eine wichtige Beobachtung bei Bug 5 ist, dass ditm grundsätzlich keine Token-basierte Authentifizierung während Replays
+unterstützt.
+Als Workaround wurde hier die Lebensdauer der Access-Token
 des SUT auf mehrere Monate gesetzt, um ditm zu erlauben, diese während eines Replays wiederzuverwenden. Mit dieser Einstellung
 hatte ditm keine Probleme, den Bug deterministisch zu reproduzieren.
 
-\section{Erfahrungsbericht zu ditm als Debugger}
-\label{chap:debugging_go}
-% vielleicht code beispiel einfügen oder so
-% mindestens absätze einfügen
-Während der Entwicklung der Experimente zum Request-Matching trat ein relativ komplexer Bug in dem absichtlich einfach
-gehaltenen SUT auf, welcher mit Hilfe von ditm identifiziert, untersucht und behoben werden konnte.
-
-Schon bei einer ersten händischen Durchführung der ersten Experimente viel auf, dass etwas nicht stimmen konnte.
-Nicht nur waren die Ergebnisse aus ditms Sicht unerwartet negativ, nach genauerem Hinsehen fanden sich in den Aufzeichnungen auch
-teilweise deutlich mehr Requests, als für das jeweilige Experiment vorgesehen, was wiederum die schlechten Ergebnisse erklärte.
-Die erste Intuition war, den Fehler in ditm zu suchen, immerhin handelte es sich um ein komplexes und wenig getestetes System.
-
-Erst nachdem sich die Fehlersuche in ditm als früchtelos erwies, viel der Blick auf das augenscheinlich sehr einfache SUT.  Hier
-erwies sich ditm tatsächlich als sehr geeignetes Debugging Werkzeug für das vorhandene Problem. Mit Hilfe der chronologischen
-Darstellung von Requests und Logs konnte festgestellt werden, dass der verwendete HTTP Client unter sehr bestimmten Bedingungen
-Retries für gescheiterte Requests sendet. Zu diesen Bedingungen zählt, dass der Request idempotent sein muss, POST Requests werden
-also niemals wiederholt. Dass der Client Retries für idempotente Requests sendet, ist auch in der Dokumentation zu finden
-\cite{go_transport_docs}. Das mit ditm beobachtete Verhalten ist damit allerdings noch nicht erklärt, da ein gescheiterter Request
-nur dann wiederholt wird, wenn er
-\begin{itemize}
-	\item idempotent ist und
-	\item auf einen erfolgreichen Request an das gleiche Ziel folgt.
-\end{itemize}
-Dieses Verhalten, dass Retries nur passieren, wenn die Verbindung bereits erfolgreich verwendet wurde,
-ist nicht in der offiziellen Dokumentation dokumentiert \cite{go_transport_docs}, entspricht aber dem gewollten Verhalten, welches in
-einer Commit-Nachricht in Googles Versionskontroll-System dokumentiert ist \cite{go_retry_commit}. Die mangelnde Dokumentation
-wurde im Rahmen dieser Arbeit auf Golangs Issue-Tracker festgehalten und kann somit in Zukunft verbessert werden.
-
-Für ditm ist dies insofern ein großer Erfolg, dass dieser Bug im SUT der erste zuvor unbekannte Bug ist, der mit ditm gefunden
-wurde. Es handelt sich zwar nicht zusätzlich um einen neuen Bug in der Standartbibliothek von Go, aber trotzdem wurde auch hier
-ein ähnlicher mentaler Schritt wie beim Debugging vollzogen. Es wurde mit Hilfe von ditm eine Diskrepanz zwischen dem erwarteten
-und dem tatsächlichen Verhalten der Bibliothek gefunden und es konnten sogar die genauen Unterschiede im Verhalten korrekt
-festgestellt werden.
-
 \chapter{Diskussion}
 \label{chap:discussion}
-% the interactive model is good at tightening the feedback loop
-In dieser Arbeit wurde ein neuartiger Replay-Mechanismus zum Debugging von verteilten Systemen mit Fokus auf
-Netzwerk-Unterbrechungen entwickelt und empirisch evaluiert. Die Kernidee dabei war, einen Proxy zu entwickeln, der den gesamten
-Nachrichten-Verkehr des verteilten Systems kontrolliert, aufzeichnet und anhand dieser Aufzeichnungen Replays von Situationen
-wiedergeben kann. Für diese Wiedergabe wurden zwei verschiedene Ansätze entwickelt und evaluiert, einerseits das Konzept, Nachrichten
-in Aufnahme und Wiedergabe zueinander zu matchen und andererseits das Konzept, Netzwerk-Unterbrechungen anhand des zeitlichen
-Ablaufs einer Situation wiederzugeben.
+In dieser Arbeit wurde ein neuartiger, Proxy-basierter Replay-Mechanismus für das Debugging von verteilten Systemen mit Fokus auf
+Netzwerk-Unterbrechungen entwickelt. Die Kernidee dabei ist ein Proxy, der den gesamten Nachrichten-Verkehr des verteilten Systems
+kontrolliert, aufzeichnet und anhand der Aufzeichnungen Replays von Situationen abspielen kann. Für diese Wiedergabe wurden zwei
+verschiedene Ansätze entwickelt, einerseits das Konzept, Nachrichten in Aufnahme und Wiedergabe zueinander zu matchen und
+andererseits das Konzept, Netzwerk-Unterbrechungen anhand des zeitlichen Ablaufs einer Situation wiederzugeben. Im folgenden
+werden die Ergebnisse der empirischen Evaluation des Prototypen diskutiert.
 
-Obwohl die Versuche zeigen, dass Request-Matching zumindest an HTTP Requests möglich ist, hat sich dieser Mechanismus nicht als
-effektiv für die Reproduktion vieler realer Bugs erwiesen. Das liegt daran, dass sich Request-Matching auf die falsche Annahme
-stützt, dass ein verteiltes System unter gleichen äußeren Bedingungen auch immer die gleichen Nachrichten intern versendet. Das
-trifft auf Systeme wie verteilte Datenbanken wie MongoDB, die Raft o.Ä. verwenden, nicht zu. Stattdessen konnte empirisch gezeigt
-werden, dass in diesen Systemen der deutlich einfachere zeitbasierte Mechanismus effektiv ist, was genau der ursprünglichen
-Annahme aus Kapitel \ref{chap:idea} widerspricht. Insgesamt ist dieser Ansatz zwar weniger genau in der Lage, zwischen einzelnen
-Nachrichten zu differenzieren, für die Reproduktion der meisten Bugs genügen aber auch laut Alquraan et. al.
-\cite{analysis_of_network_partition_failures} einfache Netzwerk-Unterbrechungen, mit denen dieser Ansatz gut umgehen kann.
+Die Experimente zum Log-Matching, welches zur Visualisierung des Abläufe im SUT beiträgt, zeigen demonstativ, dass das
+Log-Matching bei hoch asynchronen Prozessen mit vielen schnellen Logs und Requests an seine Grenzen kommen kann und dann effektiv
+unbrauchbar wird. Ganz im Gegenteil dazu stehen die Ergebnisse der synchronen Experimente. Zwar gibt es auch hier durchaus Fehler,
+diese sind aber selten genug und vor allem klein genug, dass das Log-Matching hier erheblich zur Effektivität von ditm als
+Debugger beitragen kann. Die Tatsache, dass sich die Fehler, die vorgekommen sind, eng zusammen in Gruppen aufgetreten sind,
+deutet darauf hin, dass in der Logging Pipeline möglicherweise ein Buffer nicht schnell genug abgearbeitet wird und sich die
+Log-Nachrichten so anstauen können. Es ist außerdem naheliegend, dass nicht der ditm Proxy selbst den Flaschenhals bildet, sondern
+bereits der Docker Daemon oder noch wahrscheinlicher der verwendete HTTP-Log-Driver, da die Zeitstempel, welche zur Sortierung der
+Tabelle von Requests und Logs verwendet werden, in diesem Teil des Systems generiert werden.
 
-Die Ergebnisse der Untersuchung zeigen, dass es möglich ist, mit Hilfe eines Proxys durch Netzwerk-Unterbrechungen
-ausgelöste Bugs deterministisch in Replays zu reproduzieren, ohne das SUT zu instrumentieren oder anderweitig zu verändern.
-Im Gegensatz zu existierenden Replay-Debuggern für verteilten Systeme ist dieser Ansatz agnostisch gegenüber der Technologie des
-SUT und damit prinzipiell deutlich breiter einsetzbar, als bisherige Lösungen.
+Im Bezug auf das Request-Matching lässt sich sagen, dass die zwei komplexesten Matcher, der Heuristische und der Mix-Matcher, wie
+erwartet in allen Request-Matching-Experimenten die besten Ergebnisse erzielen, zwischen den beiden besteht aber kein relevanter
+Unterschied, der in diesen Ergebnissen erkennbar wird. Vor allem die Experimente ohne Zufallskomponenten in den Requests, deren
+Ergebnisse in Tabelle \ref{tab:get_nka} dargestellt sind, deuten darauf hin, dass Request-Matching als Replay-Mechanismus
+funktionieren kann. Trotzdem liefert keiner der Matcher perfekte Ergebnisse in allen Situationen und es ist davon auszugehen, dass
+es auch in realen Situationen zu Fehlern kommen kann. Es ist allerdings zu beachten, dass die Request-Machting Experimente
+spzifisch so konzipiert sind, dass sie schwierige Situationen für ditm erzeugen, um die Grenzen des Ansatzes zu finden. Diese
+liegen vor allem bei Requests, die in zufälliger Reihenfolge gesendet werden und zusätzlich selbst Zufallskomponenten enthalten.
+Des Weiteren können die Request-Matcher nicht gut mit Systemen umgehen, die unter gleichen Bedingungen unterschiedliche Requests
+senden.
+
+Das Konzept des Request-Matchings wurde unter der Annahme entwickelt, dass verteilte Systeme in der Regel unter gleichen
+Bedingungen unterschiedliche Requests senden. Die Debugging Experimente an dem Raft-basierten System haben demonstriert, dass dies
+nicht immer der Fall ist und dass Request-Matching in diesem Fall, wie aufgrund der Request-Matching Exprimente erwartet, nicht
+als Replay-Mechanismus für Bugs funktioniert. Vor allem für Systeme wie verteilte Datenbanken wie MongoDB, die Raft o.Ä.
+verwenden, eignet sich Request-Matching damit nicht.
+
+Die Debugging-Experimente zeigen auch, dass der einfachere zeitbasierte Mechanismus hingegen effektiv darin ist, Bugs in Replays
+zu reproduzieren. Dass sich der erste Bug mit dem Mechanismus nicht reproduzieren lässt, liegt daran, dass der Mechanismus nicht in der
+Lage ist, ditms zufallsgetriebene Netzwerk-Unterbrechungen in Replays zu reproduzieren und ditm nicht die Möglichkeit bietet,
+einseitige Netzwerk-Unterbrechungen gezielt zu steuern. Mit der Addition dieses Features könnte der zeitbasierte Ansatz alle fünf der
+getesteten Bugs deterministisch reproduzieren.
+
+Die Ergebnisse der Untersuchung bestätigen also die Hypothese, dass es möglich ist, mit Hilfe eines Proxys durch
+Netzwerk-Unterbrechungen ausgelöste Bugs deterministisch in Replays zu reproduzieren, ohne das SUT zu instrumentieren oder
+anderweitig zu verändern. Im Gegensatz zu existierenden Replay-Debuggern für verteilten Systeme ist dieser Ansatz agnostisch
+gegenüber der Technologie des SUT und damit prinzipiell deutlich breiter einsetzbar, als bisherige Lösungen.
 
 Für sich allein hat ein Tool wie ditm allerdings trotzdem keinen großen Wert, da der Aufwand, einen komplexen Bug erstmals in
-einer Aufzeichnung zu erzeugen und zu identifizieren deutlich zu aufwändig ist. Ein interaktives Tool wie ditm ist grundsätzlich
+einer Aufzeichnung zu erzeugen und zu identifizieren deutlich zu groß ist. Ein interaktives Tool wie ditm ist grundsätzlich
 nicht gut dazu geeignet, neue Bugs zu finden, da der potentielle Suchraum in realen Systemen zu groß ist, als dass ein Mensch
 diesen händisch durchsuchen könnte. Vielmehr ist der Wert von ditm, aufgezeichnete Bugs schnell und zuverlässig lokal zu
 reproduzieren. Dadurch erhalten Entwickler, die komplexe Bugs in verteilten Systemen untersuchen schnelles Feedback zu
 Veränderungen, das es ihnen erlaubt, Hypothesen schnell zu überprüfen und somit effizienter zu arbeiten.
 
-\section{Beschränkungen}
-Eine große Beschränkung für die Ergebnisse dieser Arbeit ist, dass der entwickelte Prototyp ausschließlich für Systeme
+\section{Einschränkungen}
+Eine große Einschränkung für die Ergebnisse dieser Arbeit ist, dass der entwickelte Prototyp ausschließlich für Systeme
 funktioniert, die HTTP-basiert kommunizieren. Das ist insofern einschränkend, dass viele Systeme wie verteilte Datenbanken in der
 Regel eigene, TCP-basierte Protokolle verwenden. Insbesondere der zeitbasierte Replay-Mechanismus sollte sich allerdings
-problemlos auch in einem Ethernet- oder TCP-Proxy anwenden lassen, da der Inhalt oder Protokoll-speziefische Metadaten der
-Nachrichten nicht betrachtet werden.
+problemlos auch in einem Ethernet- oder TCP-Proxy anwenden lassen, da der Inhalt oder Protokoll-speziefische Metadaten von
+Nachrichten nicht betrachtet werden müssen.
 
 Es ist weiterhin zu beachten, dass diese Arbeit nicht empirisch untersucht, ob Replay-Debugging auf kognitiver Ebene eine
 effektive Methode zum Debugging von verteilten Systemen ist. Hierzu können mit den durchgeführten Experimenten lediglich
-anekdotische Aussagen getroffen werden. Es ist allerdings anzunehmen, dass ein Replay-Debugger abhängig von der Oberfläche und der
-verwendeten Visualisierung sehr effektiv sein kann.
+anekdotische Aussagen getroffen werden. Es ist allerdings anzunehmen, dass ein Replay-Debugger für verteilte Systeme abhängig von
+der Oberfläche und der verwendeten Visualisierung sehr effektiv sein kann.
 
 \section{Ausblick}
-Die Vision, die durch die Ergebnisse dieser Arbeit unterstützt wird, einen Replay-Debugger wie ditm mit einem Failure-Testing Tool
+Die Vision, die durch die Ergebnisse dieser Arbeit unterstützt wird, ist einen Replay-Debugger wie ditm mit einem Failure-Testing Tool
 wie Jepsen zu kombinieren, sodass Jepsen für jeden identifizierten Bug ein Recording erstellt, welches dann debuggt werden kann.
 Eine große Herausforderung dabei ist, Jepsen dazu zu bringen, Aufzeichnungen zu erstellen, anhand derer ein deterministisches
-Replay möglich ist. Es ist möglich, dass für die Symbiose der beiden Techniken ein neues Failure-Testing Tool notwendig ist,
+Replay möglich ist. Es ist möglich, dass für die Symbiose der beiden Techniken ein neues Failure-Testing-Tool notwendig ist,
 welches die Anforderungen des Replay-Debuggings von vorn herein mit einbezieht.
 
-Um ein Tool wie ditm in der Realität einsetzen zu können, wäre außerdem eine neue Implementierung des Konzept notwendig, die
+Um ein Tool wie ditm in der Realität einsetzen zu können, wäre außerdem eine neue Implementierung des Konzepts notwendig, die
 andere Netzwerk-Protokolle als HTTP unterstützt, vorzugsweise mindestens TCP. Eine mögliche, sehr nutzerfreundliche Variante wäre
 über einen Docker-Network-Driver. Eine entsprechende Implementierung wurde im Rahmen dieser Arbeit bereits angefangen, aber für
 einen Prototypen als zu aufwändig befunden. Aus technischer Sicht spricht allerdings nichts gegen das Prinzip und die grundlegende
-Proxy-Funktionalität konnte in dem angefangenen Projekt bereits demonstriert werden.
+Proxy-Funktionalität konnte in dem angefangenen Projekt bereits demonstriert werden. Für eine neue Implementierung sollte außerdem
+ein Konzept enwickelt werden, wie mit Tokenbasierter Authentifizierung und ähnlichen Situationen umgegangen werden kann, in denen
+es nicht ausreicht, Client-Requests im Replay einfach zu wiederholen.
 
 Des Weiteren gibt es viele Möglichkeiten, das Interaktionsmodell und die GUI von ditm zu erweitern. Für eine reale Verwendung
 erscheint mindestens eine Visualisierung von Abläufen als Zeit-Raum-Diagramm wie in Oddity \cite{oddity_graphical_debugger} oder
@@ -1368,17 +1369,44 @@ feststellen zu können. Ein Editor für Recordings, der es erlaubt, Netzwerk-Unt
 hinzuzufügen, wäre ein weiteres Werkzeug für Entwickler, um schnell Hypothesen zu überprüfen, für die sonst die jeweilige
 Situation komplett händisch neu reproduziert werden müsste.
 
-% hier kommt future work, die ich als experte sehe, auch im kontext meiner arbeit
-
-% keep and extend the idea of an interactive, graphical tool / debugger,
-% while switching out failure mechanism for ssh, and extending to allow clock drift etc (like failify does it in docker)
-
-% explore additional UI features: a builting graphical request 'builder',
-% a smart diff tool for recordings / action sequences
-% a drag and drop test case / replay editor to build predefined action sequences,
-% enable using replays from an interactive session as an automated regression test
-
 % vielleicht EBPF basiertes system, das wie proxy einzelne Requests blocken kann, aber auf jedem Knoten einzeln agiert?
+
+
+
+% \section{Erfahrungsbericht zu ditm als Debugger}
+% \label{chap:debugging_go}
+% % vielleicht code beispiel einfügen oder so
+% Während der Entwicklung der Experimente zum Request-Matching trat ein relativ komplexer Bug in dem absichtlich einfach
+% gehaltenen SUT auf, welcher mit Hilfe von ditm identifiziert, untersucht und behoben werden konnte.
+% 
+% Schon bei einer ersten händischen Durchführung der ersten Experimente viel auf, dass etwas nicht stimmen konnte.
+% Nicht nur waren die Ergebnisse aus ditms Sicht unerwartet negativ, nach genauerem Hinsehen fanden sich in den Aufzeichnungen auch
+% teilweise deutlich mehr Requests, als für das jeweilige Experiment vorgesehen, was wiederum die schlechten Ergebnisse erklärte.
+% Die erste Intuition war, den Fehler in ditm zu suchen, immerhin handelte es sich um ein komplexes und wenig getestetes System.
+% 
+% Erst nachdem sich die Fehlersuche in ditm als früchtelos erwies, viel der Blick auf das augenscheinlich sehr einfache SUT.  Hier
+% erwies sich ditm tatsächlich als sehr geeignetes Debugging Werkzeug für das vorhandene Problem. Mit Hilfe der chronologischen
+% Darstellung von Requests und Logs konnte festgestellt werden, dass der verwendete HTTP Client unter sehr bestimmten Bedingungen
+% Retries für gescheiterte Requests sendet. Zu diesen Bedingungen zählt, dass der Request idempotent sein muss, POST Requests werden
+% also niemals wiederholt. Dass der Client Retries für idempotente Requests sendet, ist auch in der Dokumentation zu finden
+% \cite{go_transport_docs}. Das mit ditm beobachtete Verhalten ist damit allerdings noch nicht erklärt, da ein gescheiterter Request
+% nur dann wiederholt wird, wenn er
+% \begin{itemize}
+% 	\item idempotent ist und
+% 	\item auf einen erfolgreichen Request an das gleiche Ziel folgt.
+% \end{itemize}
+% Dieses Verhalten, dass Retries nur passieren, wenn die Verbindung bereits erfolgreich verwendet wurde,
+% ist nicht in der offiziellen Dokumentation dokumentiert \cite{go_transport_docs}, entspricht aber dem gewollten Verhalten, welches in
+% einer Commit-Nachricht in Googles Versionskontroll-System dokumentiert ist \cite{go_retry_commit}. Die mangelnde Dokumentation
+% wurde im Rahmen dieser Arbeit auf Golangs Issue-Tracker festgehalten und kann somit in Zukunft verbessert werden.
+% 
+% Für ditm ist dies insofern ein großer Erfolg, dass dieser Bug im SUT der erste zuvor unbekannte Bug ist, der mit ditm gefunden
+% wurde. Es handelt sich zwar nicht zusätzlich um einen neuen Bug in der Standartbibliothek von Go, aber trotzdem wurde auch hier
+% ein ähnlicher mentaler Schritt wie beim Debugging vollzogen. Es wurde mit Hilfe von ditm eine Diskrepanz zwischen dem erwarteten
+% und dem tatsächlichen Verhalten der Bibliothek gefunden und es konnten sogar die genauen Unterschiede im Verhalten korrekt
+% festgestellt werden.
+
+
 
 \chapter{Fazit}
 Im Rahmen dieser Arbeit wurde erforscht, ob Netzwerk-Unterbrechungen deterministisch in einer Testumgebung für verteilte Systeme
