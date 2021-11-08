@@ -171,6 +171,8 @@ gegeben.
 % als auch für weitere Forschung im Allgemeinen gegeben.
 
 \chapter{Grundlagen}
+Dieses Kapitel fasst die für diese Arbeit relevanten Grundlagen zu verteilen Systemen, Netzwerk-Unterbrechungen und adjazenten
+Themen zusammen.
 
 \section{Verteilte Systeme}
 % kontext der Arbeit sind verteilte systeme, die heute sich auf virtualisierung, dev ops, cloud native verlassen
@@ -181,7 +183,13 @@ ausschließlich mittels Nachrichten über das Netzwerk koordinieren. Van Steen e
 einem Nutzer des Systems gegenüber wie ein einziges System erscheinen. Ein Nutzer kann dabei sowohl ein Mensch, als auch eine
 Applikation sein.
 
-\cite{cloud_virtualization}
+Moderne verteilte Systeme sind heute allerdings nur noch selten direkt auf physikalisch vernetzen Rechnern deployed. Stattdessen
+wird Software immer öfter Cloud-Native entwickelt und betrieben. Cloud-Native entwickelte Systeme sind hoch-verteilte Systeme, die
+auf virtualisierter Hardware in Containern in der Cloud laufen. Klassischerweise monolithische oder wenig verteilte Systeme
+werden nach der Cloud-Native-Philosophie in viele Microservices unterteilt, die in einem DevOps Workflow durch CI/CD Pipelines
+automatisiert getestet und deployed werden. Diese Microservices werden in elastischen orchestrierungs-Plattformen deployed, und
+können somit automatisch und nach Bedarf horizontal skaliert werden. \cite{cloud_native_10_years} Diese Systeme werden unter der
+Annahme entwickelt, dass Hardware nicht beständig ist und jederzeit fehlschlagen kann \cite{cloud_native_applications}.
 
 \section{Netzwerk-Unterbrechungen}
 Eine Netzwerk-Unterbrechung ein einem verteilten System ist eine Situation, in der ein Teil des Netzwerks ausfällt, sodass Teile
@@ -235,12 +243,24 @@ Netzwerk-Unterbrechung tritt selten auf und wird ausgelöst durch fehlerhafte Ko
 	\label{fig:partition_types}
 \end{figure}
 
-\subsection{Partitionstoleranz und CAP}
-\cite{cap_brewer}
-\cite{perspectives_on_cap}
+\subsection{Das CAP-Theorem}
+Das von Eric Brewer \cite{cap_brewer} entwickelte CAP-Theorem besagt, dass jedes verteilte System, welches Daten zwischen seinen
+Knoten teilt, nur zwei der drei Eigenschaften Konsistenz (Consistency), Erreichbarkeit (Availability) und Partititionstoleranz
+haben kann.
 
-\subsection{Linearisierbarkeit}
-\cite{linearizability_paper}
+Konsistenz bedeutet, dass jeder Knoten des Systems jede Anfrage von einem Client korrekt beantwortet. Korrekt kann in diesem
+Kontext beispielsweise auch bedeuten, dass eine Anfrage nicht bearbeitet wird und eine entsprechende Meldung zurückgegeben wird.
+Generell sollte ein konsistentes System aber niemals falsche Daten liefern. Erreichbarkeit bedeutet, dass ein System jede Anfrage
+von einem Client beantwortet. Partitionstoleranz bedeutet, dass ein System auch in der Gegenwart von Netzwerk-Unterbrechungen
+funktioniert. \cite{perspectives_on_cap}
+
+Da Netzwerke in der Regel nicht zuverlässig sind und Netzwerk-Unterbrechungen auftreten \cite{the_network_is_reliable}, gibt es
+bei der Entwicklung verteilter Systeme wie Datenbanken, die vom CAP-Theorem betroffen sind, effektiv nur zwei Möglichkeiten: CP
+und AP. Mit CP wird Konsistenz der Daten sichergestellt, mit AP die Verfügbarkeit. In der Realität befindet sich zwischen den
+beiden Extremen allerdings ein Spektrum und MongoDB bietet beispielsweise die Möglichkeit, über verstellbare Konsistenz für jede
+Operation einzeln einzustellen, wie konsistent die Daten sein müssen \cite{tunable_consistency_mongo}. Mit geringerer Konsistenz
+geht dabei dann eine entsprechend höhrere Verfügbarkeit einher, eine Anfrage mit geringeren Anforderungen an Konsistez hat also
+eine höhere Chance, erfolgreich zu sein.
 
 \section{Verteilter Konsens}
 \label{chap:dist_consensus}
@@ -253,6 +273,7 @@ zur Kommunikation innerhalb verteilter Systeme zwingend Notwendig sind, fast imm
 \cite{the_network_is_reliable}, wird die Umsetzung verteilter Systeme wie MongoDB und Kubernetes erst durch verteilten Konsens in
 der Praxis möglich \cite{distributed_consensus}.
 
+\subsection{Raft}
 Raft ist ein Algorithmus für verteilten Konsens. Raft repliziert ein Log zwischen den Knoten eines verteilten Systems, dabei
 können Log-Einträge beispielsweise Datenbank-Transaktionen oder andere Events sein. In Raft hat jeder Knoten immer einen von drei
 Zuständen: Follower, Leader und Candidate. Die möglichen Zustandsübergänge sind in Abbildung \ref{fig:raft_states} abgebildet.
@@ -283,6 +304,15 @@ schreiben kann. \cite{raft_original_paper}
 Raft hat viele Details, auf die in dieser groben Darstellung des Algorithmus nicht eingegangen werden kann. Der Artikel, in dem
 Ongaro und Ousterhout \cite{raft_original_paper} den Algorithmus vorstellen, bietet einen vollständigen Überblick über die
 Feinheiten, die hier weg gelassen wurden.
+
+\subsection{Linearisierbarkeit}
+Die von Herlihy und Wing \cite{linearizability_paper} eingeführte Linearisierbarkeit ist eine Korrektheitseigenschaft für
+nicht-blockierende Datenstrukturen. Sie ist ein Werkzeug zur Entscheidung, ob eine Reihe von beobachteten Operationen an einer
+Datenstruktur unter den Regeln der jeweiligen Datenstruktur in der beobachteten Reihenfolge möglich sein. Linearisierbarkeit wird
+unter Anderem verwendet, um das Verhalten von verteilten Systemen auf Korrektheit zu prüfen. Raft unterstützt die Implementierung
+von Systemen mit linearisierbarer Semantik \cite{raft_original_paper}.
+
+
 
 \chapter{Stand der Technik}
 Im Umgang mit Fehlern in verteilten Systemen werden eine Reihe verschiedener Ansätze mit unterschiedlichen Zielen verfolgt.
