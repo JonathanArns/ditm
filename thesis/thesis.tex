@@ -80,9 +80,9 @@
         \vspace{1.5cm}
                 
         
-        \textb{Bachelor-Thesis}\\
+        Bachelor-Thesis\\
         \begin{small}zur Erlangung des akademischen Grades Bachelor of Science (B.Sc.)\end{small}\\
-        \textb{Studiengang Unternehmens- und Wirtschaftsinformatik}
+        Studiengang Unternehmens- und Wirtschaftsinformatik
 
         \vspace{1cm}
                 
@@ -183,13 +183,6 @@ Applikation sein.
 
 \cite{cloud_virtualization}
 
-% We define a distributed system as one in which hardware or software components
-% located at networked computers communicate and coordinate their actions only by
-% passing messages. This simple definition covers the entire range of systems in which
-% networked computers can usefully be deployed. \cite{distributed_systems_concepts_and_design}
-\subsection{Verteilter Consens}
-\cite{raft_original_paper}
-
 \section{Netzwerk-Unterbrechungen}
 Eine Netzwerk-Unterbrechung ein einem verteilten System ist eine Situation, in der ein Teil des Netzwerks ausfällt, sodass Teile
 des Systems, die eigentlich miteinander kommunizieren können sollten, sich nicht mehr erreichen können. Netzwerk-Unterbrechungen
@@ -201,7 +194,8 @@ Zwar gibt es keine zuverlässigen Zahlen dazu, wie oft Netzwerk-Unterbrechungen 
 Netzwerk ist und die Unterschiede auch im Bezug auf die Häufigkeit und Dauer von Netzwerk-Unterbrechungen sehr groß sind. Aus
 anekdotischen Berichten und internen Studien großer Unternehmen lässt sich trotzdem schließen, dass Netzwerk-Unterbrechungen nicht
 nur ein akademisches Problem sind, sondern auch in der Realität auftreten und Schaden anrichten. Aus diesem Grund ist es wichtig,
-verteilte Systeme so zu entwerfen, dass sie mit Netzwerk-Unterbrechungen umgehen können. \cite{the_network_is_reliable}
+verteilte Systeme so zu entwerfen, dass sie mit Netzwerk-Unterbrechungen umgehen können, beispielsweise durch die Nutzung eines
+Algorithmus für verteilten Konsens (siehe Kapitel \ref{chap:dist_consensus}). \cite{the_network_is_reliable}
 
 \subsection{Arten von Netzwerk-Unterbrechungen}
 Netzwerk-Unterbrechungen lassen sich in drei Kategorien einteilen. Vollständige Netzwerk-Unterbrechungen wie in Abbildung
@@ -248,7 +242,47 @@ Netzwerk-Unterbrechung tritt selten auf und wird ausgelöst durch fehlerhafte Ko
 \subsection{Linearisierbarkeit}
 \cite{linearizability_paper}
 
+\section{Verteilter Konsens}
+\label{chap:dist_consensus}
+Die Problemstellung des verteilten Konsens ist, trotz der Existenz von Fehlern und Asynchronität in einem verteilten System
+zuverlässig einheitliche Entscheidungen zwischen Knoten des Systems zu treffen. Alle Entscheidungen im Sinne von verteilem Konsens
+müssen dabei final, also unveränderlich sein. Außerdem muss garantiert sein, dass irgendwann eine Entscheidung getroffen wird, der
+Entscheidungsprozess darf also nicht stagnieren. Ein Algorithmus, der das Problem des verteilten Konsens löst, erlaubt es,
+zuverlässige verteilte Systeme aus unzuverlässigen Komponenten zu bauen. \cite{distributed_consensus} Da heutige Netzwerke, die
+zur Kommunikation innerhalb verteilter Systeme zwingend Notwendig sind, fast immer unzuverlässig sind
+\cite{the_network_is_reliable}, wird die Umsetzung verteilter Systeme wie MongoDB und Kubernetes erst durch verteilten Konsens in
+der Praxis möglich \cite{distributed_consensus}.
 
+Raft ist ein Algorithmus für verteilten Konsens. Raft repliziert ein Log zwischen den Knoten eines verteilten Systems, dabei
+können Log-Einträge beispielsweise Datenbank-Transaktionen oder andere Events sein. In Raft hat jeder Knoten immer einen von drei
+Zuständen: Follower, Leader und Candidate. Die möglichen Zustandsübergänge sind in Abbildung \ref{fig:raft_states} abgebildet.
+Follower sind Knoten, die den Zustand des Leaders replizieren, auf sie kann lesend, aber nicht schreibend zugegriffen werden.
+Jedes Raft-Cluster hat immer genau einen Leader, dieser ist der einzige Knoten, der Schreiboperationen von außen durchgeführen
+kann. Der Leader wird von den anderen Knoten des Clusters gewählt, Candidates sind Knoten, für die eine Wahl zum Leader läuft.
+Raft verwendet Heartbeat-Requests vom Leader zu den anderen Knoten und Timeouts auf Followers und Candidates, um Probleme wie
+Netzwerk-Unterbrechungen zu entdecken und Wahlen für einen neuen Leader zu starten. Jeder Knoten hält einen Zähler für den sog.
+Term, bzw. die aktuelle Amtszeit, in der sich das Cluster befindet. Mit jeder neuen Election wird dieser Zähler erhöht und Knoten
+folgen keinem Leader, der einen geringeren Term hat, als sie selbst. Außerdem kann ein Knoten in pro Term nur für einen Leader
+stimmen. So stellt Raft sicher, dass ein Cluster, in dem der Leader nicht mindestens die Hälfte des Clusters erreichen kann, nach
+einer gewissen Zeit immer einen neuen Leader wählt. Das ist wichtig, weil alle Entscheidungen in Raft Mehrheitsentscheidungen sind
+und ein Leader, der weniger als die Hälfte des Clusters erreichen kann, somit keine Entscheidungen treffen, also auch keine Daten
+schreiben kann. \cite{raft_original_paper}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=.8\linewidth]{img/raft_state_machine.pdf}
+    \caption{
+        Zustände und Zustandsübergänge von Knoten in Raft. Ein Follower wird zum Candidate und startet eine Wahl, wenn er zu Lange
+        keine Nachrichten vom Leader empfängt. Erhält ein Candidate Stimmen von einer absoluten Mehrheit der Knoten im Cluster,
+        wird er zum neuen Leader. Ein Leader bleibt in der Regel bestehen, bis er beispielsweise abstürzt oder durch eine
+        Netzwerk-Unterbrechung vom einer Mehrheit des Clusters getrennt wird. \cite{raft_original_paper}
+    }
+	\label{fig:raft_states}
+\end{figure}
+
+Raft hat viele Details, auf die in dieser groben Darstellung des Algorithmus nicht eingegangen werden kann. Der Artikel, in dem
+Ongaro und Ousterhout \cite{raft_original_paper} den Algorithmus vorstellen, bietet einen vollständigen Überblick über die
+Feinheiten, die hier weg gelassen wurden.
 
 \chapter{Stand der Technik}
 Im Umgang mit Fehlern in verteilten Systemen werden eine Reihe verschiedener Ansätze mit unterschiedlichen Zielen verfolgt.
