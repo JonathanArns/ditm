@@ -262,6 +262,38 @@ Operation einzeln einzustellen, wie konsistent die Daten sein müssen \cite{tuna
 geht dabei dann eine entsprechend höhrere Verfügbarkeit einher, eine Anfrage mit geringeren Anforderungen an Konsistez hat also
 eine höhere Chance, erfolgreich zu sein.
 
+\subsection{Partitionstoleranz-Bugs}
+Die Bugs, mit denen sich diese Arbeit befasst, sind Bugs in der Partitionstoleranz von verteilten Systemen, sie werden also durch
+Netzwerk-Unterbrechungen ausgelöst. Die Effekte von Partitionstoleranz-Bugs sind laut einer Studie von Yuan et. al.
+\cite{simple_testing_can_prevent} in über 79\% der Fälle katastrophal. Dabei lösen beispielsweise über 26\% der untersuchten Bugs
+den Verlust von Daten, über 13\% Stale Reads und über 5\% Dirty Reads aus.
+
+Stale und Dirty Reads sind Leseoperationen gegen eine Datenstruktur, bei denen der Client falsche Daten erhält. Konkret werden bei
+einem Stale Read, dargestellt in Abbildung \ref{fig:stale_read}, Daten gelesen, die nicht mehr aktuell sind. In Systemen mit
+eventual Consistency werden Stale Reads in Kauf genommen, um die Verfügbarkeit der Daten zu erhöhen, in streng konsistenten
+Systemen hingegen sollten sie niemals auftreten \cite{analysis_of_network_partition_failures}. Ein Dirty Read, dargestellt in
+Abbildung \ref{fig:dirty_read}, ließt Daten aus einer Schreiboperation, die später zurück gerollt wird. Eine Schreiboperation, die
+zurückgerollt wird, ist im Endeffekt als wäre sie niemals passiert, sie sollte also auch niemals gelesen werden können.
+\cite{jepsen_mongo_analysis}
+
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\linewidth]{img/stale_read.png}
+    \caption{Visualisierung eines Stale Reads. Ist `w` eine Schreiboperation, die einen Wert überschreibt, der später trotzdem von `r`
+    gelesen wird, dann ist `r` ein Stale Read. \cite{jepsen_mongo_analysis}}
+	\label{fig:stale_read}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\linewidth]{img/dirty_read.png}
+	\caption{Visualisierung eines Dirty Reads. Ist `w` eine Schreiboperation, die später zurückgerollt wird, dann ist `r` ein
+		Dirty Read. \cite{jepsen_mongo_analysis}}
+	\label{fig:dirty_read}
+\end{figure}
+
+
 \section{Verteilter Konsens}
 \label{chap:dist_consensus}
 Die Problemstellung des verteilten Konsens ist, trotz der Existenz von Fehlern und Asynchronität in einem verteilten System
@@ -1007,9 +1039,9 @@ nachstellen zu können. Dazu zählen Systeme wie MongoDB, Redis und VoltDB. Die 
 ursprünglich aus MongoDB und Redis.
 
 \subsubsection{Startup}
-Das dritte und letzte System ist das System eines realen jungen Startups. Konkret handelt es sich um eine SaaS-Lösung für das
+Das dritte und letzte System ist das System des Startups Spenoki. Konkret handelt es sich um eine SaaS-Lösung für das
 Sustainability Reporting von Mittelständischen Unternehmen. Das System setzt auf eine verteilte, Service-orientierte Architektur
-und besteht aus derzeit 5 Services. Im Kontext von ditm kann einer der fünf Services nicht verwendet werden, da dieser von AWS
+und besteht aus derzeit fünf Services. Im Kontext von ditm kann einer der fünf Services nicht verwendet werden, da dieser von AWS
 Diensten wie S3 abhängig ist, es wird hier also ein Cluster aus vier Knoten verwendet. Die anderen Services sind von dem
 fehlenden Service nicht abhängig und können auch in dieser kleineren Konstellation problemlos funktionieren.
 
@@ -1026,18 +1058,6 @@ von einer Netzwerk-Unterbrechung geblockt werden.
 
 \subsubsection{B2: Dirty Reads in MongoDB}
 % ergebnis: funktioniert nur mit timing
-Ein Dirty Read ist eine Lese-Operation, die Daten aus Schreiboperationen enthält, die später zurück gerollt werden. Dirty Reads
-sind problematisch, weil sie falsche Daten liefern. Eine Schreiboperation, die zurückgerollt wird, ist im Endeffekt niemals
-passiert, sie sollte also auch niemals gelesen werden können. \cite{jepsen_mongo_analysis}
-
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.7\linewidth]{img/dirty_read.png}
-	\caption{Visualisierung eines Dirty Reads. Ist `w` eine Schreiboperation, die später zurückgerollt wird, dann ist `r` ein
-		Dirty Read. \cite{jepsen_mongo_analysis}}
-	\label{fig:dirty_read}
-\end{figure}
-
 Jepsen hat in MongoDB Version 2.6.7 einen Bug entdeckt, der im Fall gewisser Netzwerk-Unterbrechungen für eine kurze Zeit Dirty
 Reads zulässt. Wenn der Leader-Knoten von der Mehrheit des Clusters getrennt wird, tritt dieser nach einem Timeout selbst zurück
 und nimmt keine Schreiboperationen mehr entgegen. Wird allerdings vor diesem Timeout ein Wert über diesen Leader geschrieben, kann
@@ -1077,10 +1097,11 @@ Bug spielt. Dazu müssen in Raft zwei Sicherheitsmechanismen ausgeschaltet werde
 \subsubsection{B4: Split-Brain in Redis-Raft}
 % ergebnis: funktioniert nur mit timing
 Wenn ein Leader-basiertes System wie Raft mehr als einen Leader-Knoten gleichzeitig hat, wird dies als Split-Brain Situation
-bezeichnet. Um diese Situationen zu vermeiden hat Raft verschiedene Sicherheitsmaßnahmen, wie dass jeder Knoten pro Term nur für
-einen Leader stimmen darf. Die Maßnahme, dessen Fehlen diesen konkreten Bug ermöglicht, ist, dass das Entfernen eines Knotens aus
-dem Cluster eine Mehrheitsentscheidung aller Knoten ist. Der Leader sollte also nicht in der Lage sein, einen Knoten zu entfernen,
-ohne eine Bestätigung der Aktion von mindestens der Hälfte des Clusters zu erhalten.
+bezeichnet. Split-Brain Situationen führen unter anderem zu Dirty Reads. Um diese Situationen zu vermeiden hat Raft verschiedene
+Sicherheitsmaßnahmen, wie dass jeder Knoten pro Term nur für einen Leader stimmen darf \cite{raft_original_paper}. Eine Maßnahme,
+dessen Fehlen diesen konkreten Bug ermöglicht, ist, dass das Entfernen eines Knotens aus dem Cluster eine Mehrheitsentscheidung
+aller Knoten ist \cite{jepsen_redis_raft}. Der Leader sollte also nicht in der Lage sein, einen Knoten zu entfernen, ohne eine
+Bestätigung der Aktion von mindestens der Hälfte des Clusters zu erhalten.
 
 Einer frühen Version der Raft-Implementierung Redis-Raft, welche optinal in Redis verwendet werden kann, fehlte diese
 Einschränkung. In dieser Version ist es möglich, eine Split-Brain Situation zu erzeugen, indem der Leader durch eine
@@ -1092,7 +1113,7 @@ Netzwerk-Unterbrechung nie von ihrer Entfernung informiert werden und diese auch
 \subsubsection{B5: Unereichbare Daten}
 % token login funktioniert in replays nicht, workaround: token lifetime wurde für Experimente auf 100 Tage gesetzt
 % ergebnis: funktioniert mit beiden matchern
-Das Startup-System verwendet ein eigenes, hierarchie-basiertes Authorisierungssystem. Dieses erlaubt es, Lese- und
+Das System von Spenoki verwendet ein eigenes, hierarchie-basiertes Authorisierungssystem. Dieses erlaubt es, Lese- und
 Update-Operationen in jedem Service lokal zu authorisieren, für das Anlegen neuer Daten ist aber ein Request an den zentralen
 Usermanagement-Service notwendig. Eine frühe Version dieses Authorisierungssystems hatte einen Bug, der dazu führte, dass neu
 geschrieben Daten für Nutzer unzugänglich würden, sollte der Usermanagement-Service während der Schreiboperation unerreichbar
