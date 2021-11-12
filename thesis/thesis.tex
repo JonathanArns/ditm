@@ -152,7 +152,7 @@ Programmiersprachen-agnostisch Bugs in verteilten Systemen reproduzieren kann.
 % Benefit
 
 % Approach
-Der verfolge Ansatz für ein solches Tool ist eine Testumgebung, welche einen Proxy verwendet, um Netzwerk-Unterbrechungen zu
+Der hier verfolge Ansatz für ein solches Tool ist eine Testumgebung, welche einen Proxy verwendet, um Netzwerk-Unterbrechungen zu
 erzeugen. Dieser Proxy zeichnet zusätzlich den gesamten Netzwerk-Verkehr des Systems inklusive Metadaten auf, um die erzeugten
 Netzwerk-Unterbrechungen später in einem Replay gleich wiedergeben zu können. Eine graphische Oberfläche stellt den
 Netzwerk-Verkehr und die Log-Ausgaben des System under Test (SUT) gemeinsam chronologisch sortiert dar, um dem Nutzer einen bei
@@ -928,11 +928,30 @@ services:
 \end{lstlisting}
 
 \subsection{Bedienung}
+Abbildung \ref{fig:gui} zeigt die Hauptansicht von ditms Web-Frontend, in der die Nachrichten und Log-Ausgaben des SUT gemeinsam
+tabellarisch dargestellt werden. Requests haben dabei jeweils einen farbigen Hintergrund, der in rot oder grün anzeigt, ob ein
+Request durch den Proxy geblockt wurde oder nicht. Blaue Requests sind Client-Requests von außerhalb des SUT und werden nie
+geblockt. Ein Pfeil in der letzten Spalte der Tabelle zeigt außerdem, ob ein Request auf dem Hinweg, oder nur die Response auf
+dem Rückweg geblockt wurde. Requests und Log-Ausgaben, die vom selben Knoten stammen, sind außerdem in der Spalte `From` farblich
+gleich gekennzeichnet.
 
+Neben der Hauptansicht, in der Volume-Snapshots erstellt und Recordings gesteuert werden können, bietet die GUI außerdem
+Ansichten, in denen existierende Recordings oder existierende Volume-Snapshots aufgelistet werden. Die Recordings können dort zur
+Anzeige geladen oder zum Start eines Replays verwendet werden. Die Volume-Snapshots können ebenfalls aus der Liste geladen
+werden. Im Partitions-Menu der GUI kann eingestellt werden, welche Requests der Proxy blocken soll, sowohl zufallsbasiert, als
+auch anhand frei definierbarer Unterteilungen des Netzwerks.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=.8\linewidth]{img/ditm_screenshot.png}
+	\caption{Screenshot der Hauptansicht in ditms Frontend}
+	\label{fig:gui}
+\end{figure}
 
 
 
 \chapter{Versuchsaufbaue}
+\label{chap:experiments}
 Dieses Kapitel beschreibt die Versuche, mit denen die in Kapitel \ref{chap:hypothesis} aufgestellte Hypothese evaluiert wird.
 Konkret sollen die folgenden Fragen über den zuvor beschriebenen Prototypen ditm beantwortet werden.
 \begin{enumerate}
@@ -1444,9 +1463,11 @@ problemlos auch in einem Ethernet- oder TCP-Proxy anwenden lassen, da der Inhalt
 Nachrichten nicht betrachtet werden müssen.
 
 Es ist weiterhin zu beachten, dass diese Arbeit nicht empirisch untersucht, ob Replay-Debugging auf kognitiver Ebene eine
-effektive Methode zum Debugging von verteilten Systemen ist. Hierzu können mit den durchgeführten Experimenten lediglich
-anekdotische Aussagen getroffen werden. Es ist allerdings anzunehmen, dass ein Replay-Debugger für verteilte Systeme abhängig von
-der Oberfläche und der verwendeten Visualisierung sehr effektiv sein kann.
+effektive Methode zum Debugging von verteilten Systemen ist.  Anekdotisch kann hier allerdings hinzugefügt werden, dass ditm sich
+bei der Entwicklung der in Kapitel \ref{chap:experiments} verwendeten Systeme als Debugger bewährt hat. Mit ditms Hilfe konnte
+unter Anderem eine Diskrepanz zwischen der Dokumentation und dem tatsächlichen Verhalten der Standartbibliothek von Go
+festgestellt werden. Der Mangel in der Dokumentation wurde auf dem entsprechenden Issue Tracker
+festgehalten\footnote{https://github.com/golang/go/issues/48438} und kann somit in Zukunft verbessert werden.
 
 \section{Ausblick}
 Die Vision, die durch die Ergebnisse dieser Arbeit unterstützt wird, ist einen Replay-Debugger wie ditm mit einem Failure-Testing Tool
@@ -1474,43 +1495,6 @@ feststellen zu können. Ein Editor für Recordings, der es erlaubt, Netzwerk-Unt
 hinzuzufügen, wäre ein weiteres Werkzeug für Entwickler, um schnell Hypothesen zu überprüfen, für die sonst die jeweilige
 Situation komplett händisch neu reproduziert werden müsste.
 
-% vielleicht EBPF basiertes system, das wie proxy einzelne Requests blocken kann, aber auf jedem Knoten einzeln agiert?
-
-
-
-% \section{Erfahrungsbericht zu ditm als Debugger}
-% \label{chap:debugging_go}
-% % vielleicht code beispiel einfügen oder so
-% Während der Entwicklung der Experimente zum Request-Matching trat ein relativ komplexer Bug in dem absichtlich einfach
-% gehaltenen SUT auf, welcher mit Hilfe von ditm identifiziert, untersucht und behoben werden konnte.
-% 
-% Schon bei einer ersten händischen Durchführung der ersten Experimente viel auf, dass etwas nicht stimmen konnte.
-% Nicht nur waren die Ergebnisse aus ditms Sicht unerwartet negativ, nach genauerem Hinsehen fanden sich in den Aufzeichnungen auch
-% teilweise deutlich mehr Requests, als für das jeweilige Experiment vorgesehen, was wiederum die schlechten Ergebnisse erklärte.
-% Die erste Intuition war, den Fehler in ditm zu suchen, immerhin handelte es sich um ein komplexes und wenig getestetes System.
-% 
-% Erst nachdem sich die Fehlersuche in ditm als früchtelos erwies, viel der Blick auf das augenscheinlich sehr einfache SUT.  Hier
-% erwies sich ditm tatsächlich als sehr geeignetes Debugging Werkzeug für das vorhandene Problem. Mit Hilfe der chronologischen
-% Darstellung von Requests und Logs konnte festgestellt werden, dass der verwendete HTTP Client unter sehr bestimmten Bedingungen
-% Retries für gescheiterte Requests sendet. Zu diesen Bedingungen zählt, dass der Request idempotent sein muss, POST Requests werden
-% also niemals wiederholt. Dass der Client Retries für idempotente Requests sendet, ist auch in der Dokumentation zu finden
-% \cite{go_transport_docs}. Das mit ditm beobachtete Verhalten ist damit allerdings noch nicht erklärt, da ein gescheiterter Request
-% nur dann wiederholt wird, wenn er
-% \begin{itemize}
-% 	\item idempotent ist und
-% 	\item auf einen erfolgreichen Request an das gleiche Ziel folgt.
-% \end{itemize}
-% Dieses Verhalten, dass Retries nur passieren, wenn die Verbindung bereits erfolgreich verwendet wurde,
-% ist nicht in der offiziellen Dokumentation dokumentiert \cite{go_transport_docs}, entspricht aber dem gewollten Verhalten, welches in
-% einer Commit-Nachricht in Googles Versionskontroll-System dokumentiert ist \cite{go_retry_commit}. Die mangelnde Dokumentation
-% wurde im Rahmen dieser Arbeit auf Golangs Issue-Tracker festgehalten und kann somit in Zukunft verbessert werden.
-% 
-% Für ditm ist dies insofern ein großer Erfolg, dass dieser Bug im SUT der erste zuvor unbekannte Bug ist, der mit ditm gefunden
-% wurde. Es handelt sich zwar nicht zusätzlich um einen neuen Bug in der Standartbibliothek von Go, aber trotzdem wurde auch hier
-% ein ähnlicher mentaler Schritt wie beim Debugging vollzogen. Es wurde mit Hilfe von ditm eine Diskrepanz zwischen dem erwarteten
-% und dem tatsächlichen Verhalten der Bibliothek gefunden und es konnten sogar die genauen Unterschiede im Verhalten korrekt
-% festgestellt werden.
-
 
 
 \chapter{Fazit}
@@ -1522,15 +1506,15 @@ funktioniert grundlegend für alle Systeme, die die Umgebungsvariablen HTTP\_PRO
 Systems. Zur Bedienung bietet ditm eine GUI, in der die aufgezeichneten Requests gemeinsam mit den Log-Ausgaben des SUT
 dargestellt werden und mit Hilfe von docker-compose ist ditm leicht zu konfigurieren und vollständig mit einem Kommando zu starten.
 
-Die Fähigkeit von ditm, Bugs deterministisch zu reproduzieren wurde mit fünf verschiedenen Bugs in drei verschiedenen Systemen
-evaluiert, darunter das Produktionssystem eines jungen Startups. Die Ergebnisse zeigen, dass das Prinzip funktioniert, auch wenn
+Die Fähigkeit von ditm, Partitionstoleranz-Bugs deterministisch zu reproduzieren wurde mit fünf verschiedenen Bugs in drei verschiedenen Systemen
+evaluiert, darunter das Produktionssystem des Startups Spenoki. Die Ergebnisse zeigen, dass das Prinzip funktioniert, auch wenn
 ditm noch unter gewissen Kinderkrankheiten leidet. Beispielsweise fehlt die Möglichkeit während Replays korrekt mit Tokenbasierter
 Authentifizierung umzugehen, wofür es noch eine sinnvolle Lösung zu finden gilt. Weitere nächste Schritte für den realen Einsatz
 eines Tools wie ditm als Debugger sind, das System für TCP als Netzwerkprotokoll zu implementieren und ein Frontend zu entwickeln,
 das die aggregierten Events des SUT als Zeit-Raum-Diagramm virtualisieren kann.
 
 Die Zukunftsvision ist eine Integration mit einem Failure-Testing-Tool wie Jepsen, sodass gefundene Bugs automatisch
-aufgezeichnet werden und für Replay-Debugging zur Verfügung stehen. Im Kontext dieser Vision trägt diese Arbeit dem
+aufgezeichnet werden und für Replay-Debugging zur Verfügung stehen. Für diese Vision trägt diese Arbeit dem
 Forschungsfeld einen einfachen Replay-Mechanismus für verteilte Systeme bei, der in Kombination mit der nächsten Generation von
 Failure-Testing-Tools das Debugging verteilter Systemen effizienter machen kann.
 

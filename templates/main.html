@@ -34,7 +34,6 @@
 
 		<div class="tab-content">
 			<div id="home" class="tab-pane fade show active" role="tabpanel">
-				<h3>HOME</h3>
 				{{if .ModeDefault}}
 				<a class="btn btn-primary" href="/start_recording">Start Recording</a>
 				<a class="btn btn-primary" href="/save_volumes">Save Volumes</a>
@@ -68,7 +67,6 @@
 			</div>
 
 			<div id="recordings" class="tab-pane fade" role="tabpanel">
-				<h3>Recording Menu</h3>
 				<table class="table">
 					<thead>
 						<tr>
@@ -92,7 +90,6 @@
 			</div>
 
 			<div id="volumes" class="tab-pane fade" role="tabpanel">
-				<h3>Volume Menu</h3>
 				<table class="table">
 					<thead>
 						<tr>
@@ -112,23 +109,26 @@
 			</div>
 
 			<div id="partitions" class="tab-pane fade" role="tabpanel">
-				<h3>Partition Menu</h3>
 				<form action="/block_config">
-					<select name="mode" class="form-select">
+          <label for="mode">Mode</label>
+					<select id="mode" name="mode" class="form-select m-1">
 						<option value="none" {{if .BlockNone}}selected{{end}}>none</option>
 						<option value="random" {{if .BlockRandom}}selected{{end}}>random</option>
 						<option value="partitions" {{if .BlockPartitions}}selected{{end}}>partitions</option>
 					</select>
-					<select name="matcher" class="form-select">
+          <label for="matcher">Matcher</label>
+					<select id="matcher" name="matcher" class="form-select m-1">
 						<option value="heuristic" {{if .MatcherHeuristic}}selected{{end}}>heuristic</option>
 						<option value="exact" {{if .MatcherExact}}selected{{end}}>exact</option>
 						<option value="mix" {{if .MatcherMix}}selected{{end}}>mix</option>
 						<option value="counting" {{if .MatcherCounting}}selected{{end}}>counting</option>
 						<option value="timing" {{if .MatcherTiming}}selected{{end}}>timing</option>
 					</select>
-					<input type="text" name="partitions" class="form-control" value="{{.Partitions}}" />
-					<input type="number" name="percentage" class="form-control" value="{{.Percentage}}" />
-					<button type="submit" class="btn btn-primary">Submit</button>
+          <label for="partitions">Partitions</label>
+					<input type="text" id="partitions" name="partitions" class="form-control m-1" value="{{.Partitions}}" />
+          <label for="percentage">Random Mode Percentage</label>
+					<input type="number" id="percentage" name="percentage" class="form-control m-1" value="{{.Percentage}}" />
+					<button type="submit" class="btn btn-primary m-1">Submit</button>
 				</form>
 			</div>
 		</div>
