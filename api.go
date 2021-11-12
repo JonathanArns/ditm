@@ -257,6 +257,12 @@ func (p *Proxy) StartReplayHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
+	hostNames := make([]string, len(p.hostNames))
+	i := 0
+	for k := range p.hostNames {
+		hostNames[i] = p.hostNames[k]
+		i++
+	}
 	t := template.New("recording").Funcs(template.FuncMap{
 		"abbreviate": func(str string, i int) template.HTML {
 			if len(str) <= i {
@@ -266,6 +272,14 @@ func (p *Proxy) LiveUpdatesHandler(w http.ResponseWriter, r *http.Request) {
 		},
 		"string": func(data []byte) string {
 			return string(data)
+		},
+		"colormap": func(str string) string {
+			for i, name := range hostNames {
+				if strings.Contains(str, name) {
+					return []string{"#3582c4", "#b342f5", "#FFC300", "#FF5733", "#009A20"}[i%5]
+				}
+			}
+			return "#111"
 		},
 	})
 	t.Parse("data: " + strings.ReplaceAll(recordingTemplate, "\n", "") + "\n\n")

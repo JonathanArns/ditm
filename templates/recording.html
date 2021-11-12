@@ -1,7 +1,7 @@
 {{if .IsRequest}}
 <tr class="{{if .Request.FromOutside}}blue{{else}}{{if or .Request.Blocked .Request.BlockedResponse}}red{{else}}green{{end}}{{end}}">
   <td>{{.Request.Timestamp.Format "15:04:05.000000"}}</td>
-  <td>{{.Request.FromName}}</td>
+  <td style="font-weight: bold; color: {{colormap .Request.FromName}}">{{.Request.FromName}}</td>
   <td>{{.Request.Method}} {{abbreviate .Request.To 36}}</td>
   <td>{{abbreviate (string .Request.Body) 15}}</td>
   <td>{{abbreviate (string .Request.ResponseBody) 15}}</td>
@@ -10,7 +10,7 @@
 {{else}}
 <tr class="">
   <td>{{.Log.Timestamp.Format "15:04:05.000000"}}</td>
-  <td>{{.Log.ContainerName}}</td>
+  <td style="font-weight: bold; color: {{colormap .Log.ContainerName}}">{{.Log.ContainerName}}</td>
   <td colspan="4">{{abbreviate .Log.Message 80}}</td>
 </tr>
 {{end}}
