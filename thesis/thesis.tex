@@ -736,14 +736,12 @@ Das Problem lässt sich darauf herunterbrechen, genau den Request im ursprüngli
 dem der aktuelle Request während des Replays entspricht. Das liegt daran, dass sich der Proxy während eines
 Replays immer exakt wie während der Aufnahme verhalten soll.
 
-Der erste Schritt dabei, Requests aus Recording und Replay zu matchen, ist immer die Requests sowohl im
-Recording als auch im Replay nach dem StreamIdentifier des aktuellen Requests zu filtern, sodass zwei
-kleinere Request Streams entstehen. Der StreamIdentifier wird zusammengesetzt aus den Namen des Clients
-und des Servers für den jeweiligen Request, ein so gefilterter Stream stellt also den gesamten Verkehr
-zwischen genau zwei Knoten des SUT dar.
-Der Rest des Matchings ist wie folgt über ein Interface abstrahiert, um leicht mehrere Implementierungen
-austauschen zu können.
-\begin{lstlisting}
+Der erste Schritt dabei, Requests aus Recording und Replay zu matchen, ist immer die Requests sowohl im Recording als auch im
+Replay nach dem StreamIdentifier des aktuellen Requests zu filtern, sodass zwei kleinere Request Streams entstehen. Der
+StreamIdentifier wird zusammengesetzt aus den Namen des Clients und des Servers für den jeweiligen Request, ein so gefilterter
+Stream stellt also den gesamten Verkehr zwischen genau zwei Knoten des SUT dar. Der Rest des Matchings ist über das in Listing
+\ref{lst:matcher} dargestellte Matcher-Interface abstrahiert, um leicht mehrere Implementierungen austauschen zu können.
+\begin{lstlisting}[caption={Das Matcher-Interface in ditm}, label={lst:matcher}]
 type Matcher interface {
    	Match(r *Request, i int, rec []*Request) *Request
    	Seen(r *Request) bool
@@ -774,8 +772,8 @@ Eigenschaften Punkte zugewiesen werden und am Ende der Request mit der höchsten
 Der Exakte Matcher vergibt einen Punkt, falls die Requests an gleicher Stelle in ihren Streams stehen, falls die URIs der
 Requests gleich sind, falls die Länge der URIs gleich ist, falls die Bodies gleich sind und falls die Länge der Bodies gleich ist.
 Sei i der Index im Replay, j der Index im Recording, req der aktuelle Request im Replay und r der aktuelle
-Request im Recording, dann wird der Score für r also wie folgt berechnet.
-\begin{lstlisting}
+Request im Recording, dann wird der Score für r also wie in Listing \ref{lst:exact} berechnet.
+\begin{lstlisting}[caption={Scoring Code für den Exakten Matcher}, label={lst:exact}]
 score := 0.0
 if i == j {
     score += 1
@@ -799,13 +797,13 @@ hier vorstellbar, dass der Matcher deutliche Probleme haben wird, sobald er auf 
 leicht gemischt sind.
 
 \subsubsection{Mix}
-Um dieses Problem noch weiter anzugehen, betrachtet der Mix Matcher nicht nur, ob die Position der Requests absolut gleich
-ist, sondern den relativen Abstand der Requests zueinander, und bewertet Requests mit geringerem Abstand besser. Alle
-anderen Eigentschaften werden weiterhin absolut miteinander verglichen. Um die Gewichtung zwischen dem relativen Abstand
-und den konstanten Komponenten des Scores anzupassen, werden diese mit der Länge des Recordings als Faktor multipliziert.
-Das führt dazu, dass Gleichheit in anderen Eigenschaften höher gewichtet wird, als die Position eines Requests und diese
-nur dann mit ins Gewicht fällt, wenn es mehrere Requests im Recording gibt, die ansonsten gleich gut passen.
-\begin{lstlisting}
+Um dieses Problem noch weiter anzugehen, betrachtet der Mix Matcher nicht nur, ob die Position der Requests absolut gleich ist,
+sondern den relativen Abstand der Requests zueinander, und bewertet Requests mit geringerem Abstand besser. Alle anderen
+Eigentschaften werden weiterhin absolut miteinander verglichen. Um die Gewichtung zwischen dem relativen Abstand und den
+konstanten Komponenten des Scores anzupassen, werden diese wie in Listing \ref{lst:mix} mit der Länge des Recordings als Faktor
+multipliziert.  Das führt dazu, dass Gleichheit in anderen Eigenschaften höher gewichtet wird, als die Position eines Requests und
+diese nur dann mit ins Gewicht fällt, wenn es mehrere Requests im Recording gibt, die ansonsten gleich gut passen.
+\begin{lstlisting}[caption={Scoring Code für den Mix-Matcher}, label={lst:mix}]
 faktor := float64(len(rec)) // Laenge des Recordings
 score := 0.0
 score -= math.Abs(float64(j - i)) // Abstand der Requests
@@ -827,9 +825,9 @@ if len(req.Body) == len(r.Body) {
 Der Heuristische Matcher unterscheidet sich vom Mix Matcher nur an zwei Stellen. Anstatt die Längen der URIs und Bodies
 absolut miteinander zu vergleichen, wird hier wie bei der Position die Differenz zwischen den beiden genommen und eine kleinere
 Differenz besser bewertet. Die Werte werden weiterhing mit der Länge des Recordings als Faktor multipliziert. Um die Tatsache
-auszugleichen, dass die Differenz selbst größere Werte annehmen kann, als die konstanten Werte, wird sie allerdings zusätzlich
-durch 10 dividiert.
-\begin{lstlisting}
+auszugleichen, dass die Differenz selbst größere Werte annehmen kann, als die konstanten Werte, wird sie allerdings wie in Listing
+\ref{lst:heuristic} zusätzlich durch 10 dividiert.
+\begin{lstlisting}[caption={Scoring Code für den Heutristischen Matcher}, label={lst:heuristic}]
 faktor := float64(len(rec))
 score := 0.0
 score -= math.Abs(float64(j - i))
@@ -878,9 +876,8 @@ ditm selbst gesetzt. Außerdem muss für den vollen Funktionsumfang der HTTP-Log
 werden, ohne diesen fehlt die Aggregation der Log-Nachrichten. Vor der ersten Verwendung muss der Driver außerdem installiert
 werden, dies ist möglich, indem das Repository \url{https://github.com/JonathanArns/http-log-driver} gecloned und darin der Befehl
 \textbf{make all} ausgeführt wird. Merke, dass in docker-compose nur alle zum Starten nötigen Einstellungen geschehen, alles andere ist Teil
-der Benutzeroberfäche. Eine beispielhafte Konfiguration sieht wie folgt aus.
-% \begin{lstlisting}[language=yaml]
-\begin{lstlisting}
+der Benutzeroberfäche. Eine beispielhafte Konfiguration ist in Listing \ref{lst:compose} zu sehen.
+\begin{lstlisting}[caption={Beispiel für ditms Konfiguration mit docker-compose}, label={lst:compose}]
 version: "3.9"
 
 services:
