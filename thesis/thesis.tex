@@ -63,6 +63,7 @@
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Document beginning %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 
 \begin{titlepage}
@@ -100,36 +101,77 @@
 	\end{center}
 \end{titlepage}
 
-\tableofcontents
+\pagenumbering{gobble}
+
 \setlength{\parindent}{0em}
 \setlength{\parskip}{0.6em}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Document beginning %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{small}
+    \linespread{1}
+	\textbf{Arns, Jonathan:}\\
+    Ein Proxy zur Erzeugung, Aufzeichnung und Wiedergabe von Netzwerk-Unterbrechungen in einer Testumgebung für verteilte Systeme
+    / Jonathan Arns. \textemdash \\ Bachelor-Thesis, Mannheim: Hochschule Mannheim, 2021. 65 Seiten.
+\end{small}
+
+\newpage
+
+\begin{Large}\textbf{Erklärung}\end{Large}
+
+Hiermit erkläre ich, dass ich die vorliegende Arbeit selbstständig verfasst und keine anderen als die angegebenen Quellen und
+Hilfsmittel benutzt habe.
+
+Ich bin damit einverstanden, dass meine Arbeit veröffentlicht wird, d. h. dass die Arbeit elektronisch gespeichert, in andere
+Formate konvertiert, auf den Servern der Hochschule Mannheim öffentlich zugänglich gemacht und über das Internet verbreitet
+werden darf.
+
+\vspace{1cm}
+
+Mannheim, 15.11.2021
+
+\vspace{1.5cm}
+
+Jonathan Arns
+
+\newpage
 
 \begin{abstract}
 	% Problem
-    Verteilte Systeme sind durch Netzwerk-Unterbrechungen schwierig zu debuggen.
+	Verteilte Systeme sind heute verbreiteter denn je zuvor.
+	Unzuverlässige Netzwerke und Partitionstoleranz-Bugs sind in diesen Systemen ein reales Problem.
+	Aufgrund eines Mangels an geeigneten Test- und Debugging-Tools sind viele dieser Bugs außerdem schwierig zu reproduzieren
+	und zu debuggen.
+
 	% Idea
-    Diese Arbeit stellt einen proxy-basierten Replay-Mechanismus für die Reproduktion von Partitionstoleranz-Bugs in verteilten
-    Systemen vor.
+	Diese Arbeit stellt einen proxy-basierten Replay-Mechanismus für Netzwerk-Unterbrechungen in verteilten Systemen vor.
 	% Benefit
-    Dieser ermöglicht es, Netzwerk-Unterbrechungen in einem verteilten System zu erzeugen, aufzuzeichnen und die Aufzeichnung in
-    einem Replay am laufenden System abzuspielen.
+	Dieser ermöglicht es, Netzwerk-Unterbrechungen zu erzeugen, aufzuzeichnen und die Aufzeichnungen als Replays am laufenden System
+	abzuspielen. Auf diese Weise können Partitions\-toleranz-Bugs aufgezeichnet und zum Debugging deterministisch reproduziert werden.
+
 	% Approach
-    Der Ansatz ist anhand eines Prototypen evaluiert worden. Aus einer Reihe unterschiedlicher Partitionstoleranz-Bugs ist der
-    Prototyp in der Lage, alle deterministisch zu reproduzieren.
+	Zur Evaluation des Konzepts wurde im Rahmen dieser Arbeit ein Prototyp für einen proxy-basierten Replay-Debugger entwickelt.
+	Der Prototyp wurde anhand bekannter Partitionstoleranz-Bugs aus Redis, MongoDB und einem Startup-System getestet.
+	% Der Prototyp ist in der Lage, reale und realitätsnahe Partitionstoleranz-Bugs in verschiedenen Systemen zuverlässig zu
+	% reproduzieren.
+	Die Experimente zeigen, dass ein proxy-basierter Replay-Mechanismus in der Lage ist, reale Bugs zuverlässig zu reproduzieren und somit
+	ein effektives Werkzeug beim Debugging von verteilten Systemen sein kann.
 \end{abstract}
+
+\setlength{\parskip}{0em}
+\tableofcontents
+\setlength{\parskip}{0.6em}
 
 
 \chapter{Einleitung}
+\pagenumbering{arabic}
+\setcounter{page}{1}
 Verteilte Systeme sind heute integral für viele Anwendungsfälle in der Informatik von Social Media über Streaming-Anbieter bis hin
 zu Machine-Learning.
 
 Verteilte Systeme bringen Herausforderungen und potentielle Fehler mit sich, die in alleinstehenden Prozessen meist nicht
 auftreten. Eine davon ist, dass in verteilten Systemen oft einzelne Komponenten des Systems fehlschlagen, anstelle des ganzen
-Systems. Beispielsweise kann ein einzelner Knoten in einem System abstürzen oder das Netzwerk zwischenzeitig ausfallen. Um die
-Verfügbarkeit und Korrektheit von Systemen zu garantieren, ist es wichtig, verteilte Systeme zu entwickeln, die sich von Fehlern
-in einzelnen Komponenten selbstständig erholen und weiter funktionieren können. \cite{distributed_systems_book}
+Systems. Beispielsweise kann ein einzelner Knoten in einem System abstürzen oder das Netzwerk zeitweise ausfallen. Um die
+Verfüg\-bar\-keit und Korrektheit von Systemen zu garantieren, ist es wichtig, verteilte Systeme zu entwickeln, die sich von Fehlern
+in einzelnen Komponenten selbst\-ständig erholen und weiter funktionieren können. \cite{distributed_systems_book}
 
 Eine häufige Annahme, die problematisch ist, ist dass das Netzwerk, welches zur Kommunikation verwendet wird,
 fehlerfrei ist \cite{brief_introduction_to_distributed_systems, the_network_is_reliable}. In der Realität sorgen
@@ -151,7 +193,7 @@ programmiersprachen-agnostisch Bugs in verteilten Systemen reproduzieren kann.
 
 Der hier verfolgte Ansatz für ein solches Tool ist eine Testumgebung, welche einen Proxy verwendet, um Netzwerk-Unterbrechungen zu
 erzeugen. Dieser Proxy zeichnet zusätzlich den gesamten Netzwerk-Verkehr des Systems inklusive Metadaten auf, um die erzeugten
-Netzwerk-Unterbrechungen später in einem Replay gleich wiedergeben zu können. Eine graphische Oberfläche stellt den
+Netzwerk-Unterbrechungen später in einem Replay gleich wiedergeben zu können. Eine grafische Oberfläche stellt den
 Netzwerk-Verkehr und die Log-Ausgaben des System-under-Test (SUT) gemeinsam chronologisch sortiert dar, um dem Nutzer bei
 der Identifikation von Bugs zu helfen.
 
@@ -492,7 +534,7 @@ vielen Aspekten klassischen Debuggern ähnelt, allerdings nur auf Systemebene. O
 des SUT zu pausieren und den Erhalt einzelner Nachrichten und Events an den Knoten zu kontrollieren, alles in einer graphischen Oberfläche, die den
 Zustand des Systems inklusive anstehender Nachrichten und Events darstellt. Ein Screenshot dieser Darstellung ist in Abbildung
 \ref{fig:oddity} zu sehen. Oddity erlaubt es außerdem, den Systemzustand auf einen früheren Zustand zurückzusetzen und so mehrere
-Kontrollflüsse in einer Session zu debuggen. Zusätzlich zu der graphischen Oberfläche, die live den Systemzustand abbildet, kann
+Kontrollflüsse in einer Session zu debuggen. Zusätzlich zu der grafischen Oberfläche, die live den Systemzustand abbildet, kann
 Oddity auch Zeit-Raum-Diagramme für Abläufe des Systems generieren.
 
 Bei all diesen Vorzügen hat Oddity zwei große Einschränkungen. Einerseits funktioniert das Tool nur für Systeme, die als
@@ -585,8 +627,8 @@ einer Testumgebung deterministisch reproduziert werden können.
 % \section{Idee}
 % \label{chap:idea}
 Die grundlegende Idee dieser Arbeit ist, einen Proxy als Kernstück eines Replay-Debuggers für verteilte Systeme zu verwenden.
-Dieses Kapitel beschreibt die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Prototypen ditm (Debugger
-in the middle), anhand dessen das Konzept evaluiert wird.
+Dieses Kapitel beschreibt die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Prototypen
+ditm\footnote{https://github.com/JonathanArns/ditm} (Debugger in the middle), anhand dessen das Konzept evaluiert wird.
 
 Grundsätzlich ähnelt ditm dem in Kapitel \ref{chap:proxies} beschriebenen Toxiproxy, der als Failure-Testing-Tool konzipiert ist,
 in der Hinsicht, dass auch ditm die Möglichkeit bietet, mittels eines Proxys Netzwerk-Unterbrechungen zu erzeugen. Im Gegensatz
@@ -636,7 +678,7 @@ Tabelle \ref{tab:nfa} beschreibt die nicht-funktionalen Anforderungen an das Sys
 	NFA1 & Portabilität      & Das System soll vollständig in Docker lauffähig und mittlels docker-compose konfigurierbar sein.                                                           \\ \hline
 	NFA2 & Proxy Architektur & Das System soll auf einen proxy-basierten Replay-Mechanismus setzen, um die in Kapitel \ref{chap:hypothesis} beschriebene Hypothese untersuchen zu können. \\ \hline
 	NFA3 & HTTP              & Das System soll mit HTTP als Netzwerkprotokoll arbeiten und grundlegend alle verteilten Systeme, die ausschließlich über HTTP kommunizieren, unterstützen. \\ \hline
-	NFA4 & Usability         & Das System soll einfach über eine graphische Oberfläche bedienbar sein.                                                                                    \\ \hline
+	NFA4 & Usability         & Das System soll einfach über eine grafische Oberfläche bedienbar sein.                                                                                     \\ \hline
 	NFA5 & Echtzeit          & Requests und Logs einer laufenden Aufzeichnung sollen in Echtzeit angezeigt werden.                                                                        \\ \hline
 	NFA6 & Unverändertes SUT & Das SUT soll für die Verwendung des Systems nicht angepasst werden müssen.                                                                                 \\ \hline
 \end{longtable}
