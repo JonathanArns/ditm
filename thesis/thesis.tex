@@ -107,68 +107,66 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Document beginning %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{abstract}
-	Das ist das abstract, das werde ich wohl am Ende schreiben.
 	% Problem
+    Verteilte Systeme sind durch Netzwerk-Unterbrechungen schwierig zu debuggen.
 	% Idea
+    Diese Arbeit stellt einen proxy-basierten Replay-Mechanismus für die Reproduktion von Partitionstoleranz-Bugs in verteilten
+    Systemen vor.
 	% Benefit
+    Dieser ermöglicht es, Netzwerk-Unterbrechungen in einem verteilten System zu erzeugen, aufzuzeichnen und die Aufzeichnung in
+    einem Replay am laufenden System abzuspielen.
 	% Approach
+    Der Ansatz ist anhand eines Prototypen evaluiert worden. Aus einer Reihe unterschiedlicher Partitionstoleranz-Bugs ist der
+    Prototyp in der Lage, alle deterministisch zu reproduzieren.
 \end{abstract}
 
 
 \chapter{Einleitung}
-% Background
-% Verteilte Systeme sind heute überall. Das ist eine vergleichsweise neue Entwicklung.
-Verteilte Systeme sind heute kritisch für viele Anwendungsfälle in der Informatik von Social Media über Streaming-Anbieter bis hin
+Verteilte Systeme sind heute integral für viele Anwendungsfälle in der Informatik von Social Media über Streaming-Anbieter bis hin
 zu Machine-Learning.
 
-% Problem
 Verteilte Systeme bringen Herausforderungen und potentielle Fehler mit sich, die in alleinstehenden Prozessen meist nicht
 auftreten. Eine davon ist, dass in verteilten Systemen oft einzelne Komponenten des Systems fehlschlagen, anstelle des ganzen
-Systems. Um die Verfügbarkeit und Korrektheit von Systemen zu garantieren, ist es wichtig, verteilte Systeme zu entwickeln, die
-sich von diesen Fehlern selbstständig erholen und weiter funktionieren können. \cite{distributed_systems_book}
+Systems. Beispielsweise kann ein einzelner Knoten in einem System abstürzen oder das Netzwerk zwischenzeitig ausfallen. Um die
+Verfügbarkeit und Korrektheit von Systemen zu garantieren, ist es wichtig, verteilte Systeme zu entwickeln, die sich von Fehlern
+in einzelnen Komponenten selbstständig erholen und weiter funktionieren können. \cite{distributed_systems_book}
 
 Eine häufige Annahme, die problematisch ist, ist dass das Netzwerk, welches zur Kommunikation verwendet wird,
 fehlerfrei ist \cite{brief_introduction_to_distributed_systems, the_network_is_reliable}. In der Realität sorgen
-Netzwerk-Unterbrechungen und andere Fehler dafür, dass die Kommunikation innerhalb verteilter Systeme grundsätzlich unzuverlässig
+Netzwerk-Unterbrechungen und andere Fehler dafür, dass die Kommunikation innerhalb verteilter Systeme grundsätzlich
 ist \cite{distributed_systems_book, distributed_systems_concepts_and_design}. Verteilte Systeme müssen also auch in der Gegenwart
 von Netzwerk-Unterbrechungen die Integrität des jeweiligen Systems und seiner Daten garantieren. Obwohl das Problem an sich bereits
-intensiv erforscht wurde, führen Netzwerk-Unterbrechungen weiterhin zu schwerwiegenden Fehlern in vielen wichtigen
+intensiv erforscht wurde, führen Netzwerk-Unterbrech\-ungen weiterhin zu schwerwiegenden Fehlern in vielen wichtigen
 Produktionssystemen \cite{analysis_of_network_partition_failures}. Dazu trägt unter anderem ein Mangel an Test- und
 Debugging-Tools für diesen Zweck bei \cite{failify_paper,simple_testing_can_prevent}, der eine Folge der rasanten Entwicklung
 moderner Cloud-Infrastruktur ist \cite{why_does_cloud_stop_computing}. Zwar gibt es bereits Tools, die effektiv darin sind, neue
 Bugs zu finden, diese sind aber nicht in der Lage, gefundene Bugs deterministisch zu reproduzieren \cite{failify_paper}. Das ist
 sowohl für das Erstellen von Regressionstests als auch beim Debugging ein Problem.
 
-% Forschungsfrage: Können durch Netzwerk-Unterbrechungen ausgelöste Bugs in einer Testumgebung für verteilte Systeme erzeugt,
-% aufgezeichnet und deterministisch wiedergegeben werden? - unabhängig von technologie des systems
-
-% Idea
 Record-and-Replay ist ein Debugging-Ansatz, welcher es ermöglicht, selbst komplexe Bugs deterministisch zu reproduzieren.
-Existierende Replay-Debugger für verteilte Systeme sind allerdings wenig ausgereift und beschränken sich auf Systeme in bestimmten
+Existierende Replay-Debug\-ger für verteilte Systeme sind allerdings wenig ausgereift und beschränken sich auf Systeme in bestimmten
 Programmiersprachen \cite{distributed_replay_debugging_1997,distributed_replay_debugging_2006}. Diese Arbeit stellt ein Konzept
-und einen Prototypen für einen auf Netzwerk-Unterbrechungen spezialisierten Replay-Debugger vor, welcher
+und einen Prototypen für einen auf Netzwerk-Unterbrech\-ungen spezialisierten Replay-Debugger vor, welcher
 programmiersprachen-agnostisch Bugs in verteilten Systemen reproduzieren kann.
 
-% Benefit
-
-% Approach
 Der hier verfolgte Ansatz für ein solches Tool ist eine Testumgebung, welche einen Proxy verwendet, um Netzwerk-Unterbrechungen zu
 erzeugen. Dieser Proxy zeichnet zusätzlich den gesamten Netzwerk-Verkehr des Systems inklusive Metadaten auf, um die erzeugten
 Netzwerk-Unterbrechungen später in einem Replay gleich wiedergeben zu können. Eine graphische Oberfläche stellt den
 Netzwerk-Verkehr und die Log-Ausgaben des System-under-Test (SUT) gemeinsam chronologisch sortiert dar, um dem Nutzer bei
 der Identifikation von Bugs zu helfen.
 
-% Overview
 Zu Anfang der Arbeit werden zunächst die technischen Grundlagen über verteilte Systeme, Netzwerk-Unterbrechungen und relevante
 Technologien erläutert. Im Anschluss folgt eine Darstellung des aktuellen Stands der Technik, sowie offener Forschungsfragen und
-noch fehlender Entwicklungen im Forschungsgebiet. Kapitel \ref{chap:system} knüpft daran an, indem im Detail die verfolgte Idee
-und der daraus entwickelte Prototyp beschrieben wird.
+noch Herausforderungen im Forschungsgebiet, aus denen die Hypothese abgeleitet wird. Kapitel \ref{chap:system} knüpft daran an,
+indem im Detail die Idee und der daraus entwickelte Prototyp beschrieben wird.
 
 Für die empirische Evaluation des Prototypen werden erst alle entworfenen Experimente beschrieben, bevor in Kapitel
 \ref{chap:results} die Ergebnisse zusammengefasst werden. Im Anschluss werden alle Ergebnisse und deren Einschränkungen
 diskutiert. Basierend auf den Gesamtergebnissen der Arbeit werden Empfehlungen für eine Weiterentwicklung den Konzepts
 gegeben.
 % als auch für weitere Forschung im Allgemeinen gegeben.
+
+
 
 \chapter{Grundlagen}
 Dieses Kapitel fasst die für diese Arbeit relevanten Grundlagen zu verteilen Systemen, Netzwerk-Unterbrechungen und adjazenten
@@ -206,7 +204,7 @@ verteilte Systeme so zu entwerfen, dass sie mit Netzwerk-Unterbrechungen umgehen
 Algorithmus für verteilten Konsens (siehe Kapitel \ref{chap:dist_consensus}). \cite{the_network_is_reliable}
 
 \subsection{Arten von Netzwerk-Unterbrechungen}
-Netzwerk-Unterbrechungen lassen sich in drei Kategorien einteilen. Vollständige Netzwerk-Unterbrechungen wie in Abbildung
+Netzwerk-Unterbrechungen lassen sich in drei Kategorien einteilen. Vollstän\-dige Netzwerk-Unterbrechungen wie in Abbildung
 \ref{fig:full_partition} trennen ein verteiltes System in zwei komplett alleinstehende Teile. Sie sind die häufigste Art von
 Netzwerk-Unterbrechung und können sowohl zwischen verschiedenen Data-Centern als auch zwischen Teilen eines Systems im gleichen
 Data-Center auftreten. Nicht vollständige Netzwerk-Unterbrechungen wie in Abbildung \ref{fig:partial_partition} trennen einen Teil des
@@ -245,16 +243,16 @@ Netzwerk-Unterbrechung tritt selten auf und wird ausgelöst durch fehlerhafte Ko
 
 \subsection{Das CAP-Theorem}
 Das von Eric Brewer \cite{cap_brewer} entwickelte CAP-Theorem besagt, dass jedes verteilte System, welches Daten zwischen seinen
-Knoten teilt, nur zwei der drei Eigenschaften Konsistenz (Consistency), Erreichbarkeit (Availability) und Partititionstoleranz
+Knoten teilt, nur zwei der drei Eigenschaften Konsistenz (Consistency), Erreichbarkeit (Availability) und Partitionstoleranz
 haben kann.
 
-Konsistenz bedeutet, dass jeder Knoten des Systems jede Anfrage von einem Client korrekt beantwortet. Korrekt kann in diesem
+Konsistenz bedeutet, dass jeder Knoten des Systems jeden Client-Request korrekt beantwortet. Korrekt kann in diesem
 Kontext beispielsweise auch bedeuten, dass eine Anfrage nicht bearbeitet wird und eine entsprechende Meldung zurückgegeben wird.
 Generell sollte ein konsistentes System aber niemals falsche Daten liefern. Erreichbarkeit bedeutet, dass ein System jede Anfrage
-von einem Client beantwortet. Partitionstoleranz bedeutet, dass ein System auch in der Gegenwart von Netzwerk-Unterbrechungen
+von einem Client beantwortet. Partitionstoleranz bedeutet, dass ein System in der Gegenwart von Netzwerk-Unterbrechungen
 funktioniert. \cite{perspectives_on_cap}
 
-Da Netzwerke in der Regel nicht zuverlässig sind und Netzwerk-Unterbrech\-un\-gen auftreten \cite{the_network_is_reliable}, gibt es
+Da Netzwerke in der Regel nicht zuverlässig sind und Netzwerk-Unterbrech\-un\-gen in der Realität auftreten \cite{the_network_is_reliable}, gibt es
 bei der Entwicklung verteilter Systeme wie Datenbanken, die vom CAP-Theorem betroffen sind, nur zwei sinnvolle Möglichkeiten: CP
 und AP. Mit CP wird die Konsistenz der Daten sichergestellt, mit AP die Verfügbarkeit. In der Realität befindet sich zwischen den
 beiden Extremen allerdings ein Spektrum und Systeme wie MongoDB bietet beispielsweise die Möglichkeit, über verstellbare Konsistenz für jede
@@ -276,11 +274,11 @@ Abbildung \ref{fig:dirty_read}, ließt Daten aus einer Schreiboperation, die sp�
 zurückgerollt wird, ist im Endeffekt als wäre sie niemals passiert, sie sollte also auch niemals gelesen werden können.
 \cite{jepsen_mongo_analysis}
 
-
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=0.7\linewidth]{img/stale_read.png}
-	\caption{Visualisierung eines Stale Reads. Ist `w` eine Schreiboperation, die einen Wert überschreibt, der später trotzdem von `r`
+	\caption{Visualisierung eines Stale Reads als Leseoperation in einer verzweigten Transaktions-Historie.
+		Ist `w` eine Schreiboperation, die einen Wert überschreibt, welcher später trotzdem von `r`
 		gelesen wird, dann ist `r` ein Stale Read. \cite{jepsen_mongo_analysis}}
 	\label{fig:stale_read}
 \end{figure}
@@ -288,11 +286,10 @@ zurückgerollt wird, ist im Endeffekt als wäre sie niemals passiert, sie sollte
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=0.7\linewidth]{img/dirty_read.png}
-	\caption{Visualisierung eines Dirty Reads. Ist `w` eine Schreiboperation, die später zurückgerollt wird, dann ist `r` ein
-		Dirty Read. \cite{jepsen_mongo_analysis}}
+	\caption{Visualisierung eines Dirty Reads als Leseoperation in einer verzweigten Transaktions-Historie.
+		Ist `w` eine Schreiboperation, die später zurückgerollt wird, dann ist `r` ein Dirty Read. \cite{jepsen_mongo_analysis}}
 	\label{fig:dirty_read}
 \end{figure}
-
 
 \section{Verteilter Konsens}
 \label{chap:dist_consensus}
@@ -325,7 +322,7 @@ schreiben kann. \cite{raft_original_paper}
 	\centering
 	\includegraphics[width=.8\linewidth]{img/raft_state_machine.pdf}
 	\caption{
-		Zustände und Zustandsübergänge von Knoten in Raft. Ein Follower wird zum Candidate und startet eine Wahl, wenn er zu Lange
+		Zustände und Zustandsübergänge von Knoten in Raft. Ein Follower wird zum Candidate und startet eine Wahl, wenn er zu lange
 		keine Nachrichten vom Leader empfängt. Erhält ein Candidate Stimmen von einer absoluten Mehrheit der Knoten im Cluster,
 		wird er zum neuen Leader. Ein Leader bleibt in der Regel bestehen, bis er beispielsweise abstürzt oder durch eine
 		Netzwerk-Unterbrechung vom einer Mehrheit des Clusters getrennt wird. \cite{raft_original_paper}
@@ -334,8 +331,8 @@ schreiben kann. \cite{raft_original_paper}
 \end{figure}
 
 Raft hat viele Details, auf die in dieser groben Darstellung des Algorithmus nicht eingegangen werden kann. Der Artikel, in dem
-Ongaro und Ousterhout \cite{raft_original_paper} den Algorithmus vorstellen, bietet einen vollständigen Überblick über die
-Feinheiten, die hier weg gelassen wurden.
+Ongaro und Ousterhout \cite{raft_original_paper} den Algorithmus vorstellen, bietet einen vollständigen Überblick über diese
+Feinheiten.
 
 \subsection{Linearisierbarkeit}
 Die von Herlihy und Wing \cite{linearizability_paper} eingeführte Linearisierbarkeit ist eine Korrektheitseigenschaft für
@@ -350,10 +347,10 @@ von Systemen mit linearisierbarer Semantik \cite{raft_original_paper}.
 Im Umgang mit Fehlern in verteilten Systemen werden eine Reihe verschiedener Ansätze mit unterschiedlichen Zielen verfolgt.
 Failure Testing und Chaos Engineering sind zwei ähnliche Methoden, die sich darauf verlassen, Fehler mit Hilfe von Tests zu
 finden, mit dem Unterschied, dass Failure Testing in einer Testumgebung und Chaos Engineering in der Produktionsumgebung
-eingesetzt werden. Daneben gibt es Log-Analyse und Tracing-Systeme, die vor allem dazu dienen, aufgetretene Fehler
-nachzuvollziehen. Zu diesem Zweck gibt es ebenfalls eine Handvoll weiterer, oft experimenteller Debugging-Tools. Diese reichen von
-Tools, die einem klassischen Debugger ähneln, bis hin zu Tools, die sich vor allem auf die Visualisierung von Systemen und Abläufen
-konzentrieren. \cite{challenges_and_options}
+eingesetzt werden. Daneben gibt es Log-analyse und Tracing-Systeme, die vor unter anderem dazu dienen, aufgetretene Fehler
+nachzuvollziehen. Zu diesem Zweck gibt es einige weitere, oft experimentelle Debugging-Tools. Diese reichen von Tools, die einem
+klassischen Debugger ähneln, bis hin zu Tools, die sich vor allem auf die Visualisierung von Systemen und Abläufen konzentrieren.
+\cite{challenges_and_options}
 
 Nachfolgend werden die genannten Methoden und jeweils wichtige Tools weiter erläutert. Außerdem wird betrachtet, welche Rolle
 Proxies als Technologie heute in dem Anwendungsbereich einnehmen und welche weiteren Möglichkeiten sie in adjazenten Bereichen
@@ -390,11 +387,11 @@ Systemen zu finden \cite{abstracting_the_geniuses} und der hohe Aufwand Failure-
 diese Systeme in der Regel eine große Menge von Nutzern haben, die sich auf deren Zuverlässigkeit verlassen.
 
 \section{Chaos Engineering}
-Chaos Engineering verfolgt das Ziel, die Resilienz und Verfügbarkeit von großen, heterogenen verteilten Systemen in Produktion zu
-verbessern. Dazu werden direkt in der Produktions-Umgebung Experimente mit Fehlern wie Abstürzen von virtuellen Maschinen und
-Netwerk-Unterbrechungen durchgeführt, um Schwachstellen zu identifizieren und zu verifizieren, damit das System im Ernstfall mit
-derartigen Fehlern umgehen kann. Basiri et. al. \cite{chaos_engineering}, die Chaos Engineering, wie es bei Netflix eingesetzt
-wird, vorstellen, definieren den Ablauf eines Experiments dabei in vier Schritten.
+Chaos Engineering verfolgt das Ziel, die Resilienz und Verfügbarkeit von großen, heterogenen verteilten Systemen in der
+Produktions-Umgebung zu verbessern. Dazu werden direkt in der Produktions-Umgebung Experimente mit Fehlern wie Abstürzen von
+virtuellen Maschinen und Netwerk-Unter\-brech\-ungen durchgeführt, um Schwachstellen zu identifizieren und zu verifizieren, damit das
+System im Ernstfall mit derartigen Fehlern umgehen kann. Basiri et. al. \cite{chaos_engineering}, die Chaos Engineering, wie es
+bei Netflix eingesetzt wird, vorstellen, definieren den Ablauf eines Experiments dabei in vier Schritten.
 \begin{enumerate}
 	\item Definiere den Ruhezustand des Systems anhand vorhandener Ausgaben.
 	\item Hypothese: Der Ruhezustand bleibt sowohl in der Kontrollgruppe als auch in der Versuchsgruppe während des Experiments erhalten.
@@ -419,12 +416,12 @@ etabliert. \cite{abstracting_the_geniuses}
 Log Analyse ist ein leichtgewichtiger Black-Box Ansatz zur Fehleridentifikation und -Analyse, der sich für Systeme eignet, die
 nicht modifiziert werden können \cite{challenges_and_options}. Es werden so viele Logs wie möglich aus den
 verschiedenen Teilen eines Systems aggregiert und gemeinsam analysiert. Aufgrund der großen Menge an Logs sind diese allein oft
-nicht direkt für einen Menschen nützlich. Stattdessen werden Data-Mining-Techniken eingesetzt, um relevante Informationen aus den
+nicht direkt einem Menschen nützlich. Stattdessen werden Data-Mining-Techniken eingesetzt, um relevante Informationen aus den
 aggregierten Logs zu gewinnen \cite{log_analysis_at_google}.
 
 Eine deutlich schwergewichtigere Lösung als die Black-Box-Log-Analyse ist das Tracing eines verteilten Systems. Die Idee ist, jede
 Aktion, die im Zusammenhang mit einem User-Request passiert, aggregiert aufzuzeichnen, um so den gesamten Weg eines Requests durch
-das System zeigen zu können. Dabei können verschiedene Informationen aufgezeichnet werden, unter anderem Log Nachrichten und
+das System zeigen zu können. Dabei können verschiedene Informationen aufgezeichnet werden, unter anderem Log-Nachrichten und
 RPC-Aufrufe, bzw. interne Nachrichten, je nachdem, was das Ziel des konkreten Tracing Systems ist. Im Gegensatz zur einfachen
 Log-Analyse erfordert Tracing Eingriffe in das verteilte System, um die notwendigen Informationen zu generieren und mit Trace-IDs
 zu kennzeichnen. Die erzeugten Traces können dafür in der Regel gut visualisiert werden und bieten Entwicklern in dieser Form
@@ -460,12 +457,12 @@ Python namens Spacetime\footnote{\url{https://github.com/Mondego/spacetime}} ver
 ein mächtiges Tool, in seiner Anwendbarkeit aber eingeschränkt.
 
 Ein anderer Ansatz, der interaktives Debugging ermöglichen kann, welcher auch in nicht-verteilten Systemen Anwendung findet
-\cite{normal_record_and_replay}, um besonders flüchtige Bugs zu reproduzieren, ist Replay-Debugging. Dieser Ansatz wurde erstmals
+\cite{normal_record_and_replay}, um besonders flüch\-tige Bugs zu reproduzieren, ist Replay-Debugging. Dieser Ansatz wurde erstmals
 1997 auch auf verteilte Systeme angewandt \cite{distributed_replay_debugging_1997}, damals im Modul für verteilte
-Applikationen des Compilers der Programmiersprache Ada95. Damit konnten Abläufe von verteilten Systemen aufgezeichnet werden, um
-dann zu Debugging-Zwecken die Abläufe auf einzelne Knoten des Systems wiederzugeben.
+Applikationen des Compilers der Programmiersprache Ada95. Damit konnten Abläufe in verteilten Systemen aufgezeichnet werden, um
+diese zu Debugging-Zwecken auf einzelne Knoten des Systems wiederzugeben.
 
-Ein moderneres Beispiel für die gleiche Idee ist liblog \cite{distributed_replay_debugging_2006}, ein Replay-Debugger für C und
+Ein moderneres Beispiel für die Idee ist liblog \cite{distributed_replay_debugging_2006}, ein Replay-Debugger für C und
 C++ Applikationen, der in der Lage ist, Netzwerk-Verkehr aufzuzeichnen. Der Mechanismus hinter liblog ist, für eine
 Applikation alle Aufrufe der Standardbibliothek libc, inklusive ihrer Ergebnisse, sowie alle über ein Netzwerk empfangenen
 Nachrichten zu loggen, sodass diese später deterministisch in einem Replay wiedergegeben werden können.
@@ -498,10 +495,10 @@ Zustand des Systems inklusive anstehender Nachrichten und Events darstellt. Ein 
 Kontrollflüsse in einer Session zu debuggen. Zusätzlich zu der graphischen Oberfläche, die live den Systemzustand abbildet, kann
 Oddity auch Zeit-Raum-Diagramme für Abläufe des Systems generieren.
 
-Bei all diesen Vorzügen hat Oddity zwei große Einschränkungen. Einerseits funktioniert das Tool aktuell nur für Systeme, die als
-eine Sammlung von Event-Handlern implementiert sind. Andererseits erfordert Oddity erheblichen Aufwand zur Einrichtung, da eine
-auf das konkrete SUT zugeschnittene Implementierung einer Oddity API erforderlich ist, die direkt mit dem SUT interagieren kann.
-Die erste Einschränkung ist nicht inherent und Woos et. al. \cite{oddity_graphical_debugger} schreiben, dass in Zukunft ohne Probleme weitere
+Bei all diesen Vorzügen hat Oddity zwei große Einschränkungen. Einerseits funktioniert das Tool nur für Systeme, die als
+eine Menge von Event-Handlern implementiert sind. Andererseits erfordert Oddity erheblichen Aufwand zur Einrichtung, da eine
+auf das jeweilige SUT zugeschnittene Implementierung einer Oddity-API erforderlich ist, die direkt mit dem SUT interagieren kann.
+Die erste Einschränkung ist nicht inherent und Woos et. al. \cite{oddity_graphical_debugger} schreiben, dass in Zukunft weitere
 Programmiermodelle unterstützt werden können. Der Einrichtungsaufwand dagegen ist tiefer in der Architektur des Tools verankert und
 ist zur Umsetzung der vollen Funktionalität notwendig.
 
@@ -531,7 +528,7 @@ Oberfläche von ShiViz.
 Proxies finden in verteilten Systemen unter anderem Verwendung, um die Verfügbarkeit von Systemen zu verbessern
 \cite{distributed_systems_concepts_and_design}, aber auch zum Testen und beim Debugging können Proxies eingesetzt werden. Der bei
 Shopify entwickelte Toxiproxy\footnote{\label{foot:toxiproxy}\url{https://github.com/Shopify/toxiproxy}} ist ein für das
-Failure-Testing von verteilten Systemen entwickelter TCP-Proxy, welcher Netzwerk-Unterbrechungen und andere Netzwerk-Fehler
+Failure-Testing von verteilten Systemen entwickelter TCP-Proxy, welcher Netzwerk-Unterbrechungen und andere Fehler des Netzwerks
 simulieren kann.
 
 In anderen Feldern werden Proxies außerdem erfolgreich an verschiedenen Stellen eingesetzt, um Replays von Netzwerk-Verkehr
@@ -546,7 +543,7 @@ Replay-Mechanismus hingegen noch nicht eingesetzt.
 
 \section{Offene Fragen und Herausforderungen}
 \label{chap:hypothesis}
-Fehlertoleranz und Debugging in verteilten Systemen sind aktuelle Forschungsfelder, die sich schnell weiterentwickeln und
+Fehlertoleranz und Debugging in verteilten Systemen sind aktuelle Forsch\-ungsfelder, die sich schnell weiterentwickeln und
 dementsprechend noch viele Möglichkeiten für Innovationen bieten. Die folgenden sind derzeit offene Probleme, die weiteren
 Entwicklungen bedürfen.
 
@@ -567,17 +564,17 @@ interaktive Debugger mit sehr großen Systemen skalieren können, sowohl im Sinn
 
 Im Kontext ihres Prädikat-Checkers D3S stellen Liu et. al. \cite{d3s_predicate_checker}
 insbesondere Replay-Debugging als Teil ihrer Zukunftsvision heraus, um mit D3S identifizierte Bugs einfach zu debuggen. In der
-Praxis haben sich seitdem Failure-Testing und Chaos-Engineering gegenüber Prädikat-Checkern zur Bug-Identifikation durchgesetzt.
-Nichts desto trotz könnte sich ein programmiersprachen-agnostischer Replay-Debugger, welcher durch Failure-Testing gefundene Bugs
+Praxis haben sich seitdem Failure-Testing und Chaos-Engineering gegenüber Prädikat-Checkern zur Iden\-tifika\-tion von Bugs durchgesetzt.
+Trotzdem könnte sich ein programmiersprachen-agnostischer Replay-Debugger, welcher durch Failure-Testing gefundene Bugs
 deterministisch wiedergeben kann, als sehr hilfreich erweisen und ist eine Entwicklung, die es noch zu machen gilt.
 In Anbetracht dessen, dass Proxies sich in anderen Bereichen als effektives Werkzeug für Replays von Netzwerk-Verkehr erwiesen
 haben (siehe Kapitel \ref{chap:proxies}), scheint es möglich, dass ein proxy-basierter Replay-Mechanismus der Schlüssel für die
 Entwicklung eines solchen Tools sein könnte.
 
-Diese Arbeit stellt die Hypothese auf, dass ein proxy-basierter Replay-Mechanismus ein effektives Tool beim Debugging von durch
-Netzwerk-Unterbrechungen ausgelösten Bugs in verteilten Systemen ist. Ziel ist es, einen Prototypen zu entwickeln, anhand dessen
-diese Hypothese evaluiert werden kann. Insbesondere soll empirisch untersucht werden, ob durch Netzwerk-Unterbrechungen ausgelöste
-Bugs mit Hilfe eines Proxys in einer Testumgebung deterministisch reproduziert werden können.
+Diese Arbeit stellt die Hypothese auf, dass ein proxy-basierter Replay-Mech\-anismus ein effektives Tool beim Debugging von
+Partitionstoleranz-Bugs in verteilten Systemen ist. Ziel ist es, einen Prototypen zu entwickeln, anhand dessen diese Hypothese
+evaluiert werden kann. Insbesondere soll empirisch untersucht werden, ob durch Partitionstoleranz-Bugs mit Hilfe eines Proxys in
+einer Testumgebung deterministisch reproduziert werden können.
 
 
 
@@ -708,9 +705,9 @@ Als Programmiersprache wird für die Implementierung auf Go gesetzt. Go bietet s
 umfassende, robuste APIs für den Umgang mit Netzwerken bietet und die Sprache insgesamt eine schnelle
 Entwicklungsgeschwindigkeit erlaubt, ohne die Performance zu vernachlässigen.
 \subsection{Datenspeicherung}
-Als Speicherformat für ditm wurden einfache Dateien im JSON Format gewählt. So wird jedes Recording-Datenobjekt in
+Als Speicherformat für ditm wurden Dateien im JSON-Format gewählt. So wird jedes Recording-Datenobjekt in
 einer eigenen Datei serialisiert gespeichert. Dieses Format wurde einer Datenbank aus mehreren Gründen vorgezogen.
-Zum einen wird Dateispeicher sowieso für die Volume-Snapshots benötigt, die als Zip-Dateien gespeichert werden,
+Zum einen wird Dateispeicher ohnehin für die Volume-Snapshots benötigt, die als Zip-Dateien gespeichert werden,
 es spart also an Komplexität für den Prototypen, für die restlichen Daten ein ähnliches Speichermodel zu wählen.
 Zum anderen bieten Dateien den Vorteil, dass der Nutzer die Möglichkeit hat, diese selbst einzeln zu verwalten.
 Es ist dem Nutzer also möglich, die Dateien einer einzelnen Aufzeichnung und des zugehörigen Snapshots getrennt
@@ -736,7 +733,7 @@ Das Problem lässt sich darauf herunterbrechen, genau den Request im ursprüngli
 dem der aktuelle Request während des Replays entspricht. Das liegt daran, dass sich der Proxy während eines
 Replays immer exakt wie während der Aufnahme verhalten soll.
 
-Der erste Schritt dabei, Requests aus Recording und Replay zu matchen, ist immer die Requests sowohl im Recording als auch im
+Der erste Schritt im Prozess, Requests aus Recording und Replay zu matchen, ist immer die Requests sowohl im Recording als auch im
 Replay nach dem Stream\-Identifier des aktuellen Requests zu filtern, sodass zwei kleinere Request-Streams entstehen. Der
 StreamIdentifier wird zusammengesetzt aus den Namen des Clients und des Servers für den jeweiligen Request, ein so gefilterter
 Stream stellt also den gesamten Verkehr zwischen genau zwei Knoten des SUT dar. Der Rest des Matchings ist über das in Listing
@@ -767,10 +764,17 @@ Der zählende Matcher ist nicht als ernsthafter Versuch gemeint, einen guten Mat
 er als Vergleichsgrundlage für die anderen Matcher dienen.
 
 \subsubsection{Exakt}
-Alle weiteren Matcher, der exakte eingeschlossen, verwenden ein Punktesystem, in dem allen Requests des Recordings für verschiedene
-Eigenschaften Punkte zugewiesen werden und am Ende der Request mit der höchsten Punktzahl als Match zurück gegeben wird.
-Der Exakte Matcher vergibt einen Punkt, falls die Requests an gleicher Stelle in ihren Streams stehen, falls die URIs der
-Requests gleich sind, falls die Länge der URIs gleich ist, falls die Bodies gleich sind und falls die Länge der Bodies gleich ist.
+Alle weiteren Matcher, der exakte eingeschlossen, verwenden ein Punktesystem, in dem alle Requests des Recordings mit dem Request,
+der gematcht werden soll, verglichen werden und dabei für verschiedene Eigenschaften Punkte zugewiesen bekommen. Am Ende wird der
+Request mit der höchsten Punktzahl als Match zurück gegeben. Der Exakte Matcher vergibt einen Punkt für jede der Folgenden
+Bedingungen, die erfüllt ist.
+\begin{itemize}
+	\item Die Requests stehen an gleicher Stelle in ihren jeweiligen Streams.
+	\item Die URIs der Requests sind gleich.
+	\item Die URIs der Requests sind gleich lang.
+	\item Die Bodies der Requests sind gleich.
+	\item Die Bodies der Requests sind gleich lang.
+\end{itemize}
 Sei i der Index im Replay, j der Index im Recording, req der aktuelle Request im Replay und r der aktuelle
 Request im Recording, dann wird der Score für r also wie in Listing \ref{lst:exact} berechnet.
 \begin{lstlisting}[caption={Scoring Code für den Exakten Matcher}, label={lst:exact}]
@@ -879,6 +883,8 @@ werden. Ohne diesen fehlt die Aggregation der Log-Nachrichten. Vor der ersten Ve
 werden. Dies ist möglich, indem das Repository \url{https://github.com/JonathanArns/http-log-driver} gecloned und darin der Befehl
 \textbf{make all} ausgeführt wird. Zu beachten ist, dass in docker-compose nur alle zum Starten nötigen Einstellungen geschehen,
 alles andere ist Teil der Benutzeroberfäche. Eine beispielhafte Konfiguration ist in Listing \ref{lst:compose} zu sehen.
+
+\newpage
 \begin{lstlisting}[caption={Beispiel für ditms Konfiguration mit docker-compose}, label={lst:compose}]
 version: "3.9"
 
@@ -949,14 +955,14 @@ auch anhand frei definierbarer Unterteilungen des Netzwerks.
 
 
 
-\chapter{Versuchsaufbaue}
+\chapter{Versuchsanordnungen}
 \label{chap:experiments}
 Dieses Kapitel beschreibt die Versuche, mit denen die in Kapitel \ref{chap:hypothesis} aufgestellte Hypothese evaluiert wird.
 Konkret sollen die folgenden Fragen über den zuvor beschriebenen Prototypen ditm beantwortet werden.
 \begin{enumerate}
 	\item Was sind die Grenzen von ditms Request-Matching?
 	\item Wie gut funktioniert ditms Log-Matching, bzw. die chronologische Ordnung von Log-Nachrichten relativ zu Requests?
-	\item Lassen sich durch Netzwerk-Unterbrechungen ausgelöste Bugs deterministisch mit ditms Replay-Mechanismen reproduzieren?
+	\item Lassen sich Partitionstoleranz-Bugs deterministisch mit ditms Replay-Mechanismen reproduzieren?
 \end{enumerate}
 \section{Request-Matching}
 \label{chap:exp_matching}
@@ -994,9 +1000,9 @@ um Requests identifizierbar zu machen. Die Zeitstempel dienen genau umgekehrt da
 machen, indem ditm durch die Zeitstempel die Query-Parameter, bzw. die Bodies der Requests nicht mehr einfach direkt miteinander
 vergleichen kann, um Requests zu identifizieren.
 
-Zuletzt gibt es die Möglichkeit, für den verwendeten HTTP-Client (Go net/http) die Wiederverwendung von TCP Verbingungen mit Keep-Alive
+Zuletzt gibt es die Möglichkeit, für den verwendeten HTTP-Client (net/http in Go) die Wiederverwendung von TCP Verbingungen mit Keep-Alive
 zu deaktivieren. Dies ist notwendig, da der Client sonst in bestimmten Situationen Retries sendet, was durch diese Einstellung
-verhindert werden kann, mehr dazu in Kapitel \ref{chap:debugging_go}.
+verhindert werden kann.
 
 Für die Evaluation werden einfache GET-Requests, GET-Requests mit Zeitstempel, GET-Requests ohne Keep-Alive, GET-Requests mit
 Zeitstempel und ohne Keep-Alive und POST-Requests verwendet. Für jede Art von Request werden Experimente mit fünf
@@ -1024,7 +1030,7 @@ notwendig.
 
 \section{Debugging}
 \label{chap:debugging_exp}
-Mit dem im Folgenden beschriebenen Versuch soll versucht werden, die tatsächlichen Debugging-Möglichkeiten von ditm empirisch zu
+Mit dem im Folgenden beschriebenen Versuch soll versucht werden, die tat\-säch\-lichen Debugging-Möglichkeiten von ditm empirisch zu
 evaluieren. Eine empirische Evaluation eines Debuggers ist grundsätzlich schwierig, da es beim Debugging vor allem darum geht,
 Entwicklern beim Verständnis eines komplexen Problems zu helfen, welches sie noch nie zuvor gesehen haben. Es bräuchte also im
 Optimalfall eine große Menge relevanter, bekannter Bugs und Entwickler, denen diese Bugs vollständig unbekannt sind, um zu
@@ -1034,10 +1040,8 @@ Eine solche Studie würde den Rahmen dieser Arbeit bei weitem sprengen. Stattdes
 Lage ist, Bugs zu finden und deterministisch in Replays zu reproduzieren. Das ist die Funktionalität, die im Kern dieser Arbeit steht
 und die essenziell für das angedachte Debugging-Konzept von ditm ist.
 
-% seite 40 done
-
-Dazu werden Systeme mit bekannten Bugs verwendet, die durch Netzwerk-Unterbrechungen ausgelöst werden. Die Bugs sollen mit Hilfe
-von ditm erst in einer Aufzeichnung nachweislich erzeugt werden und dann wiederholbar in Replays wiedergegeben werden.
+Dazu werden Systeme mit bekannten Partitionstoleranz-Bugs verwendet. Die Bugs sollen mit Hilfe von ditm erst in einer Aufzeichnung
+nachweislich erzeugt werden und dann wiederholbar in Replays wiedergegeben werden.
 
 \subsection{Systeme}
 Es werden insgesamt drei verschiedene Systeme verwendet, in denen jeweils mindestens ein Bug im Zusammenhang mit
@@ -1059,7 +1063,7 @@ nachstellen zu können. Dazu zählen Systeme wie MongoDB, Redis und VoltDB. Die 
 ursprünglich aus MongoDB und Redis.
 
 \subsubsection{Startup}
-Das dritte und letzte System ist das System des Startups Spenoki. Konkret handelt es sich um eine SaaS-Lösung für das
+Das dritte und letzte System ist das System des Startups Spenoki\footnote{https://www.spenoki.de/}. Konkret handelt es sich um eine SaaS-Lösung für das
 Sustainability Reporting von Mittelständischen Unternehmen. Das System setzt auf eine verteilte, service-orientierte Architektur
 und besteht aus derzeit fünf Services. Im Kontext von ditm kann einer der fünf Services nicht verwendet werden, da dieser von
 AWS-Diensten wie S3 abhängig ist, es wird hier also ein Cluster aus vier Knoten verwendet. Die anderen Services sind von dem
@@ -1085,7 +1089,7 @@ dieser von dort auch gelesen werden, bevor er später zurückgerollt wird. Das l
 Schreiboperationen unter allen Konsistenzeinstellungen sofort vom Leader lesbar waren, noch bevor sie an eine Mehrheit des
 Clusters repliziert wurden. \cite{jepsen_mongo_analysis}
 
-Dieser Bug wird hier originalgetreu mittels der beschriebenen Raft-Implementierung simuliert.
+Dieser Bug wird hier originalgetreu mittels der in Kapitel \ref{chap:raft} beschriebenen Raft-Implementierung simuliert.
 
 \subsubsection{B3: Election-Endlosschleife in MongoDB}
 % ergebnis: funktioniert mit beiden bei 3 knoten (heuristic replay end unzuverlässig), bei mehr nur mit timing
@@ -1134,7 +1138,7 @@ bestätigen. \cite{jepsen_redis_raft}
 % token login funktioniert in replays nicht, workaround: token lifetime wurde für Experimente auf 100 Tage gesetzt
 % ergebnis: funktioniert mit beiden matchern
 Das System von Spenoki verwendet ein eigenes, hierarchie-basiertes Authorisierungssystem. Dieses erlaubt es, Lese- und
-Update-Operationen in jedem Service lokal zu authorisieren, für das Anlegen neuer Daten ist aber ein Request an den zentralen
+Updateoperationen in jedem Service lokal zu authorisieren, für das Anlegen neuer Daten ist aber ein Request an den zentralen
 Usermanagement-Service notwendig. Eine frühe Version dieses Authorisierungssystems hatte einen Bug, der dazu führte, dass neu
 geschriebene Daten für Nutzer unzugänglich würden, sollte der Usermanagement-Service während der Schreiboperation unerreichbar
 sein. Das lag daran, dass die Daten in diesem Fall einfach ohne die zur Authorisierung notwendige ID geschrieben wurden, die vom
@@ -1450,19 +1454,19 @@ Nachrichten nicht betrachtet werden müssen.
 Es ist weiterhin zu beachten, dass diese Arbeit nicht empirisch untersucht, ob Replay-Debugging auf kognitiver Ebene eine
 effektive Methode zum Debugging von verteilten Systemen ist.  Anekdotisch kann hier allerdings hinzugefügt werden, dass ditm sich
 bei der Entwicklung der in Kapitel \ref{chap:experiments} verwendeten Systeme als Debugger bewährt hat. Mit ditms Hilfe konnte
-unter Anderem eine Diskrepanz zwischen der Dokumentation und dem tatsächlichen Verhalten der Standartbibliothek von Go
+unter Anderem eine Diskrepanz zwischen der Dokumentation und dem tatsächlichen Verhalten der Standardbibliothek von Go
 festgestellt werden. Der Mangel in der Dokumentation wurde auf dem entsprechenden Issue Tracker
 festgehalten\footnote{https://github.com/golang/go/issues/48438} und kann somit in Zukunft verbessert werden.
 
 \section{Ausblick}
 Die Vision, die durch die Ergebnisse dieser Arbeit unterstützt wird, ist einen Replay-Debugger wie ditm mit einem Failure-Testing-Tool
-wie Jepsen zu kombinieren, sodass Jepsen für jeden identifizierten Bug ein Recording erstellt, welches dann debuggt werden kann.
+wie Jepsen zu kombinieren, so dass Jepsen für jeden identifizierten Bug ein Recording erstellt, welches dann debuggt werden kann.
 Eine große Herausforderung dabei ist, Jepsen dazu zu bringen, Aufzeichnungen zu erstellen, anhand derer ein deterministisches
 Replay möglich ist. Es ist denkbar, dass für die Symbiose der beiden Techniken ein neues Failure-Testing-Tool notwendig ist,
 welches die Anforderungen des Replay-Debuggings von vorneherein mit einbezieht.
 
 Um ein Tool wie ditm in der Realität einsetzen zu können, wäre außerdem eine neue Implementierung des Konzepts notwendig, die
-andere Netzwerk-Protokolle als HTTP unterstützt, vorzugsweise mindestens TCP. Eine mögliche, sehr nutzerfreundliche Variante wäre
+andere Netzwerk-Protokolle als HTTP unterstützt, vorzugsweise mindestens TCP. Eine mög\-liche, sehr nutzerfreundliche Variante wäre
 über einen Docker-Network-Driver. Eine entsprechende Implementierung wurde im Rahmen dieser Arbeit bereits angefangen, aber für
 einen Prototypen als zu aufwändig befunden. Aus technischer Sicht spricht allerdings nichts gegen das Prinzip und die grundlegende
 Proxy-Funktionalität konnte in dem angefangenen Projekt bereits demonstriert werden. Für eine neue Implementierung sollte außerdem
@@ -1492,7 +1496,7 @@ Systems. Zur Bedienung bietet ditm eine GUI, in der die aufgezeichneten Requests
 dargestellt werden und mit Hilfe von docker-compose ist ditm leicht zu konfigurieren und vollständig mit einem Kommando zu starten.
 
 Die Fähigkeit von ditm, Partitionstoleranz-Bugs deterministisch zu reproduzieren wurde mit fünf verschiedenen Bugs in drei verschiedenen Systemen
-evaluiert, darunter das Produktionssystem des Startups Spenoki. Die Ergebnisse zeigen, dass das Prinzip funktioniert, auch wenn
+evaluiert, darunter das Produktionssystem des Startups Spenoki. Die Ergebnisse zeigen, dass das Prinzip grundsätzlich funktioniert, auch wenn
 ditm noch unter gewissen Kinderkrankheiten leidet. Beispielsweise fehlt die Möglichkeit, während Replays korrekt mit token-basierter
 Authentifizierung umzugehen, wofür es noch eine sinnvolle Lösung zu finden gilt. Weitere nächste Schritte für den realen Einsatz
 eines Tools wie ditm als Debugger sind, das System für TCP als Netzwerkprotokoll zu implementieren und ein Frontend zu entwickeln,
