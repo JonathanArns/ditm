@@ -9,4 +9,7 @@
 *.synctex.gz
 *.toc
 *.out
+*.lof
+*.lol
+*.lot
 thesis.pdf

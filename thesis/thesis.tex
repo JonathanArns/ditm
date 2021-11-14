@@ -21,6 +21,7 @@
     tabsize=4,
     language=Golang % this is it !
 }
+\renewcommand\lstlistlistingname{Listingverzeichnis}
 % \lstdefinelanguage{yaml}{
 %   keywords={true,false,null,y,n},
 %   keywordstyle=\color{darkgray}\bfseries,
@@ -54,11 +55,13 @@
             linkcolor=black,
             filecolor=black,
             citecolor=black,]{hyperref}
+
 \usepackage{fancyhdr}
-% \pagestyle{fancy}
-% \fancyhf{}
-% \rhead{\thechapter}
-% \cfoot{\thepage}
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0.5pt}
+\lhead{}
+\renewcommand{\chaptermark}[1]{%
+    \markboth{\thechapter.\ #1}{}}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -107,13 +110,15 @@
 \setlength{\parskip}{0.6em}
 
 \begin{small}
-    \linespread{1}
+	\thispagestyle{empty}
+	\linespread{1}
 	\textbf{Arns, Jonathan:}\\
-    Ein Proxy zur Erzeugung, Aufzeichnung und Wiedergabe von Netzwerk-Unterbrechungen in einer Testumgebung für verteilte Systeme
-    / Jonathan Arns. \textemdash \\ Bachelor-Thesis, Mannheim: Hochschule Mannheim, 2021. 65 Seiten.
+	Ein Proxy zur Erzeugung, Aufzeichnung und Wiedergabe von Netzwerk-Unterbrechungen in einer Testumgebung für verteilte Systeme
+	/ Jonathan Arns. \textemdash \\ Bachelor-Thesis, Mannheim: Hochschule Mannheim, 2021. 65 Seiten.
 \end{small}
 
 \newpage
+\thispagestyle{empty}
 
 \begin{Large}\textbf{Erklärung}\end{Large}
 
@@ -150,14 +155,13 @@ Jonathan Arns
 	% Approach
 	Zur Evaluation des Konzepts wurde im Rahmen dieser Arbeit ein Prototyp für einen proxy-basierten Replay-Debugger entwickelt.
 	Der Prototyp wurde anhand bekannter Partitionstoleranz-Bugs aus Redis, MongoDB und einem Startup-System getestet.
-	% Der Prototyp ist in der Lage, reale und realitätsnahe Partitionstoleranz-Bugs in verschiedenen Systemen zuverlässig zu
-	% reproduzieren.
 	Die Experimente zeigen, dass ein proxy-basierter Replay-Mechanismus in der Lage ist, reale Bugs zuverlässig zu reproduzieren und somit
 	ein effektives Werkzeug beim Debugging von verteilten Systemen sein kann.
 \end{abstract}
 
 \setlength{\parskip}{0em}
 \tableofcontents
+\thispagestyle{empty}
 \setlength{\parskip}{0.6em}
 
 
@@ -319,7 +323,7 @@ zurückgerollt wird, ist im Endeffekt als wäre sie niemals passiert, sie sollte
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=0.7\linewidth]{img/stale_read.png}
-	\caption{Visualisierung eines Stale Reads als Leseoperation in einer verzweigten Transaktions-Historie.
+    \caption[Visualisierung eines Stale Reads]{Visualisierung eines Stale Reads als Leseoperation in einer verzweigten Transaktions-Historie.
 		Ist `w` eine Schreiboperation, die einen Wert überschreibt, welcher später trotzdem von `r`
 		gelesen wird, dann ist `r` ein Stale Read. \cite{jepsen_mongo_analysis}}
 	\label{fig:stale_read}
@@ -328,7 +332,7 @@ zurückgerollt wird, ist im Endeffekt als wäre sie niemals passiert, sie sollte
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=0.7\linewidth]{img/dirty_read.png}
-	\caption{Visualisierung eines Dirty Reads als Leseoperation in einer verzweigten Transaktions-Historie.
+    \caption[Visualisierung eines Dirty Reads]{Visualisierung eines Dirty Reads als Leseoperation in einer verzweigten Transaktions-Historie.
 		Ist `w` eine Schreiboperation, die später zurückgerollt wird, dann ist `r` ein Dirty Read. \cite{jepsen_mongo_analysis}}
 	\label{fig:dirty_read}
 \end{figure}
@@ -363,7 +367,7 @@ schreiben kann. \cite{raft_original_paper}
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=.8\linewidth]{img/raft_state_machine.pdf}
-	\caption{
+    \caption[Zustände und Zustandsübergänge von Knoten in Raft]{
 		Zustände und Zustandsübergänge von Knoten in Raft. Ein Follower wird zum Candidate und startet eine Wahl, wenn er zu lange
 		keine Nachrichten vom Leader empfängt. Erhält ein Candidate Stimmen von einer absoluten Mehrheit der Knoten im Cluster,
 		wird er zum neuen Leader. Ein Leader bleibt in der Regel bestehen, bis er beispielsweise abstürzt oder durch eine
@@ -525,7 +529,7 @@ Events bietet.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{img/shiviz_time_space.pdf}
-	\caption{Interaktives Raum-Zeit-Diagramm in Shiviz \cite{ShiViz_visual_debugger}}
+    \caption[Interaktives Raum-Zeit-Diagramm in Shiviz]{Interaktives Raum-Zeit-Diagramm in Shiviz \cite{ShiViz_visual_debugger}}
 	\label{fig:shiviz}
 \end{figure}
 
@@ -547,7 +551,7 @@ ist zur Umsetzung der vollen Funktionalität notwendig.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{img/oddity_raft_state.pdf}
-	\caption{Visualisierung eines Systemzustands in Oddity \cite{oddity_graphical_debugger}}
+    \caption[Visualisierung eines Systemzustands in Oddity]{Visualisierung eines Systemzustands in Oddity \cite{oddity_graphical_debugger}}
 	\label{fig:oddity}
 \end{figure}
 
@@ -561,7 +565,7 @@ Oberfläche von ShiViz.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{img/debugAR_rendering.png}
-	\caption{Rendering einer 3D Visualisierung von Nachrichtenflüssen in debugAR \cite{debugAR_AR_debugger}}
+    \caption[Rendering einer 3D Visualisierung von Nachrichtenflüssen in debugAR]{Rendering einer 3D Visualisierung von Nachrichtenflüssen in debugAR \cite{debugAR_AR_debugger}}
 	\label{fig:debugAR}
 \end{figure}
 
@@ -1147,7 +1151,7 @@ sobald die Netzwerk-Unterbrechung geheilt ist.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=0.6\linewidth]{img/ditm-Partitions.pdf}
-	\caption{Visualisierung einer nicht vollständigen Netzwerk-Unterbrechung (rot), die in MongoDB eine Election-Endlosschleife auslösen konnte}
+	\caption[Visualisierung einer Netzwerk-Unterbrechung, die in MongoDB eine Election-Endlosschleife auslösen kann]{Visualisierung einer nicht vollständigen Netzwerk-Unterbrechung (rot), die in MongoDB eine Election-Endlosschleife auslösen konnte}
 	\label{fig:partial_partition_mongo}
 \end{figure}
 
@@ -1215,7 +1219,7 @@ wird sowohl der Durchschnitt als auch der Median über zehn individuelle Durchf�
 % bei den asynchronen Experimenten im Vergleich zu den synchron gemischten in Tabelle \ref{tab:get}.
 \begin{table}[H]
 	\centering
-	\caption{
+	\caption[Ergebnisse zum Request-Matching von einfachen GET-Requests]{
 		Ergebnisse zum Request-Matching von einfachen GET-Requests:
 		Anzahl der im Replay falsch behandelten Requests pro Anzahl Requests im Recording,
 		beides als Durchschnitt und Median über zehn Durchführungen des Versuchs mit dem jeweiligen Matcher.
@@ -1256,7 +1260,7 @@ Versuchen ohne Zeitstempel in Tabelle \ref{tab:get} machen.
 % ein möglicher Bugfix getestet werden soll.
 \begin{table}[H]
 	\centering
-	\caption{
+	\caption[Ergebnisse zum Request-Matching von GET-Requests mit Zeitstempel]{
 		Ergebnisse zum Request-Matching von GET-Requests mit Zeitstempel:
 		Anzahl der im Replay falsch behandelten Requests pro Anzahl Requests im Recording,
 		beides als Durchschnitt und Median über zehn Durchführungen des Versuchs mit dem jeweiligen Matcher.
@@ -1282,7 +1286,7 @@ Versuchen ohne Zeitstempel in Tabelle \ref{tab:get} machen.
 
 \begin{table}[H]
 	\centering
-	\caption{
+	\caption[Ergebnisse zum Request-Matching von GET-Requests mit no-keep-alive Header]{
 		Ergebnisse zum Request-Matching von GET-Requests mit no-keep-alive Header:
 		Anzahl der im Replay falsch behandelten Requests pro Anzahl Requests im Recording,
 		beides als Durchschnitt und Median über zehn Durchführungen des Versuchs mit dem jeweiligen Matcher.
@@ -1312,7 +1316,7 @@ Matcher haben deutliche Probleme.
 
 \begin{table}[H]
 	\centering
-	\caption{
+	\caption[Ergebnisse zum Request-Matching von GET-Requests mit Zeitstempel no-keep-alive Header]{
 		Ergebnisse zum Request-Matching von GET-Requests mit Zeitstempel no-keep-alive Header:
 		Anzahl der im Replay falsch behandelten Requests pro Anzahl Requests im Recording,
 		beides als Durchschnitt und Median über zehn Durchführungen des Versuchs mit dem jeweiligen Matcher.
@@ -1342,7 +1346,7 @@ klaren Favoriten gibt es hier aber zwischen den beiden nicht, wie Tabelle \ref{t
 
 \begin{table}[H]
 	\centering
-	\caption{
+	\caption[Ergebnisse zum Request-Matching von POST-Requests]{
 		Ergebnisse zum Request-Matching von POST-Requests mit Zeitstempel und Füller im Body:
 		Anzahl der im Replay falsch behandelten Requests pro Anzahl Requests im Recording,
 		beides als Durchschnitt und Median über zehn Durchführungen des Versuchs mit dem jeweiligen Matcher.
@@ -1379,8 +1383,8 @@ Es ist anzumerken, dass die Anzahl der Fehler und auch der maximale Fehler bei d
 die asynchrone Natur der Experimente bei manchen Logs nicht eindeutig festzustellen ist, ob sie an richtiger Stelle stehen oder nicht.
 \begin{table}[H]
 	\centering
-	\caption{
-		Ergebnisse der Log-Matching Experimente: Der maximale Fehler beschreibt, wie weit entfernt eine Log-Nachricht maximal von
+	\caption[Ergebnisse der Log-Matching-Experimente]{
+		Ergebnisse der Log-Matching-Experimente: Der maximale Fehler beschreibt, wie weit entfernt eine Log-Nachricht maximal von
 		ihrer korrekten Position eingeordnet war, die Anzahl an Fehlern, wie viele Log-Nachrichten insgesamt falsch eingeordnet waren.
 	}
 	\label{tab:logs}
@@ -1407,7 +1411,7 @@ sind.
 
 \begin{table}[H]
 	\centering
-	\caption{Überblick darüber, mit welchen Matchern welche Bugs zuverlässig in Replays reproduzierbar sind. *Nur in einem Cluster mit
+	\caption[Ergebnisse zur Reproduktion von Bugs]{Überblick darüber, mit welchen Matchern welche Bugs zuverlässig in Replays reproduzierbar sind. *Nur in einem Cluster mit
 		drei Knoten.}
 	\label{tab:debug}
 	\begin{tabular}{|l|l|l|}
@@ -1550,5 +1554,10 @@ Replay-Mechanismus für verteilte Systeme an die Hand, der in Kombination mit de
 Debugging verteilter Systemen effizienter machen kann.
 
 \printbibliography
+
+\setlength{\parskip}{0em}
+\listoffigures
+\listoftables
+\lstlistoflistings
 
 \end{document}
