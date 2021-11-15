@@ -10,7 +10,7 @@
 \usepackage{float}
 \usepackage{listings}
 \usepackage{listings-golang}
-\lstset{ % add your own preferences
+\lstset{%
     frame=single,
     basicstyle=\linespread{0.9}\footnotesize\ttfamily,
     keywordstyle=\color{red},
@@ -22,22 +22,6 @@
     language=Golang % this is it !
 }
 \renewcommand\lstlistlistingname{Listingverzeichnis}
-% \lstdefinelanguage{yaml}{
-%   keywords={true,false,null,y,n},
-%   keywordstyle=\color{darkgray}\bfseries,
-%   ndkeywords={},
-%   ndkeywordstyle=\color{black}\bfseries,
-%   identifierstyle=\color{black},
-%   sensitive=false,
-%   %moredelim=[l]{}{:},
-%   comment=[l]{#},
-%   morecomment=[s]{/*}{*/},
-%   commentstyle=\color{purple}\ttfamily,
-%   stringstyle=\color{blue}\ttfamily,
-%   %morestring=[l]{-}{},
-%   morestring=[b]',
-%   morestring=[b]"
-% }
 \usepackage[font={small,it}]{caption}
 \usepackage{subcaption}
 \usepackage[english,ngerman]{babel}
@@ -100,7 +84,7 @@
 
 		Betreuer\\
 		Prof. Dr. Oliver Hummel, Hochschule Mannheim\\
-		Prof. Dr. Thomas Smits, Hochschule Mannheim\\
+		Prof. Thomas Smits, Hochschule Mannheim\\
 	\end{center}
 \end{titlepage}
 
@@ -138,7 +122,8 @@ werden darf.
 
 Mannheim, 15.11.2021
 
-\vspace{1.5cm}
+\vspace{2.65cm}
+% \includegraphics[width=4cm]{img/signature.jpg}
 
 Jonathan Arns
 
@@ -147,7 +132,7 @@ Jonathan Arns
 \begin{abstract}
 	% Problem
 	Verteilte Systeme sind heute verbreiteter denn je zuvor.
-	Unzuverlässige Netzwerke und Partitionstoleranz-Bugs sind in diesen Systemen ein reales Problem.
+	In diesen Systemen sind unzuverlässige Netzwerke und Partitionstoleranz-Bugs ein reales Problem.
 	Aufgrund eines Mangels an geeigneten Test- und Debugging-Tools sind viele dieser Bugs außerdem schwierig zu reproduzieren
 	und zu debuggen.
 
@@ -159,7 +144,7 @@ Jonathan Arns
 
 	% Approach
 	Zur Evaluation des Konzepts wurde im Rahmen dieser Arbeit ein Prototyp für einen proxy-basierten Replay-Debugger entwickelt.
-	Der Prototyp wurde anhand bekannter Partitionstoleranz-Bugs aus Redis, MongoDB und einem Startup-System getestet.
+	Der Prototyp wurde an einem realen Startup-System und an Simulationen bekannter Partitions\-toleranz-Bugs aus Redis und MongoDB getestet.
 	Die Experimente zeigen, dass ein proxy-basierter Replay-Mechanismus in der Lage ist, reale Bugs zuverlässig zu reproduzieren und somit
 	ein effektives Werkzeug beim Debugging von verteilten Systemen sein kann.
 \end{abstract}
@@ -215,7 +200,6 @@ Für die empirische Evaluation des Prototypen werden erst alle entworfenen Exper
 \ref{chap:results} die Ergebnisse zusammengefasst werden. Im Anschluss werden alle Ergebnisse und deren Einschränkungen
 diskutiert. Basierend auf den Gesamtergebnissen der Arbeit werden Empfehlungen für eine Weiterentwicklung den Konzepts
 gegeben.
-% als auch für weitere Forschung im Allgemeinen gegeben.
 
 
 
@@ -224,7 +208,6 @@ Dieses Kapitel fasst die für diese Arbeit relevanten Grundlagen zu verteilen Sy
 Themen zusammen.
 
 \section{Verteilte Systeme}
-% kontext der Arbeit sind verteilte systeme, die heute sich auf virtualisierung, dev ops, cloud native verlassen
 Gunawi et. al. \cite{distributed_systems_concepts_and_design} definieren ein verteiltes System als ein System, in dem Hardware-
 oder Software-Komponenten, die auf oder an vernetzten Rechnern laufen, untereinander kommunizieren und ihre Aktionen
 ausschließlich mittels Nachrichten über das Netzwerk koordinieren. Van Steen et. al.
@@ -631,10 +614,6 @@ einer Testumgebung deterministisch reproduziert werden können.
 
 \chapter{Ein Proxy zum Debuggen von Netzwerk-Unterbrechungen}
 \label{chap:system}
-% Dieses Kapitel beschreibt die Idee, die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Systems ditm.
-% 
-% \section{Idee}
-% \label{chap:idea}
 Die grundlegende Idee dieser Arbeit ist, einen Proxy als Kernstück eines Replay-Debuggers für verteilte Systeme zu verwenden.
 Dieses Kapitel beschreibt die Anforderungen und die Umsetzung des im Rahmen dieser Arbeit entwickelten Prototypen
 ditm\footnote{https://github.com/JonathanArns/ditm} (Debugger in the middle), anhand dessen das Konzept evaluiert wird.
@@ -645,15 +624,6 @@ zu Failure-Testing-Tools wie dem Toxiproxy geschieht das mit ditm allerdings, w�
 anstatt in programmatisch vordefinierten Testfällen. Ditm ähnelt in der Hinsicht mehr einem Debugger, als einem Test-Framwork. Um
 gefundene Bugs dennoch zuverlässig und mit geringem Aufwand reproduzieren zu können, soll ditm Situationen aufzeichnen und zum
 späteren Zeitpunkt wieder abspielen können, insbesondere mit den gleichen Netzwerk-Bedingungen wie während der Aufzeichnung.
-
-% Ein großer Fokus der Arbeit liegt dabei speziell auf dem verfolgten Ansatz für ein solches System. Dieser ist, alle Nachrichten
-% innerhalb des SUT über einen Proxy zu leiten, der diese inklusive Metadaten aufzeichnet und in der Lage ist, kontrolliert
-% Netwerk-Unterbrechungen zu erzeugen, indem einzelne Nachrichten geblockt, bzw. nicht weiter geleitet, werden. Mit diesem Aufbau
-% soll auch ein Replay der Netzwerk-Bedingungen anhand eines zuvor durch den Proxy aufgezeichneten Test-Durchlaufs möglich sein.
-% Dazu soll der Proxy während eines Replays für jeden erhaltenen Request identifizieren, welchem Request aus der Aufzeichnung dieser
-% entspricht, um die gleichen Netzwerk-Bedingungen erzeugen zu können. Zudem muss der Proxy Requests, die in der Aufzeichnung von
-% außerhalb des Systems kommen, identifizieren und während des Replays zum richtigen Zeitpunkt selbstständig an das System senden,
-% um so die Interaktionen des Nutzers mit dem System wiederzugeben.
 
 \section{Anforderungen}
 Ditm ist ein Prototyp, der primär dem Zweck dient, die in Kapitel \ref{chap:hypothesis} aufgestellte Hypothese zu untersuchen.
@@ -1066,7 +1036,6 @@ Request-Matcher ein Replay durchgeführt. Für jedes Replay wird anhand von dazu
 Requests ditm falsch behandelt hat. Aus diesem Wert wird dann pro Request-Matcher über die zehn erzeugten Replays der Durchschnitt
 und der Median der Anzahl der falsch behandelten Requests berechnet. Diese Werte bilden das Ergebnis des jeweiligen Experiments.
 Alle Experimente zum Request-Matching werden vollständig automatisiert durchgeführt und ausgewertet.
-% (Das Python Script hierfür ist im Repo)
 
 \section{Log-Matching}
 \label{chap:exp_logs}
@@ -1124,7 +1093,6 @@ fehlenden Service nicht abhängig und können auch in dieser kleineren Konstella
 An dieser Stelle sind die bekannten Bugs in den jeweiligen Systemen beschrieben, die hier mit Hilfe von ditm untersucht werden sollen.
 
 \subsubsection{B1: Doppelte Buchung}
-% ergebnis: funktioniert nur mit heuristic, weil blockconfig optionen im prototypen fehlen
 Das Banksystem wurde speziell für dieses Szenario entwickelt und enthält einen Bug, welcher dazu führt, dass Ein- und Auszahlungen
 doppelt auf einem Konto verbucht werden können. Konkret tritt dieses Problem auf, weil das API-Gateway automatisch Retries für
 fehlgeschlagene Operationen sendet und die Ein- und Auszahlung nicht idempotent sind. Um den Bug zu reproduzieren, muss ein Ein-
@@ -1132,7 +1100,6 @@ oder Auszahlungsrequest an das API-Gateway gesendet werden und die Response auf 
 von einer Netzwerk-Unterbrechung geblockt werden.
 
 \subsubsection{B2: Dirty Reads in MongoDB}
-% ergebnis: funktioniert nur mit timing
 Jepsen hat in MongoDB Version 2.6.7 einen Bug entdeckt, der im Fall gewisser Netzwerk-Unterbrechungen für eine kurze Zeit Dirty
 Reads zulässt. Wenn der Leader-Knoten von der Mehrheit des Clusters getrennt wird, tritt dieser nach einem Timeout selbst zurück
 und nimmt keine Schreiboperationen mehr entgegen. Wird allerdings vor diesem Timeout ein Wert über diesen Leader geschrieben, kann
@@ -1143,7 +1110,6 @@ Clusters repliziert wurden. \cite{jepsen_mongo_analysis}
 Dieser Bug wird hier originalgetreu mittels der in Kapitel \ref{chap:raft} beschriebenen Raft-Implementierung simuliert.
 
 \subsubsection{B3: Election-Endlosschleife in MongoDB}
-% ergebnis: funktioniert mit beiden bei 3 knoten (heuristic replay end unzuverlässig), bei mehr nur mit timing
 Alquraan et. al. \cite{analysis_of_network_partition_failures} nennen als Beispiel für Partitionstoleranz-Bugs bei nicht
 vollständigen Netzwerk-Unterbrechungen einen Bug in MongoDB, welcher zu einer Schleife führt, in der endlos neue Leader gewählt
 werden. MongoDB verwendet einen Verwaltungsknoten, um unentschiedene Elections zu entscheiden.  Tritt in einem Cluster mit zwei
@@ -1169,7 +1135,6 @@ Bug spielt. Dazu müssen in Raft zwei Sicherheitsmechanismen ausgeschaltet werde
 \end{itemize}
 
 \subsubsection{B4: Split-Brain in Redis-Raft}
-% ergebnis: funktioniert nur mit timing
 Wenn ein leader-basiertes System wie Raft mehr als einen Leader-Knoten gleichzeitig hat, wird dies als Split-Brain Situation
 bezeichnet. Split-Brain-Situationen führen unter anderem zu Dirty Reads. Um diese Situationen zu vermeiden hat Raft verschiedene
 Sicherheitsmaßnahmen, wie dass jeder Knoten pro Term nur für einen Leader stimmen darf \cite{raft_original_paper}. Eine Maßnahme,
@@ -1186,8 +1151,6 @@ passiert, weil die anderen Knoten durch die Netzwerk-Unterbrechung nie von ihrer
 bestätigen. \cite{jepsen_redis_raft}
 
 \subsubsection{B5: Unerreichbare Daten}
-% token login funktioniert in replays nicht, workaround: token lifetime wurde für Experimente auf 100 Tage gesetzt
-% ergebnis: funktioniert mit beiden matchern
 Das System von Spenoki verwendet ein eigenes, hierarchie-basiertes Authorisierungssystem. Dieses erlaubt es, Lese- und
 Updateoperationen in jedem Service lokal zu authorisieren, für das Anlegen neuer Daten ist aber ein Request an den zentralen
 Usermanagement-Service notwendig. Eine frühe Version dieses Authorisierungssystems hatte einen Bug, der dazu führte, dass neu
@@ -1212,16 +1175,6 @@ Jede Zeile in den Tabellen stellt die Ergebnisse für eine bestimmte Konfigurati
 beschriebenen Versuchs dar, jeweils für die vier verschiedenen Request-Matcher, die in den Versuchen evaluiert werden. Für jedes Experiment
 wird sowohl der Durchschnitt als auch der Median über zehn individuelle Durchführungen des jeweiligen Versuchs angegeben.
 
-% Die Erklärung hierfür ist, dass durch den Bug ein vorangegangener Aufruf des SUT einen
-% Einfluss auf den nächsten haben kann, falls der letzte Request des vorangegangenen Aufrufs erfolgreich war und der erste Request
-% des neuen Aufrufs geblockt wird. In diesem Fall wird der erste Request erneut versucht, was in isolation selbst mit dem Bug
-% nicht passieren sollte. Tritt dieser Fall ein, verändert sich dadurch die Reihenfolge des gesamten Request-Flusses, da direkt am
-% Anfang ein zusätzlicher Request eingefügt wird, was zu den beobachteten Fehlern führt. Tabelle \ref{tab:get_nka} zeigt, dass
-% diese Fehler in der Tat durch den Bug ausgelöst werden, da sie nicht auftreten, wenn die Retries mittels no-keep-alive
-% verhindert werden. Des weiteren zeigt sich an den jeweils geringeren Request Anzahlen, dass der Bug deutlich weniger bei den
-% asynchronen Experimenten auftritt, vermutlich, weil dort weniger Verbindungen wiederverwendet werden, als im synchronen
-% Versuchsaufbau. Das seltenere Auftreten des Bugs erklärt auch die deutlich bessere Performance der heuristischen und Mix-Matcher
-% bei den asynchronen Experimenten im Vergleich zu den synchron gemischten in Tabelle \ref{tab:get}.
 \begin{table}[H]
 	\centering
 	\caption[Ergebnisse zum Request-Matching von einfachen GET-Requests]{
@@ -1258,11 +1211,6 @@ verhalten als die anderen beiden. In den Versuchen mit Zeitstempeln, deren Ergeb
 sind, machen der heuristische und der Mix-Matcher in vielen Konfigurationen des Versuchs ein Vielfaches der Fehler, die sie in den
 Versuchen ohne Zeitstempel in Tabelle \ref{tab:get} machen.
 
-% Obwohl ein korrektes Request-Matching bei gemischter Reihenfolge durch den Bug effektiv unmöglich wird, da schlichtweg nicht die
-% gleichen Requests im Recording und im Replay sind, ist zu erkennen, dass
-% Das ist in so fern relevant, dass auch in realen Szenarien durchaus
-% unterschiedliche Mengen an Requests in Recording und Replay sein können, beispielsweise wenn im Laufe eines Debugging Workflows
-% ein möglicher Bugfix getestet werden soll.
 \begin{table}[H]
 	\centering
 	\caption[Ergebnisse zum Request-Matching von GET-Requests mit Zeitstempel]{
