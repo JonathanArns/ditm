@@ -1538,13 +1538,14 @@ Situation komplett händisch reproduziert werden müsste.
 
 
 \chapter{Fazit}
-Im Rahmen dieser Arbeit wurde erforscht, ob Netzwerk-Unterbrechungen deterministisch in einer Testumgebung für verteilte Systeme
-mittels eines Proxys reproduziert werden können. Zu diesem Zweck wurde ein Prototyp namens ditm entwickelt, der das Konzept für
-HTTP-basierte Systeme implementiert. Ditm ermöglicht es, Netzwerk-Unterbrechungen zu erzeugen, Abläufe und persistierte Zustände
-in verteilten Systemen aufzuzeichnen und anhand der Aufzeichnungen Replays durchzuführen, die zuverlässig Bugs reproduzieren. Ditm
-funktioniert grundlegend für alle Systeme, die die Umgebungsvariablen HTTP\_PROXY respektieren und erfordert keine Veränderung des
-Systems. Zur Bedienung bietet ditm eine GUI, in der die aufgezeichneten Requests gemeinsam mit den Log-Ausgaben des SUT
-dargestellt werden und mit Hilfe von docker-compose ist ditm leicht zu konfigurieren und vollständig mit einem Kommando zu starten.
+Im Rahmen dieser Arbeit wurde erforscht, ob ein Proxy ein geeignetes Werkzeug ist, um Netzwerk-Unterbrechungen deterministisch in
+einer Testumgebung für verteilte Systeme zu reproduzieren. Zu diesem Zweck wurde ein Prototyp für einen proxy-basierten
+Replay-Debugger namens ditm entwickelt, der das Konzept für HTTP-basierte Systeme implementiert. Ditm ermöglicht es,
+Netzwerk-Unterbrechungen zu erzeugen, Netzwerk-Verkehr und persistierte Zustände in verteilten Systemen aufzuzeichnen und anhand der
+Aufzeichnungen Replays durchzuführen, die zuverlässig Partitionstoleranz-Bugs reproduzieren. Dazu erfordert ditm keine Veränderung
+des jeweiligen Systems. Zur Bedienung bietet ditm eine GUI, in der die aufgezeichneten Requests gemeinsam mit den Log-Ausgaben des
+Systems dargestellt werden und mit Hilfe von docker-compose ist ditm leicht zu konfigurieren und vollständig mit einem Kommando zu
+starten.
 
 Die Fähigkeit von ditm, Partitionstoleranz-Bugs deterministisch zu reproduzieren wurde mit fünf verschiedenen Bugs in drei verschiedenen Systemen
 evaluiert, darunter das Produktionssystem des Startups Spenoki. Die Ergebnisse zeigen, dass das Prinzip grundsätzlich funktioniert, auch wenn
