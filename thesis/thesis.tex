@@ -922,7 +922,7 @@ Requests gibt der Matcher einen neuen Dummy Request zurück, der lediglich die I
 behandelt werden soll. Dieser Workaround ist notwendig, um in das Matcher-Interface zu passen. Auch die Funktionalität des
 Matchers, Requests zu identifizieren, die bereits im Replay aufgetaucht sind, wird hier über die im Replay vergangene Zeit
 implementiert, sodass Requests als bereits gesehen gelten, sobald der Zeitpunkt überschritten ist, an dem sie in der Aufzeichnung
-vorkamen. Einzige Ausnahme hierbei sind die Requests von außerhalb des SUTs. Diese werden wie bei den anderen Matchern erst markiert,
+vorkamen. Einzige Ausnahme hierbei sind die Requests von außerhalb des SUT. Diese werden wie bei den anderen Matchern erst markiert,
 wenn sie tatsächlich gesendet wurden, da es wichtig ist, diese während des Replays vollständig wiederzugeben.
 
 \section{Nutzung}
