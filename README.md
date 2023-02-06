@@ -1,2 +1,2 @@
 # ditm
-Debugger in the Middle
+Debugger in the Middle is my concept of using a proxy in a testing environment for distributed systems to help with debugging network partition related failures. The proof of concept in this repository is able to produce, record and replay arbitrary network partitions. In experiments, it reliably reproduced real-world-like bugs from systems like Redis that were reimplemented in a custom implementation of the Raft consensus protocol.
